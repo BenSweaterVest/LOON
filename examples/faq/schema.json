@@ -1,0 +1,56 @@
+{
+  "title": "FAQ Entry",
+  "description": "Create or update a frequently asked question",
+  "fields": [
+    {
+      "key": "question",
+      "label": "Question",
+      "type": "text",
+      "required": true,
+      "maxlength": 200,
+      "placeholder": "How do I reset my password?"
+    },
+    {
+      "key": "answer",
+      "label": "Answer",
+      "type": "textarea",
+      "required": true,
+      "rows": 6,
+      "placeholder": "Provide a clear, helpful answer..."
+    },
+    {
+      "key": "category",
+      "label": "Category",
+      "type": "select",
+      "options": ["General", "Account", "Billing", "Technical", "Shipping", "Returns", "Other"]
+    },
+    {
+      "key": "related_url",
+      "label": "Related Link",
+      "type": "url",
+      "placeholder": "https://...",
+      "description": "Link to relevant documentation or page"
+    },
+    {
+      "key": "keywords",
+      "label": "Search Keywords",
+      "type": "text",
+      "placeholder": "password, reset, forgot, login",
+      "description": "Comma-separated terms to help users find this FAQ"
+    },
+    {
+      "key": "order",
+      "label": "Display Order",
+      "type": "number",
+      "min": 1,
+      "max": 999,
+      "description": "Lower numbers appear first"
+    },
+    {
+      "key": "published",
+      "label": "Published",
+      "type": "checkbox",
+      "description": "Uncheck to hide this FAQ from the public"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "_documentation": {
+    "description": "This schema defines the form fields for the demo page.",
+    "how_it_works": "The admin.html editor reads this file and dynamically generates a form with these fields.",
+    "field_types": "Supported types: text, textarea, select, email, url, number",
+    "customization": "Copy this file, modify the fields array, and create a new page."
+  },
+  "title": "LOON Demo Page",
+  "description": "A sample page demonstrating the LOON micro-CMS capabilities",
+  "fields": [
+    {
+      "key": "headline",
+      "label": "Main Headline",
+      "type": "text",
+      "placeholder": "Enter a headline",
+      "_note": "This will be displayed as the main title on the public page"
+    },
+    {
+      "key": "status",
+      "label": "Current Status",
+      "type": "select",
+      "options": ["Active", "Offline", "Maintenance"],
+      "_note": "Status is shown as a colored badge on the public page"
+    },
+    {
+      "key": "body",
+      "label": "Description",
+      "type": "textarea",
+      "placeholder": "Tell visitors about this page...",
+      "_note": "Supports multiple lines. Use \\n for line breaks in JSON."
+    }
+  ]
+}

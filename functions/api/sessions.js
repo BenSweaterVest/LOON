@@ -1,0 +1,216 @@
+/**
+ * ============================================================================
+ * LOON Sessions Endpoint (functions/api/sessions.js)
+ * ============================================================================
+ *
+ * Admin-only endpoint to view and manage active sessions.
+ * Useful for security monitoring and incident response.
+ *
+ * ENDPOINTS:
+ *   GET    /api/sessions          - List all active sessions
+ *   DELETE /api/sessions          - Revoke a specific session
+ *   DELETE /api/sessions?all=true - Revoke all sessions for a user
+ *
+ * AUTHENTICATION:
+ *   Requires admin session token in Authorization header.
+ *
+ * GET /api/sessions
+ *   Response: { "sessions": [{ username, role, created, ip }, ...] }
+ *
+ * DELETE /api/sessions
+ *   Request: { "token": "session-to-revoke" }
+ *   - OR -
+ *   Request: { "username": "user", "all": true }  // Revoke all user sessions
+ *   Response: { "success": true, "revoked": 1 }
+ *
+ * USE CASES:
+ *   - View who is currently logged in
+ *   - Force logout a compromised account
+ *   - Revoke all sessions during a security incident
+ *
+ * @module functions/api/sessions
+ * @version 2.0.0 (Phase 2 - Team Mode)
+ */
+
+import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+
+/**
+ * CORS options for this endpoint.
+ */
+const CORS_OPTIONS = { methods: 'GET, DELETE, OPTIONS' };
+
+/**
+ * Validate admin session
+ */
+async function validateAdminSession(db, authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return { valid: false, error: 'No authorization token' };
+    }
+    
+    const token = authHeader.slice(7);
+    const sessionRaw = await db.get(`session:${token}`);
+    
+    if (!sessionRaw) {
+        return { valid: false, error: 'Invalid or expired session' };
+    }
+    
+    const session = JSON.parse(sessionRaw);
+    
+    if (session.role !== 'admin') {
+        return { valid: false, error: 'Admin access required' };
+    }
+    
+    return { valid: true, session, token };
+}
+
+/**
+ * GET: List all active sessions
+ */
+export async function onRequestGet(context) {
+    const { request, env } = context;
+    const db = env.LOON_DB;
+
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured. Phase 2 only.' }, 500, env, request);
+    }
+
+    // Validate admin session
+    const authHeader = request.headers.get('Authorization');
+    const auth = await validateAdminSession(db, authHeader);
+
+    if (!auth.valid) {
+        return jsonResponse({ error: auth.error }, 403, env, request);
+    }
+
+    try {
+        // List all sessions
+        const list = await db.list({ prefix: 'session:' });
+        const sessions = [];
+
+        for (const key of list.keys) {
+            const sessionRaw = await db.get(key.name, { type: 'json' });
+            if (sessionRaw) {
+                const tokenId = key.name.replace('session:', '');
+                sessions.push({
+                    tokenPreview: tokenId.substring(0, 8) + '...',
+                    username: sessionRaw.username,
+                    role: sessionRaw.role,
+                    created: sessionRaw.created ? new Date(sessionRaw.created).toISOString() : null,
+                    ip: sessionRaw.ip || 'unknown',
+                    isCurrent: tokenId === auth.token
+                });
+            }
+        }
+
+        // Sort by creation time (newest first)
+        sessions.sort((a, b) => {
+            if (!a.created) return 1;
+            if (!b.created) return -1;
+            return new Date(b.created) - new Date(a.created);
+        });
+
+        return jsonResponse({
+            sessions: sessions,
+            total: sessions.length
+        }, 200, env, request);
+
+    } catch (err) {
+        console.error('Sessions API error:', err);
+        return jsonResponse({ error: 'Failed to list sessions' }, 500, env, request);
+    }
+}
+
+/**
+ * DELETE: Revoke session(s)
+ */
+export async function onRequestDelete(context) {
+    const { request, env } = context;
+    const db = env.LOON_DB;
+
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured. Phase 2 only.' }, 500, env, request);
+    }
+
+    // Validate admin session
+    const authHeader = request.headers.get('Authorization');
+    const auth = await validateAdminSession(db, authHeader);
+
+    if (!auth.valid) {
+        return jsonResponse({ error: auth.error }, 403, env, request);
+    }
+
+    try {
+        const body = await request.json();
+        let revokedCount = 0;
+
+        if (body.token) {
+            // Revoke specific session by token
+            const key = `session:${body.token}`;
+            const exists = await db.get(key);
+
+            if (exists) {
+                // Prevent revoking own session
+                if (body.token === auth.token) {
+                    return jsonResponse({ error: 'Cannot revoke your own session' }, 400, env, request);
+                }
+
+                await db.delete(key);
+                revokedCount = 1;
+            }
+        } else if (body.username && body.all) {
+            // Revoke all sessions for a user
+            const targetUsername = body.username.toLowerCase();
+
+            // Prevent revoking own sessions if that's the target
+            if (targetUsername === auth.session.username) {
+                return jsonResponse({ error: 'Cannot revoke your own sessions' }, 400, env, request);
+            }
+
+            const list = await db.list({ prefix: 'session:' });
+
+            for (const key of list.keys) {
+                const sessionRaw = await db.get(key.name, { type: 'json' });
+                if (sessionRaw && sessionRaw.username === targetUsername) {
+                    await db.delete(key.name);
+                    revokedCount++;
+                }
+            }
+        } else {
+            return jsonResponse({ error: 'Provide either "token" or "username" with "all: true"' }, 400, env, request);
+        }
+
+        return jsonResponse({
+            success: true,
+            revoked: revokedCount,
+            message: revokedCount > 0 ? `Revoked ${revokedCount} session(s)` : 'No sessions found to revoke'
+        }, 200, env, request);
+
+    } catch (err) {
+        console.error('Sessions revoke error:', err);
+        return jsonResponse({ error: 'Failed to revoke sessions' }, 500, env, request);
+    }
+}
+
+/**
+ * Handle OPTIONS (CORS preflight)
+ * Uses shared CORS utility that respects CORS_ORIGIN environment variable.
+ */
+export async function onRequestOptions(context) {
+    return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
+}
+
+/**
+ * JSON response helper with configurable CORS.
+ */
+function jsonResponse(data, status = 200, env = null, request = null) {
+    const headers = env && request
+        ? getCorsHeaders(env, request, CORS_OPTIONS)
+        : {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        };
+
+    return new Response(JSON.stringify(data, null, 2), { status, headers });
+}

@@ -1,0 +1,13 @@
+{
+  "business_name": "Corner Cafe",
+  "category": "Lunch Menu",
+  "items": "Club Sandwich - $12.99 - Turkey, bacon, lettuce, tomato on toasted sourdough\nCaesar Salad - $10.99 - Romaine, parmesan, croutons, house-made dressing\nSoup of the Day - $6.99 - Ask your server for today's selection\nCheeseburger - $14.99 - Half-pound beef patty with cheddar, served with fries\nVeggie Wrap - $11.99 - Grilled vegetables, hummus, mixed greens in a spinach tortilla",
+  "specials": "Soup & Sandwich Combo - $13.99 (Mon-Fri 11am-2pm)\nSenior Discount - 10% off on Tuesdays",
+  "notes": "Gluten-free bread available (+$2). Please inform your server of any allergies.",
+  "effective_date": "2026-01-15",
+  "currency": "USD",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "owner"
+  }
+}

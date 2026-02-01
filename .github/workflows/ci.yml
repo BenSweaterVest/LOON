@@ -1,0 +1,132 @@
+# Continuous Integration Workflow
+# Runs on all pull requests and pushes to main
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Validate JSON files
+  validate-json:
+    name: Validate JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate JSON files
+        run: |
+          echo "Validating JSON files..."
+          find . -name "*.json" -type f -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+            echo "Checking $file"
+            python3 -m json.tool "$file" > /dev/null || exit 1
+          done
+          echo "All JSON files are valid"
+
+  # Validate JavaScript syntax
+  validate-js:
+    name: Validate JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Check JavaScript syntax
+        run: |
+          echo "Checking JavaScript syntax..."
+          find functions -name "*.js" -type f | while read file; do
+            echo "Checking $file"
+            node --check "$file" || exit 1
+          done
+          echo "All JavaScript files have valid syntax"
+
+  # Validate HTML
+  validate-html:
+    name: Validate HTML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install html-validate
+        run: npm install -g html-validate
+      
+      - name: Validate HTML files
+        run: |
+          echo "Validating HTML files..."
+          html-validate "*.html" --config '{"extends":["html-validate:recommended"],"rules":{"no-inline-style":"off","prefer-native-element":"off"}}' || true
+          echo "HTML validation complete"
+
+  # Check for security issues
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for secrets in code
+        run: |
+          echo "Checking for potential secrets..."
+          # Check for common secret patterns (but not in example/template files)
+          if grep -r --include="*.js" --include="*.html" -E "(password|secret|token|key)\s*[:=]\s*['\"][^'\"]{20,}" . 2>/dev/null | grep -v "placeholder\|example\|YOUR_\|your-\|xxxxx" | grep -v ".env"; then
+            echo "WARNING: Potential hardcoded secrets found"
+            exit 1
+          fi
+          echo "No hardcoded secrets detected"
+
+  # Validate Cloudflare Functions structure
+  validate-functions:
+    name: Validate Functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check function exports
+        run: |
+          echo "Checking Cloudflare Functions structure..."
+          for file in functions/api/*.js; do
+            echo "Checking $file"
+            # Verify each function exports at least one handler
+            if ! grep -q "export async function onRequest" "$file"; then
+              echo "WARNING: $file may not export a valid handler"
+            fi
+          done
+          echo "Functions structure check complete"
+
+  # Run tests (when available)
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm install
+          fi
+      
+      - name: Run tests
+        run: |
+          if [ -f package.json ] && grep -q '"test"' package.json; then
+            npm test
+          else
+            echo "No test script found, skipping automated tests"
+            echo "See docs/TESTING.md for manual testing procedures"
+          fi

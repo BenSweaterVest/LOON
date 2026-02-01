@@ -1,0 +1,81 @@
+{
+  "title": "Service Status",
+  "description": "System status page for services or infrastructure",
+  "fields": [
+    {
+      "key": "service_name",
+      "label": "Service Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "API Gateway"
+    },
+    {
+      "key": "status",
+      "label": "Current Status",
+      "type": "select",
+      "required": true,
+      "options": ["Operational", "Degraded", "Partial Outage", "Major Outage", "Maintenance"]
+    },
+    {
+      "key": "status_message",
+      "label": "Status Message",
+      "type": "textarea",
+      "rows": 3,
+      "placeholder": "Brief description of current status"
+    },
+    {
+      "key": "incident_title",
+      "label": "Active Incident",
+      "type": "text",
+      "placeholder": "Leave empty if no active incident"
+    },
+    {
+      "key": "incident_details",
+      "label": "Incident Details",
+      "type": "textarea",
+      "rows": 5,
+      "placeholder": "Timeline and details of the current incident"
+    },
+    {
+      "key": "incident_start",
+      "label": "Incident Start Time",
+      "type": "datetime"
+    },
+    {
+      "key": "expected_resolution",
+      "label": "Expected Resolution",
+      "type": "text",
+      "placeholder": "Within 2 hours, By 5:00 PM, etc."
+    },
+    {
+      "key": "last_checked",
+      "label": "Last Status Check",
+      "type": "datetime"
+    },
+    {
+      "key": "uptime_30d",
+      "label": "30-Day Uptime %",
+      "type": "text",
+      "placeholder": "99.95%"
+    },
+    {
+      "key": "maintenance_scheduled",
+      "label": "Scheduled Maintenance",
+      "type": "textarea",
+      "rows": 3,
+      "placeholder": "Upcoming maintenance windows"
+    },
+    {
+      "key": "status_page_url",
+      "label": "Detailed Status Page",
+      "type": "url",
+      "placeholder": "https://status.example.com"
+    },
+    {
+      "key": "support_contact",
+      "label": "Support Contact",
+      "type": "text",
+      "placeholder": "support@example.com or support URL"
+    }
+  ]
+}

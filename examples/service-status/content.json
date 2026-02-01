@@ -1,0 +1,18 @@
+{
+  "service_name": "Cloud Platform",
+  "status": "Operational",
+  "status_message": "All systems operating normally.",
+  "incident_title": "",
+  "incident_details": "",
+  "incident_start": "",
+  "expected_resolution": "",
+  "last_checked": "2026-01-30T12:00:00",
+  "uptime_30d": "99.98%",
+  "maintenance_scheduled": "Scheduled maintenance: Sunday, Feb 2, 2026 from 2:00 AM - 4:00 AM CT\nExpected impact: Brief interruptions to API responses (under 30 seconds)",
+  "status_page_url": "",
+  "support_contact": "support@example.com",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "ops"
+  }
+}

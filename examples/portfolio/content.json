@@ -1,0 +1,17 @@
+{
+  "title": "E-commerce Website Redesign",
+  "client": "Mountain Gear Co.",
+  "date": "2026-01-15",
+  "category": "Web Design",
+  "summary": "Complete redesign of an outdoor equipment retailer's online store",
+  "description": "Led the complete redesign of Mountain Gear Co.'s e-commerce platform, focusing on mobile-first design and improved checkout flow.\n\nKey achievements:\n- 40% increase in mobile conversions\n- Reduced cart abandonment by 25%\n- Implemented new product filtering system\n- Integrated with existing inventory management\n\nWorked closely with the marketing team to ensure brand consistency across all touchpoints.",
+  "image_url": "",
+  "project_url": "",
+  "tags": "Shopify, Figma, JavaScript, A/B Testing",
+  "featured": true,
+  "testimonial": "The redesign exceeded our expectations. Sales are up significantly and customers love the new experience.",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "designer"
+  }
+}

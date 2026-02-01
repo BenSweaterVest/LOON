@@ -1,0 +1,118 @@
+# Security Scanning Workflow
+# Checks for common security issues
+
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly on Mondays
+    - cron: '0 0 * * 1'
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Scanning for potential hardcoded secrets..."
+          
+          # Patterns that might indicate hardcoded secrets
+          patterns=(
+            "password\s*=\s*['\"][^'\"]{8,}"
+            "api_key\s*=\s*['\"][^'\"]{8,}"
+            "secret\s*=\s*['\"][^'\"]{8,}"
+            "token\s*=\s*['\"][^'\"]{20,}"
+            "ghp_[a-zA-Z0-9]{36}"
+            "github_pat_[a-zA-Z0-9_]{22,}"
+          )
+          
+          found=0
+          for pattern in "${patterns[@]}"; do
+            if grep -rn --include="*.js" --include="*.html" -E "$pattern" . 2>/dev/null | grep -v "placeholder\|example\|YOUR_\|your-\|xxxxx\|test-\|mock" | grep -v ".env\|node_modules"; then
+              found=$((found + 1))
+            fi
+          done
+          
+          if [ $found -gt 0 ]; then
+            echo "WARNING: Potential secrets detected"
+            exit 1
+          fi
+          
+          echo "No hardcoded secrets detected"
+      
+      - name: Check security headers
+        run: |
+          echo "Verifying security headers in _headers file..."
+          
+          required_headers=(
+            "X-Frame-Options"
+            "X-Content-Type-Options"
+            "Referrer-Policy"
+          )
+          
+          missing=0
+          for header in "${required_headers[@]}"; do
+            if ! grep -q "$header" _headers; then
+              echo "MISSING: $header"
+              missing=$((missing + 1))
+            else
+              echo "OK: $header"
+            fi
+          done
+          
+          if [ $missing -gt 0 ]; then
+            echo "WARNING: $missing security headers missing"
+          fi
+      
+      - name: Check for vulnerable patterns
+        run: |
+          echo "Checking for potentially vulnerable code patterns..."
+          
+          # Check for eval usage
+          if grep -rn "eval(" --include="*.js" . 2>/dev/null | grep -v "node_modules"; then
+            echo "WARNING: eval() usage detected"
+          fi
+          
+          # Check for innerHTML with user input
+          if grep -rn "innerHTML\s*=" --include="*.js" --include="*.html" . 2>/dev/null | grep -v "node_modules" | head -5; then
+            echo "NOTE: innerHTML usage detected - verify XSS protection"
+          fi
+          
+          echo "Vulnerability pattern check complete"
+      
+      - name: Check for timing-safe comparisons
+        run: |
+          echo "Verifying timing-safe password comparisons..."
+          
+          # Check that auth files use timing-safe comparison
+          if grep -l "timingSafeEqual\|secureCompare" functions/api/auth*.js > /dev/null; then
+            echo "OK: Timing-safe comparison found in auth functions"
+          else
+            echo "WARNING: No timing-safe comparison found in auth functions"
+            exit 1
+          fi
+      
+      - name: Check rate limiting
+        run: |
+          echo "Verifying rate limiting is implemented..."
+          
+          # Check for rate limiting in auth
+          if grep -l "rateLimit\|RATE_LIMIT\|rateLimitMap" functions/api/auth.js > /dev/null; then
+            echo "OK: Rate limiting found in auth.js"
+          else
+            echo "WARNING: No rate limiting found in auth.js"
+          fi
+          
+          # Check for rate limiting in save
+          if grep -l "rateLimit\|RATE_LIMIT\|rateLimitMap" functions/api/save.js > /dev/null; then
+            echo "OK: Rate limiting found in save.js"
+          else
+            echo "WARNING: No rate limiting found in save.js"
+          fi

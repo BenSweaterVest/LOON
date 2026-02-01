@@ -1,0 +1,75 @@
+{
+  "title": "Announcement",
+  "description": "Post an important notice or alert",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Announcement Title",
+      "type": "text",
+      "required": true,
+      "maxlength": 100,
+      "placeholder": "Office Closure Notice"
+    },
+    {
+      "key": "urgency",
+      "label": "Urgency Level",
+      "type": "select",
+      "required": true,
+      "options": ["Info", "Notice", "Important", "Urgent", "Emergency"]
+    },
+    {
+      "key": "effective_date",
+      "label": "Effective Date",
+      "type": "date",
+      "description": "When this announcement takes effect"
+    },
+    {
+      "key": "expiry_date",
+      "label": "Expiry Date",
+      "type": "date",
+      "description": "When to remove this announcement (optional)"
+    },
+    {
+      "key": "summary",
+      "label": "Summary",
+      "type": "text",
+      "maxlength": 200,
+      "placeholder": "Brief one-line summary",
+      "description": "Shown in previews and notifications"
+    },
+    {
+      "key": "body",
+      "label": "Full Announcement",
+      "type": "textarea",
+      "rows": 8,
+      "required": true,
+      "placeholder": "Complete details of the announcement..."
+    },
+    {
+      "key": "action_url",
+      "label": "Action Link",
+      "type": "url",
+      "placeholder": "https://...",
+      "description": "Link for more info or to take action"
+    },
+    {
+      "key": "action_text",
+      "label": "Action Button Text",
+      "type": "text",
+      "placeholder": "Learn More",
+      "maxlength": 30
+    },
+    {
+      "key": "contact",
+      "label": "Contact for Questions",
+      "type": "text",
+      "placeholder": "Name, email, or phone"
+    },
+    {
+      "key": "pinned",
+      "label": "Pin to Top",
+      "type": "checkbox",
+      "description": "Keep this announcement at the top of the list"
+    }
+  ]
+}

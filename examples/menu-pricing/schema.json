@@ -1,0 +1,52 @@
+{
+  "title": "Menu & Pricing",
+  "description": "Update your services, products, or menu items with pricing",
+  "fields": [
+    {
+      "key": "business_name",
+      "label": "Business Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Corner Cafe"
+    },
+    {
+      "key": "category",
+      "label": "Menu Category",
+      "type": "text",
+      "placeholder": "Lunch Specials, Haircuts, Services, etc."
+    },
+    {
+      "key": "items",
+      "label": "Menu Items",
+      "type": "textarea",
+      "rows": 10,
+      "placeholder": "Item Name - $XX.XX - Description\nItem Name - $XX.XX - Description",
+      "description": "One item per line. Format: Name - Price - Description"
+    },
+    {
+      "key": "specials",
+      "label": "Current Specials",
+      "type": "textarea",
+      "rows": 4,
+      "placeholder": "Any current deals or promotions"
+    },
+    {
+      "key": "notes",
+      "label": "Additional Notes",
+      "type": "textarea",
+      "rows": 3,
+      "placeholder": "Dietary info, policies, etc."
+    },
+    {
+      "key": "effective_date",
+      "label": "Prices Effective As Of",
+      "type": "date"
+    },
+    {
+      "key": "currency",
+      "label": "Currency",
+      "type": "select",
+      "options": ["USD", "EUR", "GBP", "CAD", "AUD", "Other"]
+    }
+  ]
+}

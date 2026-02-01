@@ -1,0 +1,74 @@
+{
+  "title": "Testimonial",
+  "description": "Customer testimonial or review",
+  "fields": [
+    {
+      "key": "quote",
+      "label": "Testimonial Quote",
+      "type": "textarea",
+      "required": true,
+      "rows": 4,
+      "placeholder": "What the customer said about your product or service..."
+    },
+    {
+      "key": "author_name",
+      "label": "Customer Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Jane Smith"
+    },
+    {
+      "key": "author_title",
+      "label": "Title/Role",
+      "type": "text",
+      "placeholder": "CEO, Acme Corp"
+    },
+    {
+      "key": "author_company",
+      "label": "Company",
+      "type": "text",
+      "placeholder": "Acme Corporation"
+    },
+    {
+      "key": "author_photo_url",
+      "label": "Photo URL",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "rating",
+      "label": "Rating",
+      "type": "select",
+      "options": ["5 Stars", "4 Stars", "3 Stars", "2 Stars", "1 Star", "No Rating"]
+    },
+    {
+      "key": "product_service",
+      "label": "Product/Service Reviewed",
+      "type": "text",
+      "placeholder": "What did they purchase or use?"
+    },
+    {
+      "key": "date",
+      "label": "Date",
+      "type": "date"
+    },
+    {
+      "key": "source",
+      "label": "Source",
+      "type": "select",
+      "options": ["Direct", "Google", "Yelp", "Facebook", "LinkedIn", "Email", "Other"]
+    },
+    {
+      "key": "featured",
+      "label": "Featured Testimonial",
+      "type": "checkbox",
+      "description": "Display prominently on homepage"
+    },
+    {
+      "key": "approved",
+      "label": "Approved for Display",
+      "type": "checkbox",
+      "description": "Only approved testimonials are shown publicly"
+    }
+  ]
+}

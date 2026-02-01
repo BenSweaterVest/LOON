@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+LOON Public Page (index.html)
+================================================================================
+
+This is the public-facing page template that displays content edited via
+the admin interface. It fetches JSON content dynamically and renders it.
+
+HOW IT WORKS:
+1. Page loads and executes loadContent()
+2. JavaScript fetches /data/{pageId}/content.json
+3. Content is parsed and rendered into the page
+4. No server-side processing required - pure static serving
+
+CUSTOMIZATION:
+- Edit the HTML structure to match your site design
+- Modify the loadContent() function to fetch different pages
+- Add CSS to match your brand
+- See docs/CUSTOMIZATION.md for theming guide
+
+CONTENT SOURCE:
+- Content stored in data/{pageId}/content.json
+- Schema defined in data/{pageId}/schema.json
+- Edited via admin.html (Phase 1) or admin-v2.html (Phase 2)
+- Changes commit to GitHub and auto-deploy (~60 seconds)
+
+NOTE:
+- Content is fetched client-side to avoid Cloudflare Pages build limits
+- For SEO, consider server-side rendering or static generation
+
+VERSION: 2.0.0
+================================================================================
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project LOON</title>
+    <meta name="description" content="Lightweight Online Organizing Network - A serverless micro-CMS">
+    <meta name="theme-color" content="#003865">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23003865'/><text x='50' y='62' text-anchor='middle' fill='white' font-size='40' font-family='sans-serif'>L</text></svg>">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Project LOON">
+    <meta property="og:description" content="Lightweight Online Organizing Network">
+    <meta property="og:type" content="website">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        :root {
+            --primary: #003865; /* Loon Lake Blue */
+            --primary-light: #004d8f;
+            --accent: #667eea;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-top: 2rem;
+            animation: fadeInUp 0.5s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-active, .status-open { background: #d4edda; color: #155724; }
+        .status-offline, .status-closed { background: #f8d7da; color: #721c24; }
+        .status-maintenance, .status-moving { background: #fff3cd; color: #856404; }
+        .status-draft { background: #e2e3e5; color: #383d41; }
+        .status-published { background: #cce5ff; color: #004085; }
+        
+        .card header {
+            text-align: left;
+            color: inherit;
+            padding: 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card header h2 {
+            color: var(--primary);
+            margin: 0.75rem 0 0 0;
+            font-size: 1.75rem;
+        }
+        
+        .body-text {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            color: #444;
+            font-size: 1.05rem;
+        }
+        
+        .meta {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+            font-size: 0.85rem;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .admin-link {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255,255,255,0.95);
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .admin-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .error strong {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header {
+            text-align: center;
+            color: white;
+            padding: 2rem 0 0 0;
+        }
+        .page-header h1 {
+            color: white;
+            margin: 0;
+            font-size: 2.25rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .page-header p {
+            opacity: 0.9;
+            margin: 0.5rem 0 0 0;
+            font-size: 1.1rem;
+        }
+        
+        .powered-by {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.7);
+        }
+        .powered-by a {
+            color: rgba(255,255,255,0.9);
+        }
+        
+        @media (max-width: 600px) {
+            .container { padding: 1rem; }
+            .card { padding: 1.5rem; }
+            .page-header h1 { font-size: 1.75rem; }
+            .meta { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1>Project LOON</h1>
+            <p>Lightweight Online Organizing Network</p>
+        </header>
+        
+        <article class="card" id="content-card" role="main">
+            <div class="loading" id="loading">Loading content</div>
+        </article>
+        
+        <p class="powered-by">
+            Powered by <a href="https://github.com/BenSweaterVest/loon-skeleton" target="_blank" rel="noopener">Project LOON</a> v2.0.0
+        </p>
+    </div>
+    
+    <a href="/admin.html" class="admin-link" aria-label="Open admin panel">Admin</a>
+
+    <script>
+        // Configuration - change this to load different pages
+        const PAGE_ID = 'demo';
+        
+        async function loadContent() {
+            const card = document.getElementById('content-card');
+            
+            try {
+                // Fetch content with cache busting for fresh data
+                const cacheBuster = Date.now();
+                const res = await fetch(`/data/${PAGE_ID}/content.json?_=${cacheBuster}`);
+                if (!res.ok) throw new Error('Content not found');
+                const content = await res.json();
+                
+                // Try to fetch schema for field labels (optional)
+                let schema = null;
+                try {
+                    const schemaRes = await fetch(`/data/${PAGE_ID}/schema.json`);
+                    if (schemaRes.ok) schema = await schemaRes.json();
+                } catch (e) { /* Schema is optional */ }
+                
+                // Build status badge class
+                const status = content.status || 'Active';
+                const statusClass = `status-${status.toLowerCase().replace(/\s+/g, '-')}`;
+                
+                // Format last modified date
+                const lastMod = content._meta?.lastModified 
+                    ? new Date(content._meta.lastModified).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'long', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })
+                    : null;
+                
+                // Determine main headline (try different common field names)
+                const headline = content.headline || content.title || content.name || 'Untitled';
+                
+                // Determine body content
+                const body = content.body || content.description || content.content || '';
+                
+                // Build additional fields display (excluding meta and common fields)
+                const excludeFields = ['headline', 'title', 'name', 'body', 'description', 'content', 'status', '_meta'];
+                const additionalFields = Object.entries(content)
+                    .filter(([key]) => !excludeFields.includes(key) && !key.startsWith('_'))
+                    .map(([key, value]) => {
+                        if (!value) return '';
+                        const label = schema?.fields?.find(f => f.key === key)?.label || formatLabel(key);
+                        return `<div class="field"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(String(value))}</div>`;
+                    })
+                    .filter(Boolean)
+                    .join('');
+                
+                // Render content
+                card.innerHTML = `
+                    <header>
+                        <span class="status-badge ${statusClass}">${escapeHtml(status)}</span>
+                        <h2>${escapeHtml(headline)}</h2>
+                    </header>
+                    ${body ? `<p class="body-text">${escapeHtml(body)}</p>` : ''}
+                    ${additionalFields ? `<div class="additional-fields" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">${additionalFields}</div>` : ''}
+                    <footer class="meta">
+                        ${lastMod ? `<span>Last updated: ${lastMod}</span>` : '<span></span>'}
+                        <span style="color: #aaa;">Page: ${PAGE_ID}</span>
+                    </footer>
+                `;
+                
+                // Update page title
+                document.title = `${headline} | Project LOON`;
+                
+            } catch (err) {
+                card.innerHTML = `
+                    <div class="error">
+                        <strong>Unable to load content</strong>
+                        <p>${escapeHtml(err.message)}</p>
+                        <p style="margin-top: 1rem; font-size: 0.9rem;">
+                            If you're the admin, <a href="/admin.html">set up your content</a>.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatLabel(key) {
+            return key
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/_/g, ' ')
+                .replace(/^\w/, c => c.toUpperCase())
+                .trim();
+        }
+        
+        // Load on page ready
+        loadContent();
+    </script>
+</body>
+</html>

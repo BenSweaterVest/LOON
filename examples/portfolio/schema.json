@@ -1,0 +1,78 @@
+{
+  "title": "Portfolio Project",
+  "description": "Showcase a project or work sample",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Project Title",
+      "type": "text",
+      "required": true,
+      "maxlength": 100,
+      "placeholder": "E-commerce Website Redesign"
+    },
+    {
+      "key": "client",
+      "label": "Client",
+      "type": "text",
+      "placeholder": "Company name or 'Personal Project'"
+    },
+    {
+      "key": "date",
+      "label": "Completion Date",
+      "type": "date"
+    },
+    {
+      "key": "category",
+      "label": "Category",
+      "type": "select",
+      "options": ["Web Design", "Branding", "Print", "Photography", "Video", "Development", "Consulting", "Other"]
+    },
+    {
+      "key": "summary",
+      "label": "Brief Summary",
+      "type": "text",
+      "maxlength": 200,
+      "placeholder": "One-line description for thumbnails"
+    },
+    {
+      "key": "description",
+      "label": "Full Description",
+      "type": "textarea",
+      "rows": 6,
+      "placeholder": "Describe the project, your role, challenges, and outcomes..."
+    },
+    {
+      "key": "image_url",
+      "label": "Featured Image URL",
+      "type": "url",
+      "placeholder": "https://...",
+      "description": "Main image for the project (hosted externally)"
+    },
+    {
+      "key": "project_url",
+      "label": "Live Project URL",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "tags",
+      "label": "Tags/Technologies",
+      "type": "text",
+      "placeholder": "React, Node.js, PostgreSQL",
+      "description": "Comma-separated list of skills or technologies used"
+    },
+    {
+      "key": "featured",
+      "label": "Featured Project",
+      "type": "checkbox",
+      "description": "Highlight this project on your main portfolio page"
+    },
+    {
+      "key": "testimonial",
+      "label": "Client Testimonial",
+      "type": "textarea",
+      "rows": 3,
+      "placeholder": "Quote from the client about the project..."
+    }
+  ]
+}

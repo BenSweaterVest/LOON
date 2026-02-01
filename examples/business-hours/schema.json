@@ -1,0 +1,63 @@
+{
+  "title": "Business Status",
+  "description": "Update your business hours and status",
+  "fields": [
+    {
+      "key": "name",
+      "label": "Business Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Corner Coffee Shop"
+    },
+    {
+      "key": "status",
+      "label": "Current Status",
+      "type": "select",
+      "required": true,
+      "options": ["Open", "Closed", "Opening Soon", "Closed for Holiday"]
+    },
+    {
+      "key": "hours_weekday",
+      "label": "Weekday Hours (Mon-Fri)",
+      "type": "text",
+      "placeholder": "7:00 AM - 6:00 PM"
+    },
+    {
+      "key": "hours_saturday",
+      "label": "Saturday Hours",
+      "type": "text",
+      "placeholder": "8:00 AM - 4:00 PM"
+    },
+    {
+      "key": "hours_sunday",
+      "label": "Sunday Hours",
+      "type": "text",
+      "placeholder": "Closed"
+    },
+    {
+      "key": "notice",
+      "label": "Special Notice",
+      "type": "textarea",
+      "placeholder": "Holiday hours, temporary closures, etc.",
+      "description": "Displayed prominently on your page"
+    },
+    {
+      "key": "phone",
+      "label": "Phone Number",
+      "type": "tel",
+      "placeholder": "(555) 123-4567"
+    },
+    {
+      "key": "address",
+      "label": "Address",
+      "type": "text",
+      "placeholder": "123 Main Street, City, State"
+    },
+    {
+      "key": "website",
+      "label": "Website",
+      "type": "url",
+      "placeholder": "https://..."
+    }
+  ]
+}

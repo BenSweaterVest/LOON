@@ -1,0 +1,15 @@
+{
+  "name": "Jane Smith",
+  "title": "Software Engineer",
+  "department": "Engineering",
+  "bio": "Full-stack developer with 5 years of experience. Passionate about building tools that help people work more efficiently.\n\nSpecializes in JavaScript, Python, and cloud infrastructure.",
+  "email": "jane@company.com",
+  "phone": "",
+  "photo_url": "",
+  "linkedin": "",
+  "available": true,
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "jane"
+  }
+}

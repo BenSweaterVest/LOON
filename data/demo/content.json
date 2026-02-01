@@ -1,0 +1,9 @@
+{
+  "headline": "Welcome to Project LOON",
+  "status": "Active",
+  "body": "This content is stored as a simple JSON file in GitHub and can be edited through the LOON admin panel.\n\n- No database required\n- No complex CMS\n- Full version history in Git\n- Works on any device\n\nTry editing this page at /admin.html using the demo credentials.",
+  "_meta": {
+    "lastModified": "2026-01-30T00:00:00Z",
+    "modifiedBy": "system"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "title": "Product or Service",
+  "description": "Showcase a product or service offering",
+  "fields": [
+    {
+      "key": "name",
+      "label": "Product/Service Name",
+      "type": "text",
+      "required": true,
+      "maxlength": 100,
+      "placeholder": "Premium Web Hosting"
+    },
+    {
+      "key": "tagline",
+      "label": "Tagline",
+      "type": "text",
+      "maxlength": 150,
+      "placeholder": "Fast, reliable, secure hosting for your business"
+    },
+    {
+      "key": "description",
+      "label": "Description",
+      "type": "textarea",
+      "required": true,
+      "rows": 6,
+      "placeholder": "Describe what this product or service offers..."
+    },
+    {
+      "key": "price",
+      "label": "Price",
+      "type": "text",
+      "placeholder": "$99/month, Starting at $49, Contact for quote"
+    },
+    {
+      "key": "features",
+      "label": "Key Features",
+      "type": "textarea",
+      "rows": 5,
+      "placeholder": "One feature per line:\n- Feature one\n- Feature two\n- Feature three"
+    },
+    {
+      "key": "image_url",
+      "label": "Product Image URL",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "cta_text",
+      "label": "Call-to-Action Text",
+      "type": "text",
+      "maxlength": 30,
+      "placeholder": "Get Started, Buy Now, Learn More"
+    },
+    {
+      "key": "cta_url",
+      "label": "Call-to-Action Link",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "availability",
+      "label": "Availability",
+      "type": "select",
+      "options": ["Available", "Limited", "Sold Out", "Coming Soon", "Discontinued"]
+    },
+    {
+      "key": "category",
+      "label": "Category",
+      "type": "text",
+      "placeholder": "Software, Consulting, Hardware, etc."
+    },
+    {
+      "key": "featured",
+      "label": "Featured Product",
+      "type": "checkbox",
+      "description": "Highlight on main page"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# CODEOWNERS - Defines who reviews code changes
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @BenSweaterVest
+
+# API/Backend changes require careful review
+/functions/ @BenSweaterVest
+
+# Security-sensitive files
+SECURITY.md @BenSweaterVest
+/scripts/ @BenSweaterVest
+
+# Documentation can have broader ownership
+/docs/ @BenSweaterVest
+*.md @BenSweaterVest

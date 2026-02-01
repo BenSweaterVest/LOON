@@ -1,0 +1,13 @@
+{
+  "question": "How do I reset my password?",
+  "answer": "To reset your password:\n\n1. Go to the login page\n2. Click \"Forgot Password\" below the sign-in button\n3. Enter your email address\n4. Check your inbox for a reset link (check spam if not found)\n5. Click the link and create a new password\n\nIf you don't receive the email within 10 minutes, contact support.",
+  "category": "Account",
+  "related_url": "",
+  "keywords": "password, reset, forgot, login, access, locked out",
+  "order": 1,
+  "published": true,
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "support"
+  }
+}

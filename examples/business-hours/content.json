@@ -1,0 +1,15 @@
+{
+  "name": "Corner Coffee Shop",
+  "status": "Open",
+  "hours_weekday": "7:00 AM - 6:00 PM",
+  "hours_saturday": "8:00 AM - 4:00 PM",
+  "hours_sunday": "9:00 AM - 2:00 PM",
+  "notice": "",
+  "phone": "(555) 123-4567",
+  "address": "123 Main Street, Anytown, MN 55101",
+  "website": "",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "owner"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "organization": "Acme Corporation",
+  "tagline": "Building the future, today",
+  "address_line1": "123 Business Ave, Suite 100",
+  "address_line2": "Minneapolis, MN 55401",
+  "phone_main": "(555) 123-4567",
+  "phone_support": "(555) 987-6543",
+  "email_general": "info@acme.example.com",
+  "email_support": "support@acme.example.com",
+  "hours": "Monday - Friday, 9:00 AM - 5:00 PM CT",
+  "website": "",
+  "map_url": "",
+  "additional_info": "Free parking available in the building garage. Enter from 2nd Street.\n\nOur office is wheelchair accessible.",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "admin"
+  }
+}

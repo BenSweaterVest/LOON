@@ -1,0 +1,25 @@
+{
+  "title": "Charming 3BR Home in Riverside",
+  "property_type": "House",
+  "listing_type": "For Sale",
+  "price": "$385,000",
+  "address": "456 Oak Avenue",
+  "city_state_zip": "Minneapolis, MN 55414",
+  "bedrooms": 3,
+  "bathrooms": "2",
+  "sqft": 1850,
+  "lot_size": "0.18 acres",
+  "year_built": 1952,
+  "description": "Beautifully updated home in the heart of Riverside neighborhood. Original hardwood floors throughout, modern kitchen with stainless appliances, and spacious backyard perfect for entertaining.\n\nWalk to restaurants, parks, and public transit. Quiet street with friendly neighbors.\n\nMove-in ready with new roof (2024) and updated electrical.",
+  "features": "- Hardwood floors throughout\n- Updated kitchen with granite counters\n- Central air conditioning\n- Attached 2-car garage\n- Finished basement\n- Fenced backyard\n- New roof (2024)\n- Walk to light rail",
+  "image_url": "",
+  "virtual_tour_url": "",
+  "contact_name": "Jennifer Adams",
+  "contact_phone": "(555) 234-5678",
+  "contact_email": "jadams@realty.example.com",
+  "available_date": "2026-03-01",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "agent"
+  }
+}

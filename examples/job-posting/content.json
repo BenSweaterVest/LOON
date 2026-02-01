@@ -1,0 +1,18 @@
+{
+  "title": "Senior Software Engineer",
+  "department": "Engineering",
+  "location": "Minneapolis, MN (Hybrid)",
+  "type": "Full-time",
+  "salary_range": "$95,000 - $130,000",
+  "description": "We're looking for an experienced software engineer to join our growing team. You'll work on building and maintaining our core platform, collaborating with cross-functional teams, and mentoring junior developers.\n\nThis role offers the opportunity to work on challenging problems with a talented team in a supportive environment.",
+  "requirements": "- 5+ years of software development experience\n- Proficiency in JavaScript/TypeScript and Python\n- Experience with cloud platforms (AWS, GCP, or Azure)\n- Strong communication skills\n- Bachelor's degree in CS or equivalent experience",
+  "benefits": "- Competitive salary and equity\n- Health, dental, and vision insurance\n- 401(k) with company match\n- Flexible PTO\n- Professional development budget",
+  "apply_url": "",
+  "contact_email": "jobs@company.com",
+  "status": "Open",
+  "remote": true,
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "hr"
+  }
+}

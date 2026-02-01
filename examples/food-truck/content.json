@@ -1,0 +1,13 @@
+{
+  "name": "Taco Express",
+  "status": "Open",
+  "location": "Downtown Food Court - 5th and Main",
+  "hours": "11:00 AM - 8:00 PM",
+  "specials": "Tuesday Special: 2-for-1 Tacos\nFree drink with any combo meal",
+  "menu_url": "",
+  "phone": "(555) 123-4567",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "tacos"
+  }
+}

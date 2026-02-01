@@ -1,0 +1,48 @@
+{
+  "title": "Food Truck Status",
+  "description": "Update your food truck's location and status",
+  "fields": [
+    {
+      "key": "name",
+      "label": "Truck Name",
+      "type": "text",
+      "placeholder": "e.g., Taco Express"
+    },
+    {
+      "key": "status",
+      "label": "Current Status",
+      "type": "select",
+      "options": ["Open", "Closed", "Moving", "Sold Out"]
+    },
+    {
+      "key": "location",
+      "label": "Current Location",
+      "type": "text",
+      "placeholder": "e.g., 5th and Main Street"
+    },
+    {
+      "key": "hours",
+      "label": "Today's Hours",
+      "type": "text",
+      "placeholder": "e.g., 11am - 8pm"
+    },
+    {
+      "key": "specials",
+      "label": "Today's Specials",
+      "type": "textarea",
+      "placeholder": "What's special today?"
+    },
+    {
+      "key": "menu_url",
+      "label": "Menu Link (optional)",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "phone",
+      "label": "Contact Phone",
+      "type": "text",
+      "placeholder": "(555) 123-4567"
+    }
+  ]
+}

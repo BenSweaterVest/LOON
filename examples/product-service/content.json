@@ -1,0 +1,17 @@
+{
+  "name": "Premium Web Hosting",
+  "tagline": "Fast, reliable, secure hosting for your business",
+  "description": "Our premium hosting package includes everything you need to run a professional website. With 99.9% uptime guarantee, automatic backups, and 24/7 support, you can focus on your business while we handle the technical details.\n\nPerfect for small businesses, portfolios, and e-commerce sites.",
+  "price": "$29/month",
+  "features": "- 50GB SSD Storage\n- Unlimited bandwidth\n- Free SSL certificate\n- Daily automatic backups\n- 24/7 email support\n- One-click WordPress install\n- 99.9% uptime guarantee",
+  "image_url": "",
+  "cta_text": "Get Started",
+  "cta_url": "",
+  "availability": "Available",
+  "category": "Web Services",
+  "featured": true,
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "sales"
+  }
+}

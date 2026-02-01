@@ -1,0 +1,17 @@
+# robots.txt for Project LOON
+# Allows indexing of public content, blocks admin areas
+
+User-agent: *
+
+# Allow public pages
+Allow: /
+Allow: /index.html
+
+# Block admin and API
+Disallow: /admin.html
+Disallow: /admin-v2.html
+Disallow: /api/
+Disallow: /functions/
+
+# Block data files from indexing (content is rendered on index.html)
+Disallow: /data/

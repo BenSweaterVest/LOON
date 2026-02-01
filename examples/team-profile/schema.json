@@ -1,0 +1,64 @@
+{
+  "title": "Team Member Profile",
+  "description": "Update your profile information",
+  "fields": [
+    {
+      "key": "name",
+      "label": "Full Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Jane Smith"
+    },
+    {
+      "key": "title",
+      "label": "Job Title",
+      "type": "text",
+      "required": true,
+      "placeholder": "Software Engineer"
+    },
+    {
+      "key": "department",
+      "label": "Department",
+      "type": "select",
+      "options": ["Engineering", "Design", "Marketing", "Sales", "Operations", "Leadership"]
+    },
+    {
+      "key": "bio",
+      "label": "Bio",
+      "type": "textarea",
+      "placeholder": "A brief description of your background and interests...",
+      "rows": 4
+    },
+    {
+      "key": "email",
+      "label": "Work Email",
+      "type": "email",
+      "placeholder": "jane@company.com"
+    },
+    {
+      "key": "phone",
+      "label": "Work Phone",
+      "type": "tel",
+      "placeholder": "(555) 123-4567"
+    },
+    {
+      "key": "photo_url",
+      "label": "Photo URL",
+      "type": "url",
+      "placeholder": "https://...",
+      "description": "Link to your profile photo (hosted externally)"
+    },
+    {
+      "key": "linkedin",
+      "label": "LinkedIn Profile",
+      "type": "url",
+      "placeholder": "https://linkedin.com/in/..."
+    },
+    {
+      "key": "available",
+      "label": "Available for Contact",
+      "type": "checkbox",
+      "description": "Display contact information publicly"
+    }
+  ]
+}

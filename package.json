@@ -1,0 +1,45 @@
+{
+  "name": "loon-skeleton",
+  "version": "2.0.0",
+  "description": "Lightweight Online Organizing Network - A serverless micro-CMS",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev . --port 8788",
+    "dev:kv": "wrangler pages dev . --port 8788 --kv LOON_DB",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "npm run lint:js && npm run lint:json",
+    "lint:js": "node --check functions/api/*.js",
+    "lint:json": "node scripts/validate-json.mjs",
+    "validate": "npm run lint && npm test",
+    "release": "npm run validate && echo 'Ready for release'"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "vitest": "^1.2.0",
+    "miniflare": "^3.20240129.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BenSweaterVest/loon-skeleton.git"
+  },
+  "keywords": [
+    "cms",
+    "serverless",
+    "cloudflare",
+    "github",
+    "micro-cms",
+    "json"
+  ],
+  "author": "Project LOON Contributors",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/BenSweaterVest/loon-skeleton/issues"
+  },
+  "homepage": "https://github.com/BenSweaterVest/loon-skeleton#readme"
+}

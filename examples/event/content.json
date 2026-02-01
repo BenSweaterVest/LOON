@@ -1,0 +1,15 @@
+{
+  "name": "Monthly Tech Meetup",
+  "date": "2026-02-15",
+  "time": "18:30",
+  "location": "Downtown Library - Room 201",
+  "description": "Join us for our monthly technology meetup. This month we're discussing serverless architecture and static site generators.\n\nAll skill levels welcome. Light refreshments provided.",
+  "status": "Scheduled",
+  "registration_url": "",
+  "free": true,
+  "contact_email": "meetup@example.com",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "organizer"
+  }
+}

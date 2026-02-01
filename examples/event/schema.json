@@ -1,0 +1,62 @@
+{
+  "title": "Event Information",
+  "description": "Update details for an event or meetup",
+  "fields": [
+    {
+      "key": "name",
+      "label": "Event Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Monthly Tech Meetup"
+    },
+    {
+      "key": "date",
+      "label": "Event Date",
+      "type": "date",
+      "required": true
+    },
+    {
+      "key": "time",
+      "label": "Start Time",
+      "type": "time",
+      "required": true
+    },
+    {
+      "key": "location",
+      "label": "Location",
+      "type": "text",
+      "required": true,
+      "placeholder": "Community Center, 123 Main St"
+    },
+    {
+      "key": "description",
+      "label": "Event Description",
+      "type": "textarea",
+      "placeholder": "What is this event about?"
+    },
+    {
+      "key": "status",
+      "label": "Event Status",
+      "type": "select",
+      "options": ["Scheduled", "Postponed", "Cancelled", "Completed"]
+    },
+    {
+      "key": "registration_url",
+      "label": "Registration Link",
+      "type": "url",
+      "placeholder": "https://eventbrite.com/..."
+    },
+    {
+      "key": "free",
+      "label": "Free Event",
+      "type": "checkbox",
+      "description": "Check if this event has no admission fee"
+    },
+    {
+      "key": "contact_email",
+      "label": "Contact Email",
+      "type": "email",
+      "placeholder": "organizer@example.com"
+    }
+  ]
+}

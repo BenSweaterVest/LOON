@@ -1,0 +1,79 @@
+{
+  "title": "Contact Information",
+  "description": "Update your organization's contact details",
+  "fields": [
+    {
+      "key": "organization",
+      "label": "Organization Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Acme Corporation"
+    },
+    {
+      "key": "tagline",
+      "label": "Tagline",
+      "type": "text",
+      "placeholder": "Building the future, today"
+    },
+    {
+      "key": "address_line1",
+      "label": "Street Address",
+      "type": "text",
+      "placeholder": "123 Business Ave, Suite 100"
+    },
+    {
+      "key": "address_line2",
+      "label": "City, State, ZIP",
+      "type": "text",
+      "placeholder": "Minneapolis, MN 55401"
+    },
+    {
+      "key": "phone_main",
+      "label": "Main Phone",
+      "type": "tel",
+      "placeholder": "(555) 123-4567"
+    },
+    {
+      "key": "phone_support",
+      "label": "Support Phone",
+      "type": "tel",
+      "placeholder": "(555) 987-6543"
+    },
+    {
+      "key": "email_general",
+      "label": "General Inquiries Email",
+      "type": "email",
+      "placeholder": "info@company.com"
+    },
+    {
+      "key": "email_support",
+      "label": "Support Email",
+      "type": "email",
+      "placeholder": "support@company.com"
+    },
+    {
+      "key": "hours",
+      "label": "Business Hours",
+      "type": "text",
+      "placeholder": "Mon-Fri 9am-5pm CT"
+    },
+    {
+      "key": "website",
+      "label": "Website",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "map_url",
+      "label": "Map/Directions Link",
+      "type": "url",
+      "placeholder": "https://maps.google.com/..."
+    },
+    {
+      "key": "additional_info",
+      "label": "Additional Information",
+      "type": "textarea",
+      "placeholder": "Parking info, accessibility notes, etc."
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "title": "Property Listing",
+  "description": "Real estate or rental property details",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Listing Title",
+      "type": "text",
+      "required": true,
+      "maxlength": 100,
+      "placeholder": "Charming 3BR Home in Riverside"
+    },
+    {
+      "key": "property_type",
+      "label": "Property Type",
+      "type": "select",
+      "required": true,
+      "options": ["House", "Apartment", "Condo", "Townhouse", "Duplex", "Land", "Commercial", "Other"]
+    },
+    {
+      "key": "listing_type",
+      "label": "Listing Type",
+      "type": "select",
+      "required": true,
+      "options": ["For Sale", "For Rent", "Lease", "Sold", "Rented", "Off Market"]
+    },
+    {
+      "key": "price",
+      "label": "Price",
+      "type": "text",
+      "required": true,
+      "placeholder": "$350,000 or $1,800/month"
+    },
+    {
+      "key": "address",
+      "label": "Address",
+      "type": "text",
+      "placeholder": "123 Main Street"
+    },
+    {
+      "key": "city_state_zip",
+      "label": "City, State, ZIP",
+      "type": "text",
+      "placeholder": "Minneapolis, MN 55401"
+    },
+    {
+      "key": "bedrooms",
+      "label": "Bedrooms",
+      "type": "number",
+      "min": 0
+    },
+    {
+      "key": "bathrooms",
+      "label": "Bathrooms",
+      "type": "text",
+      "placeholder": "2, 1.5, etc."
+    },
+    {
+      "key": "sqft",
+      "label": "Square Feet",
+      "type": "number",
+      "min": 0
+    },
+    {
+      "key": "lot_size",
+      "label": "Lot Size",
+      "type": "text",
+      "placeholder": "0.25 acres, 5,000 sqft"
+    },
+    {
+      "key": "year_built",
+      "label": "Year Built",
+      "type": "number",
+      "min": 1800,
+      "max": 2030
+    },
+    {
+      "key": "description",
+      "label": "Description",
+      "type": "textarea",
+      "required": true,
+      "rows": 6,
+      "placeholder": "Describe the property features, neighborhood, etc."
+    },
+    {
+      "key": "features",
+      "label": "Features & Amenities",
+      "type": "textarea",
+      "rows": 4,
+      "placeholder": "Central AC, hardwood floors, attached garage, etc."
+    },
+    {
+      "key": "image_url",
+      "label": "Main Photo URL",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "virtual_tour_url",
+      "label": "Virtual Tour Link",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "contact_name",
+      "label": "Contact Name",
+      "type": "text",
+      "placeholder": "Agent name"
+    },
+    {
+      "key": "contact_phone",
+      "label": "Contact Phone",
+      "type": "tel"
+    },
+    {
+      "key": "contact_email",
+      "label": "Contact Email",
+      "type": "email"
+    },
+    {
+      "key": "available_date",
+      "label": "Available Date",
+      "type": "date"
+    }
+  ]
+}

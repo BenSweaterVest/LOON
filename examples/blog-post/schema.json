@@ -1,0 +1,42 @@
+{
+  "title": "Blog Post Editor",
+  "description": "Create or edit a blog post",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Post Title",
+      "type": "text",
+      "placeholder": "Enter your post title"
+    },
+    {
+      "key": "author",
+      "label": "Author Name",
+      "type": "text",
+      "placeholder": "Your name"
+    },
+    {
+      "key": "excerpt",
+      "label": "Excerpt / Summary",
+      "type": "textarea",
+      "placeholder": "A brief summary for previews..."
+    },
+    {
+      "key": "body",
+      "label": "Post Content",
+      "type": "textarea",
+      "placeholder": "Write your post content here..."
+    },
+    {
+      "key": "tags",
+      "label": "Tags (comma-separated)",
+      "type": "text",
+      "placeholder": "news, update, announcement"
+    },
+    {
+      "key": "status",
+      "label": "Publication Status",
+      "type": "select",
+      "options": ["Draft", "Published", "Archived"]
+    }
+  ]
+}

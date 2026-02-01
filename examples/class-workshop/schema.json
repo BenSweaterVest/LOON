@@ -1,0 +1,102 @@
+{
+  "title": "Class or Workshop",
+  "description": "Educational offering, class, or workshop details",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Class Title",
+      "type": "text",
+      "required": true,
+      "maxlength": 100,
+      "placeholder": "Introduction to Yoga"
+    },
+    {
+      "key": "instructor",
+      "label": "Instructor",
+      "type": "text",
+      "placeholder": "Jane Smith"
+    },
+    {
+      "key": "description",
+      "label": "Description",
+      "type": "textarea",
+      "required": true,
+      "rows": 5,
+      "placeholder": "What will participants learn?"
+    },
+    {
+      "key": "level",
+      "label": "Skill Level",
+      "type": "select",
+      "options": ["All Levels", "Beginner", "Intermediate", "Advanced"]
+    },
+    {
+      "key": "schedule",
+      "label": "Schedule",
+      "type": "text",
+      "placeholder": "Tuesdays and Thursdays, 6:00 PM"
+    },
+    {
+      "key": "start_date",
+      "label": "Start Date",
+      "type": "date"
+    },
+    {
+      "key": "end_date",
+      "label": "End Date",
+      "type": "date",
+      "description": "Leave empty for ongoing classes"
+    },
+    {
+      "key": "duration",
+      "label": "Duration",
+      "type": "text",
+      "placeholder": "60 minutes, 6 weeks, etc."
+    },
+    {
+      "key": "location",
+      "label": "Location",
+      "type": "text",
+      "placeholder": "Studio A, Online, etc."
+    },
+    {
+      "key": "capacity",
+      "label": "Class Capacity",
+      "type": "number",
+      "min": 1,
+      "placeholder": "Maximum participants"
+    },
+    {
+      "key": "spots_available",
+      "label": "Spots Available",
+      "type": "number",
+      "min": 0
+    },
+    {
+      "key": "price",
+      "label": "Price",
+      "type": "text",
+      "placeholder": "$99, $25/class, Free"
+    },
+    {
+      "key": "requirements",
+      "label": "Requirements",
+      "type": "textarea",
+      "rows": 3,
+      "placeholder": "What to bring, prerequisites, etc."
+    },
+    {
+      "key": "registration_url",
+      "label": "Registration Link",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "status",
+      "label": "Status",
+      "type": "select",
+      "required": true,
+      "options": ["Open", "Waitlist", "Full", "Cancelled", "Completed"]
+    }
+  ]
+}

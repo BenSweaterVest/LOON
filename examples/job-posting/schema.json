@@ -1,0 +1,81 @@
+{
+  "title": "Job Posting",
+  "description": "Create or update a job listing",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Job Title",
+      "type": "text",
+      "required": true,
+      "placeholder": "Senior Software Engineer"
+    },
+    {
+      "key": "department",
+      "label": "Department",
+      "type": "text",
+      "placeholder": "Engineering"
+    },
+    {
+      "key": "location",
+      "label": "Location",
+      "type": "text",
+      "placeholder": "Minneapolis, MN (Hybrid)"
+    },
+    {
+      "key": "type",
+      "label": "Employment Type",
+      "type": "select",
+      "options": ["Full-time", "Part-time", "Contract", "Internship"]
+    },
+    {
+      "key": "salary_range",
+      "label": "Salary Range",
+      "type": "text",
+      "placeholder": "$80,000 - $120,000"
+    },
+    {
+      "key": "description",
+      "label": "Job Description",
+      "type": "textarea",
+      "required": true,
+      "placeholder": "Describe the role and responsibilities...",
+      "rows": 6
+    },
+    {
+      "key": "requirements",
+      "label": "Requirements",
+      "type": "textarea",
+      "placeholder": "List qualifications and requirements...",
+      "rows": 4
+    },
+    {
+      "key": "benefits",
+      "label": "Benefits",
+      "type": "textarea",
+      "placeholder": "List benefits and perks..."
+    },
+    {
+      "key": "apply_url",
+      "label": "Application Link",
+      "type": "url",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "contact_email",
+      "label": "Contact Email",
+      "type": "email",
+      "placeholder": "jobs@company.com"
+    },
+    {
+      "key": "status",
+      "label": "Posting Status",
+      "type": "select",
+      "options": ["Open", "Closed", "On Hold", "Filled"]
+    },
+    {
+      "key": "remote",
+      "label": "Remote Friendly",
+      "type": "checkbox"
+    }
+  ]
+}

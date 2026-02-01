@@ -1,0 +1,21 @@
+{
+  "title": "Introduction to Yoga",
+  "instructor": "Maria Santos",
+  "description": "Perfect for beginners, this class introduces fundamental yoga poses, breathing techniques, and meditation basics. You'll build strength, flexibility, and mindfulness in a supportive environment.\n\nNo prior experience needed. All bodies welcome.",
+  "level": "Beginner",
+  "schedule": "Tuesdays and Thursdays, 6:00 PM - 7:00 PM",
+  "start_date": "2026-02-01",
+  "end_date": "2026-03-15",
+  "duration": "60 minutes per session, 6-week series",
+  "location": "Studio B, Downtown Wellness Center",
+  "capacity": 15,
+  "spots_available": 7,
+  "price": "$120 for full series, $25 drop-in",
+  "requirements": "- Comfortable clothing\n- Yoga mat (rentals available for $3)\n- Water bottle\n- Arrive 10 minutes early for first class",
+  "registration_url": "",
+  "status": "Open",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "instructor"
+  }
+}

@@ -1,0 +1,33 @@
+# Wrangler configuration for local development
+# Documentation: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "loon-skeleton"
+compatibility_date = "2026-01-01"
+
+# Cloudflare Pages configuration
+pages_build_output_dir = "."
+
+# Local development settings
+[dev]
+port = 8788
+local_protocol = "http"
+
+# Environment variables for local development
+# Copy .env.example to .env.local and fill in your values
+# Wrangler will automatically load .env.local
+
+# To run locally (Phase 1 - no KV):
+#   npx wrangler pages dev .
+#
+# To run locally (Phase 2 - with KV):
+#   npx wrangler pages dev . --kv LOON_DB
+#
+# This starts a local server at http://localhost:8788
+# The functions in /functions will be available at /api/*
+
+# KV Namespace binding for Phase 2 (Team Mode)
+# Uncomment and configure for local development with KV
+# [[kv_namespaces]]
+# binding = "LOON_DB"
+# id = "your-kv-namespace-id"
+# preview_id = "your-preview-kv-namespace-id"

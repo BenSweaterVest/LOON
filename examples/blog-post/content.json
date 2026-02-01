@@ -1,0 +1,12 @@
+{
+  "title": "Getting Started with LOON",
+  "author": "The LOON Team",
+  "excerpt": "Learn how to set up your own serverless micro-CMS with Project LOON - no database required, completely free to host.",
+  "body": "Welcome to Project LOON!\n\nLOON (Lightweight Online Organizing Network) is a serverless micro-CMS that runs entirely on Cloudflare Pages and GitHub.\n\nKey Benefits:\n• Zero hosting costs - runs on free tiers\n• No database to maintain\n• Full version control with Git\n• Edit from any device\n• Simple, clean interface\n\nTo get started, check out the documentation at the project repository.",
+  "tags": "tutorial, getting-started, documentation",
+  "status": "Published",
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "admin"
+  }
+}

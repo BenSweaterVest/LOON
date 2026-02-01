@@ -1,0 +1,16 @@
+{
+  "title": "Holiday Office Hours",
+  "urgency": "Notice",
+  "effective_date": "2026-02-14",
+  "expiry_date": "2026-02-18",
+  "summary": "Modified hours for Presidents Day weekend",
+  "body": "Our office will have modified hours for the Presidents Day holiday:\n\nFriday, Feb 14: Normal hours (9am-5pm)\nSaturday, Feb 15: Closed\nSunday, Feb 16: Closed\nMonday, Feb 17 (Presidents Day): Closed\nTuesday, Feb 18: Normal hours resume\n\nFor urgent matters during the closure, please email emergency@example.com.",
+  "action_url": "",
+  "action_text": "",
+  "contact": "Front Desk: (555) 123-4567",
+  "pinned": true,
+  "_meta": {
+    "lastModified": "2026-01-30T12:00:00Z",
+    "modifiedBy": "admin"
+  }
+}
