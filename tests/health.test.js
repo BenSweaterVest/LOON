@@ -63,7 +63,9 @@ describe('Health Endpoint', () => {
                 images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
             };
 
-            const allHealthy = Object.values(checks).every(v => v);
+            // Only check required vars (github + kv), not optional images
+            const requiredChecks = [checks.github_repo, checks.github_token, checks.kv_database];
+            const allHealthy = requiredChecks.every(v => v);
             expect(allHealthy).toBe(true);
         });
     });
