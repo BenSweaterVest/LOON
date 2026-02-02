@@ -29,6 +29,9 @@ jobs:
             "functions/api/auth.js"
             "functions/api/save.js"
             "functions/api/health.js"
+            "functions/api/pages.js"
+            "functions/api/users.js"
+            "functions/api/_audit.js"
             "data/demo/schema.json"
             "data/demo/content.json"
           )
@@ -112,16 +115,20 @@ jobs:
       - name: Validate robots.txt
         run: |
           echo "Checking robots.txt..."
-          
+
           # Verify admin pages are blocked
           if ! grep -q "admin.html" robots.txt; then
             echo "WARNING: admin.html not blocked in robots.txt"
           fi
+<<<<<<< Updated upstream
           
+=======
+
+>>>>>>> Stashed changes
           if ! grep -q "/api/" robots.txt; then
             echo "WARNING: /api/ not blocked in robots.txt"
           fi
-          
+
           echo "robots.txt check complete"
       
       - name: Summary
@@ -135,8 +142,9 @@ jobs:
           echo ""
           echo "Next steps:"
           echo "1. Create Cloudflare Pages project"
-          echo "2. Add environment variables:"
+          echo "2. Create Cloudflare KV namespace (LOON_DB)"
+          echo "3. Add environment variables:"
           echo "   - GITHUB_REPO"
           echo "   - GITHUB_TOKEN"
-          echo "   - USER_DEMO_PASSWORD"
-          echo "3. Deploy!"
+          echo "4. Bootstrap admin user: ./scripts/bootstrap-admin.sh"
+          echo "5. Deploy!"
