@@ -108,17 +108,19 @@ export async function getAuditLogs(db, options = {}) {
         const BATCH_SIZE = 50;
         const logs = [];
         
-        for (let i = 0; i < filteredKeys.length && logs.length < limit; i += BATCH_SIZE) {
-            const batch = filteredKeys.slice(i, i + BATCH_SIZE);
+        for (let i = 0; i < filteredKeys.length; i += BATCH_SIZE) {
+            // Only fetch keys up to the limit to avoid unnecessary fetches
+            const remainingNeeded = limit - logs.length;
+            if (remainingNeeded <= 0) break;
+            
+            const batchSize = Math.min(BATCH_SIZE, remainingNeeded, filteredKeys.length - i);
+            const batch = filteredKeys.slice(i, i + batchSize);
             const batchPromises = batch.map(key =>
                 db.get(key.name, { type: 'json' })
             );
             
             const batchResults = await Promise.all(batchPromises);
             logs.push(...batchResults.filter(value => value));
-            
-            // Stop early if we've reached the limit
-            if (logs.length >= limit) break;
         }
 
         // Sort by timestamp descending (newest first)

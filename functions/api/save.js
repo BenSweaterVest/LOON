@@ -87,14 +87,7 @@ function checkRateLimit(ip) {
     }
     
     recent.push(now);
-    
-    // Clean up old entries to prevent memory leak
-    if (recent.length === 0) {
-        saveAttempts.delete(ip);
-    } else {
-        saveAttempts.set(ip, recent);
-    }
-    
+    saveAttempts.set(ip, recent);
     return true;
 }
 
