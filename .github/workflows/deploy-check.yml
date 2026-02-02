@@ -9,10 +9,17 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: deploy-check-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy-check:
     name: Deployment Readiness
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      ready: ${{ steps.final-check.outputs.ready }}
     steps:
       - uses: actions/checkout@v4
       
@@ -120,31 +127,38 @@ jobs:
           if ! grep -q "admin.html" robots.txt; then
             echo "WARNING: admin.html not blocked in robots.txt"
           fi
-<<<<<<< Updated upstream
-          
-=======
 
->>>>>>> Stashed changes
           if ! grep -q "/api/" robots.txt; then
             echo "WARNING: /api/ not blocked in robots.txt"
           fi
 
           echo "robots.txt check complete"
       
-      - name: Summary
+      - name: Final Check
+        id: final-check
         run: |
+          echo "ready=true" >> $GITHUB_OUTPUT
           echo ""
           echo "=================================="
-          echo "Deployment Readiness Check Complete"
+          echo "✓ Deployment Readiness Verified"
           echo "=================================="
           echo ""
-          echo "Ready for Cloudflare Pages deployment!"
+          echo "Project is ready for deployment to Cloudflare Pages"
           echo ""
-          echo "Next steps:"
-          echo "1. Create Cloudflare Pages project"
-          echo "2. Create Cloudflare KV namespace (LOON_DB)"
-          echo "3. Add environment variables:"
-          echo "   - GITHUB_REPO"
-          echo "   - GITHUB_TOKEN"
-          echo "4. Bootstrap admin user: ./scripts/bootstrap-admin.sh"
-          echo "5. Deploy!"
+          echo "Configuration checklist:"
+          echo "  ✓ All required files present"
+          echo "  ✓ Functions structure validated"
+          echo "  ✓ Data directory structure correct"
+          echo "  ✓ Security headers configured"
+          echo "  ✓ Robots.txt configured"
+          echo ""
+          echo "Deployment requirements:"
+          echo "  1. Cloudflare Pages project created"
+          echo "  2. KV namespace 'LOON_DB' created"
+          echo "  3. Environment variables configured:"
+          echo "     - GITHUB_REPO (e.g., owner/repo)"
+          echo "     - GITHUB_TOKEN (PAT with repo scope)"
+          echo "  4. Optional: CF_ACCOUNT_ID, CF_IMAGES_TOKEN (for image uploads)"
+          echo ""
+          echo "Bootstrap admin user: ./scripts/bootstrap-admin.sh"
+

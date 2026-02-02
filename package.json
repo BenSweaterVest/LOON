@@ -7,13 +7,15 @@
   "scripts": {
     "dev": "wrangler pages dev . --port 8788",
     "dev:kv": "wrangler pages dev . --port 8788 --kv LOON_DB",
-    "test": "vitest run",
+    "test": "vitest run --reporter=verbose",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "lint": "npm run lint:js && npm run lint:json",
     "lint:js": "node --check functions/api/*.js",
     "lint:json": "node scripts/validate-json.mjs",
-    "validate": "npm run lint && npm test",
+    "check:env": "node scripts/check-env.mjs",
+    "validate": "npm run lint && npm run test && npm run check:env",
     "release": "npm run validate && echo 'Ready for release'"
   },
   "devDependencies": {

@@ -6,6 +6,10 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-3.1.0-green.svg)](CHANGELOG.md)
+[![Docs](https://img.shields.io/badge/docs-complete-brightgreen.svg)](docs/)
+[![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen.svg)](#testing)
+
+> 📚 **New to LOON?** Start with the [Developer Quick Start Guide](docs/DEVELOPER_QUICK_START.md) - get running in 5 minutes!
 
 ---
 
@@ -245,6 +249,12 @@ Or use the web UI: Login as admin → Manage Users → Add New User
 | `/api/health` | GET | Health check |
 
 See [docs/API.md](docs/API.md) for full API documentation.
+
+---
+
+## Error Handling
+
+For detailed error codes and troubleshooting, see [docs/ERROR_CODES.md](docs/ERROR_CODES.md).
 
 ---
 

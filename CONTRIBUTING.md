@@ -2,6 +2,8 @@
 
 This document provides guidelines and instructions for contributing.
 
+> **New to the project?** Start with [Developer Quick Start Guide](docs/DEVELOPER_QUICK_START.md) - it has everything you need to get running in 5 minutes!
+
 ## Code of Conduct
 
 Be respectful, inclusive, and constructive. We're building something useful together.
@@ -40,7 +42,35 @@ Be respectful, inclusive, and constructive. We're building something useful toge
 - GitHub account
 - Cloudflare account (free tier)
 - Git installed locally
+- Node.js 18+ installed
 - A text editor (VS Code recommended)
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/loon.git
+   cd loon
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Check environment variables** (optional for local testing):
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your values (or skip for test-only work)
+   npm run check:env
+   ```
+
+4. **Verify the setup**:
+   ```bash
+   npm run lint        # Check syntax
+   npm test            # Run tests
+   npm run validate    # Full validation
+   ```
 
 ### Local Testing
 
