@@ -13,20 +13,17 @@ Have ready:
 
 ---
 
-## Step 1: Create User Credentials
+## Step 1: Create User via Admin Panel
 
-Run the management script:
+The easiest way to add users is through the web UI:
 
-```bash
-./scripts/manage-users.sh add <page-id>
-```
+1. Log in to `/admin.html` as an admin
+2. Click "Manage Users" tab
+3. Click "Add New User"
+4. Enter username and set temporary password
+5. Click "Create User"
 
-Example:
-```bash
-./scripts/manage-users.sh add johns-truck
-```
-
-**Save the generated password** - you'll need to send it to the user.
+The new user can now log in and change their password.
 
 ---
 
@@ -198,16 +195,19 @@ When a user no longer needs access:
 
 ### Quick Deactivation
 
+1. Log in to `/admin.html` as admin
+2. Click "Manage Users"
+3. Find the user to remove
+4. Click "Delete"
+5. Confirm deletion
+
+The user's account is deactivated immediately. Data remains for archival.
+
+### Full Removal (Optional)
+
+If you want to also delete their page content:
+
 ```bash
-./scripts/manage-users.sh remove <page-id>
-```
-
-This sets an unusable password. Data remains for archival.
-
-### Full Removal
-
-```bash
-./scripts/manage-users.sh remove <page-id>
 rm -rf data/<page-id>
 git add -A
 git commit -m "Remove <page-id>"
@@ -218,7 +218,7 @@ git push
 
 - [ ] Confirm user should be removed
 - [ ] Backup their content (if needed)
-- [ ] Run remove command
+- [ ] Remove via Admin Panel
 - [ ] Delete data folder (if full removal)
-- [ ] Commit and push
+- [ ] Commit and push (if removing data)
 - [ ] Notify user their access has ended

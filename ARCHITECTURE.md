@@ -114,6 +114,8 @@ LOON is built on a "Static Frontend, Serverless Gatekeeper" architecture with a 
 | `content.js` | Content deletion (admin/editor) |
 | `audit.js` | Audit log (admin only) |
 | `health.js` | System status |
+| `_cors.js` | Shared CORS utility |
+| `_audit.js` | Shared audit logging |
 
 - Run on Cloudflare's edge network
 - Handle authentication and authorization
@@ -172,17 +174,20 @@ LOON is built on a "Static Frontend, Serverless Gatekeeper" architecture with a 
 
 ```
 1. User visits https://site.pages.dev/admin.html
-2. User enters Page ID and Password
+2. User enters Username and Password
 3. Browser POSTs to /api/auth
-4. Function validates password against USER_{PAGEID}_PASSWORD env var
-5. On success, browser fetches schema.json and content.json
-6. Editor form is generated from schema
-7. User edits and clicks Save
-8. Browser POSTs to /api/save with session token + content
-9. Function validates session + RBAC
-10. Function commits content.json to GitHub via API
-11. GitHub webhook triggers Cloudflare Pages rebuild
-12. ~60 seconds later, new content is live
+4. Function validates password against KV user record (PBKDF2 hash)
+5. On success, browser receives session token
+6. Browser fetches schema.json and content.json
+7. Editor form is generated from schema
+8. User edits and clicks Save (as Draft or Direct)
+9. Browser POSTs to /api/save with session token + content
+10. Function validates session + RBAC
+11. If draft: saves only to draft field
+12. If direct (admin/editor): saves to both draft + published
+13. Function commits content.json to GitHub via API
+14. GitHub webhook triggers Cloudflare Pages rebuild
+15. ~60 seconds later, content is live (if published)
 ```
 
 ---

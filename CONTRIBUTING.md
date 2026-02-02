@@ -177,7 +177,7 @@ When contributing, keep these principles in mind:
 2. Export `onRequestPost`, `onRequestGet`, `onRequestDelete`, etc. as needed
 3. Include CORS headers and `onRequestOptions` handler
 4. Add rate limiting if accepting user input
-5. Add session validation if Phase 2 only
+5. Add session validation (all KV-based, no environment variables)
 6. Add comprehensive JSDoc documentation at top of file
 7. Document in `docs/API.md`
 

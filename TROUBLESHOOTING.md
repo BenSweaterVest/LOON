@@ -138,25 +138,21 @@ Common issues and their solutions.
 1. Set variables in "Production" environment
 2. Trigger redeploy: Deployments > ... > Retry deployment
 
-### New user can't log in after running manage-users.sh
+### New user can't log in after creation
 
-**Cause:** Cloudflare requires a new deployment for environment variable changes to take effect in Functions.
+**Causes:**
+1. User credentials haven't synced to KV yet (< 1 second typically)
+2. User has wrong password
+3. Admin panel is cached
 
 **Solutions:**
-1. Wait 1-2 minutes for automatic propagation
-2. If still not working, trigger a redeploy:
-   - Cloudflare Dashboard > Pages > Your Project
-   - Deployments > Latest > ... > Retry deployment
-3. Or push an empty commit:
-   ```bash
-   git commit --allow-empty -m "Trigger redeploy for new user"
-   git push
-   ```
-
-**Prevention:** After adding a user with `manage-users.sh`:
-1. Create the required data files first
-2. Commit and push (this triggers a redeploy)
-3. Then give credentials to the user
+1. Wait a few seconds and try again
+2. Check the user exists: Admin Panel → Manage Users (should be in list)
+3. Reset user password:
+   - Admin Panel → Manage Users
+   - Click user → "Reset Password"
+   - Send new temporary password to user
+4. Clear browser cache and refresh
 
 ### Functions returning 404
 
@@ -176,8 +172,9 @@ Common issues and their solutions.
 ```
 GITHUB_REPO=your-username/repo-name
 GITHUB_TOKEN=github_pat_xxxxx
-USER_DEMO_PASSWORD=loon123
 ```
+
+Note: User passwords are no longer stored in environment variables. Users are stored in Cloudflare KV only.
 
 ### Port already in use
 

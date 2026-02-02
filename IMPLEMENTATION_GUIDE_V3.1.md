@@ -8,111 +8,92 @@
 
 ## Overview
 
-This guide covers implementing four major features:
+This guide documents the four features implemented in v3.1.0:
 
-1. **Unify Authentication Modes** - Remove Phase 1, keep only Phase 2 (KV-based auth)
-2. **Draft/Publish Workflow** - Add content states (draft vs published)
-3. **Basic Media Management** - Cloudflare Images integration
-4. **JSON Schema Standard** - Convert to industry-standard schema format
+1. **KV-Only Authentication** - Users stored in Cloudflare KV (no environment variables)
+2. **Draft/Publish Workflow** - Content stages before going live
+3. **Image Upload Management** - Cloudflare Images integration
+4. **JSON Schema Support** - Industry-standard schema format
 
 ---
 
-## Feature 1: Unify Authentication Modes
+## Feature 1: KV-Only Authentication
 
 ### What Changed
 
-**Removed**:
-- Phase 1 authentication (environment variable passwords)
-- `USER_{PAGEID}_PASSWORD` environment variable support
+**Previous Model (Phase 1)**:
+- User passwords stored in environment variables (`USER_{PAGEID}_PASSWORD`)
+- Limited to ~95 users due to env var constraints
+- Tightly coupled to page IDs
 
-**Kept**:
-- KV-based authentication (users + sessions in KV)
-- `/api/auth` endpoint (unified for all users)
-- RBAC system (Admin, Editor, Contributor)
+**Current Model (v3.1.0)**:
+- All users stored in Cloudflare KV `LOON_DB` namespace
+- Unlimited users
+- Users can manage multiple pages
+- Passwords hashed with PBKDF2 (100,000 iterations)
+- Session tokens are UUIDs with 24-hour expiry
 
-### Migration Steps
+### Migration (If Upgrading)
 
-#### Step 1: Run Migration Script
+If you have Phase 1 users in environment variables:
 
 ```bash
-# Set environment variables
-export CF_ACCOUNT_ID="your-cloudflare-account-id"
-export CF_API_TOKEN="your-cloudflare-api-token"
+# Set up Cloudflare API access
+export CF_ACCOUNT_ID="your-account-id"
+export CF_API_TOKEN="your-api-token"
 export KV_NAMESPACE_ID="your-kv-namespace-id"
 
-# Scan for Phase 1 users and list them
-export USER_DEMO_PASSWORD="password123"  # Example Phase 1 user
-export USER_BLOG_PASSWORD="secret456"    # Example Phase 1 user
-
-# Run migration
+# Run migration script
 node scripts/migrate-phase1-to-phase2.js
 ```
 
-**Output**:
-```
-======================================================================
-Phase 1 → Phase 2 Migration
-======================================================================
+The script will:
+1. Scan for `USER_*_PASSWORD` environment variables
+2. Create KV user records with random passwords
+3. Output new credentials to share with users
 
-Found 2 Phase 1 user(s):
-  - demo (page: demo)
-  - blog (page: blog)
+### Setup Steps
 
-✓ Migrated: demo
-✓ Migrated: blog
+1. **Create KV Namespace**
+   - Cloudflare Dashboard → KV Namespaces
+   - Create new namespace: `LOON_DB`
 
-======================================================================
-Migration Complete
-======================================================================
+2. **Bind to Pages Project**
+   - Pages → Your Project → Settings → Functions
+   - Add KV namespace binding: `LOON_DB`
 
-Successfully migrated: 2/2 users
+3. **Create First Admin User**
+   ```bash
+   ./scripts/bootstrap-admin.sh admin MySecurePassword123
+   ```
 
-NEW CREDENTIALS (share securely with users):
-----------------------------------------------------------------------
+4. **Deploy**
+   - Trigger redeploy in Cloudflare Pages
 
-Username: demo
-Password: AbCdEfGh12345678
-Role:     contributor
-Page:     demo
+### Technical Details
 
-Username: blog
-Password: XyZ9876543210MnO
-Role:     contributor
-Page:     blog
-
-----------------------------------------------------------------------
-```
-
-#### Step 2: Share Credentials with Users
-
-Email/Slack each user their new credentials:
-
-```
-Hi [User],
-
-Your LOON account has been migrated to the new authentication system.
-
-New Login Credentials:
-- URL: https://your-site.pages.dev/admin.html
-- Username: [username]
-- Password: [temporary-password]
-
-Please log in and change your password via the "My Account" tab.
-
-Thanks!
+**User Record (KV)**:
+```json
+{
+  "username": "admin",
+  "role": "admin",
+  "hash": "pbkdf2(password)",
+  "salt": "random-16-char-salt",
+  "created": "2026-02-02T10:00:00Z",
+  "modified": "2026-02-02T10:00:00Z",
+  "bootstrap": false
+}
 ```
 
-#### Step 3: Remove Phase 1 Environment Variables
-
-In Cloudflare Pages → Settings → Environment variables:
-- Delete all `USER_*_PASSWORD` variables
-- Keep `GITHUB_TOKEN` and `GITHUB_REPO`
-
-#### Step 4: Verify Migration
-
-1. Test login with new credentials at `/admin.html`
-2. Verify users can edit their assigned pages
-3. Check "Manage Users" tab shows all migrated users
+**Session Record (KV, 24h TTL)**:
+```json
+{
+  "username": "admin",
+  "role": "admin",
+  "created": "2026-02-02T10:00:00Z",
+  "ip": "1.2.3.4"
+}
+```
 
 ---
 
