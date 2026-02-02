@@ -11,7 +11,7 @@ LOON has two modes. Ask your administrator which one applies to you:
 | Mode | Login With | Admin URL |
 |------|------------|-----------|
 | **Directory Mode** (Phase 1) | Page ID + Password | `/admin.html` |
-| **Team Mode** (Phase 2) | Username + Password | `/admin-v2.html` |
+| **Team Mode** (Phase 2) | Username + Password | `/admin.html` |
 
 Most of this guide applies to both modes. Differences are noted where relevant.
 
@@ -39,7 +39,7 @@ Most of this guide applies to both modes. Differences are noted where relevant.
 4. Click **Sign In**
 
 **Team Mode:**
-1. Go to: `https://your-site.pages.dev/admin-v2.html`
+1. Go to: `https://your-site.pages.dev/admin.html`
 2. Enter your **Username**
 3. Enter your **Password**
 4. Click **Login**
