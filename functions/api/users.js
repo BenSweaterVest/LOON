@@ -56,7 +56,7 @@
  *   - Deleting user also invalidates their sessions
  * 
  * @module functions/api/users
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';

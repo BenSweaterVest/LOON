@@ -47,7 +47,7 @@ describe('Schema Validation', () => {
                     const validTypes = [
                         'text', 'textarea', 'select', 'email', 'url',
                         'number', 'tel', 'date', 'time', 'datetime',
-                        'checkbox', 'hidden'
+                        'checkbox', 'hidden', 'image'
                     ];
                     
                     const content = readFileSync(schemaPath, 'utf8');

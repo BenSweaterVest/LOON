@@ -219,7 +219,7 @@ npx wrangler pages dev . --port 8789
 **Causes:**
 1. Private/incognito browsing
 2. Browser clears data on close
-3. Session expired (7 days)
+3. Session expired (24 hours)
 
 **Solution:** Check browser privacy settings
 
@@ -244,7 +244,7 @@ npx wrangler pages dev . --port 8789
 
 ---
 
-## Phase 2 (Team Mode) Issues
+## Authentication & KV Issues
 
 ### "KV not configured" error
 
@@ -268,7 +268,7 @@ npx wrangler pages dev . --port 8789
 **Solutions:**
 1. Log in again
 2. Clear localStorage and try again
-3. Check that /api/auth-v2 returns valid response
+3. Check that /api/auth returns valid response
 
 ### "Admin access required" error
 

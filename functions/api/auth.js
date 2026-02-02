@@ -46,7 +46,7 @@
  *   session:{token}    -> { username, role, created, ip } [TTL: 24h]
  *
  * @module functions/api/auth
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -57,25 +57,43 @@ import { logAudit } from './_audit.js';
  */
 const CORS_OPTIONS = { methods: 'GET, POST, PATCH, DELETE, OPTIONS' };
 
-// Rate limiting (in-memory, resets on worker restart)
-const loginAttempts = new Map();
+// Rate limiting constants (KV-backed)
 const RATE_LIMIT = { maxAttempts: 5, windowMs: 60000 }; // 5 attempts per minute
 
 /**
- * Check rate limit for IP
+ * Check rate limit using KV (persists across worker restarts)
+ * Key format: ratelimit:auth:{ip}
+ * Value: JSON array of timestamps within window
  */
-function checkRateLimit(ip) {
+async function checkRateLimit(db, ip) {
     const now = Date.now();
-    const attempts = loginAttempts.get(ip) || [];
-    const recentAttempts = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+    const key = `ratelimit:auth:${ip}`;
     
-    if (recentAttempts.length >= RATE_LIMIT.maxAttempts) {
-        return false;
+    try {
+        const stored = await db.get(key);
+        let attempts = stored ? JSON.parse(stored) : [];
+        
+        // Filter to only recent attempts
+        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+        
+        if (recent.length >= RATE_LIMIT.maxAttempts) {
+            return false;
+        }
+        
+        // Add current attempt
+        recent.push(now);
+        
+        // Store updated attempts with TTL matching rate limit window
+        await db.put(key, JSON.stringify(recent), {
+            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
+        });
+        
+        return true;
+    } catch (err) {
+        console.error('Rate limit check error:', err);
+        // Fail open on KV errors (don't block requests)
+        return true;
     }
-    
-    recentAttempts.push(now);
-    loginAttempts.set(ip, recentAttempts);
-    return true;
 }
 
 /**
@@ -142,7 +160,7 @@ export async function onRequestPost(context) {
 
     // Rate limit check
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!checkRateLimit(ip)) {
+    if (!(await checkRateLimit(db, ip))) {
         return jsonResponse({ error: 'Too many login attempts. Try again later.' }, 429, env, request);
     }
 

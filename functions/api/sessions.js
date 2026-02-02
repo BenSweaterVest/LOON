@@ -29,7 +29,7 @@
  *   - Revoke all sessions during a security incident
  *
  * @module functions/api/sessions
- * @version 2.0.0 (Phase 2 - Team Mode)
+ * @version 3.1.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -101,6 +101,7 @@ export async function onRequestGet(context) {
             .map(result => {
                 const tokenId = result.key.replace('session:', '');
                 return {
+                    tokenId: tokenId,
                     tokenPreview: tokenId.substring(0, 8) + '...',
                     username: result.data.username,
                     role: result.data.role,

@@ -35,7 +35,7 @@
  *   Audit logs are automatically deleted after 30 days (configurable).
  *
  * @module functions/api/_audit
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 /**

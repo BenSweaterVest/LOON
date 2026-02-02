@@ -153,38 +153,6 @@ Date Created: ___________________
 
 ## Bulk Onboarding
 
-For adding many users at once:
-
-### 1. Create a list file (`users.txt`):
-
-```
-page-id-1,schema-type
-page-id-2,schema-type
-page-id-3,schema-type
-```
-
-### 2. Run batch script:
-
-```bash
-while IFS=, read -r page_id schema_type; do
-    echo "Creating $page_id..."
-    ./scripts/manage-users.sh add "$page_id"
-    cp -r "examples/$schema_type" "data/$page_id"
-done < users.txt
-
-git add data/
-git commit -m "Bulk add users"
-git push
-```
-
-### 3. Export credentials
-
-The script outputs passwords. Save them securely for distribution.
-
----
-
-## Bulk Onboarding (Phase 2)
-
 For onboarding many users at once, use the bulk user creation script.
 
 ### 1. Create CSV file

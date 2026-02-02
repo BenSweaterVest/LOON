@@ -128,5 +128,5 @@ jobs:
             npm test
           else
             echo "No test script found, skipping automated tests"
-            echo "See docs/TESTING.md for manual testing procedures"
+            echo "See QA_TESTING_GUIDE.md for manual testing procedures"
           fi

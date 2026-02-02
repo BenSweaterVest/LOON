@@ -27,7 +27,7 @@
  *   None required - templates are public
  *
  * @module functions/api/templates
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -102,7 +102,7 @@ async function fetchTemplates(env) {
     const headers = {
         'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/3.0'
+        'User-Agent': 'LOON-CMS/3.1.0'
     };
 
     // List examples/ directory

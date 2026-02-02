@@ -23,7 +23,7 @@
  * delete the folder via Git.
  *
  * @module functions/api/content
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -66,7 +66,7 @@ async function deleteFromGitHub(env, path, message) {
     const headers = {
         'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS',
+        'User-Agent': 'LOON-CMS/3.1.0',
         'Content-Type': 'application/json'
     };
     

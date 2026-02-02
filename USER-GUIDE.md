@@ -4,16 +4,9 @@ A guide for content editors using Project LOON.
 
 ---
 
-## Which Mode Are You Using?
+## Authentication Mode
 
-LOON has two modes. Ask your administrator which one applies to you:
-
-| Mode | Login With | Admin URL |
-|------|------------|-----------|
-| **Directory Mode** (Phase 1) | Page ID + Password | `/admin.html` |
-| **Team Mode** (Phase 2) | Username + Password | `/admin.html` |
-
-Most of this guide applies to both modes. Differences are noted where relevant.
+LOON uses a unified authentication model. All users log in with a **username** and **password**.
 
 ---
 
@@ -21,24 +14,12 @@ Most of this guide applies to both modes. Differences are noted where relevant.
 
 ### What You Need
 
-**Directory Mode (Phase 1):**
-1. **Page ID** - Provided by your administrator (e.g., `demo`, `tacos`)
-2. **Password** - A unique password for your page
-
-**Team Mode (Phase 2):**
 1. **Username** - Your personal username
 2. **Password** - Your account password
 3. **Role** - Your permission level (Admin, Editor, or Contributor)
 
 ### Logging In
 
-**Directory Mode:**
-1. Go to: `https://your-site.pages.dev/admin.html`
-2. Enter your **Page ID** (lowercase), or click **Browse** to see available pages
-3. Enter your **Password**
-4. Click **Sign In**
-
-**Team Mode:**
 1. Go to: `https://your-site.pages.dev/admin.html`
 2. Enter your **Username**
 3. Enter your **Password**
@@ -49,9 +30,7 @@ Most of this guide applies to both modes. Differences are noted where relevant.
 
 ### Staying Logged In
 
-Check **"Remember me"** to stay signed in. 
-- Directory Mode: 7 days
-- Team Mode: 24 hours (session token expires)
+Check **"Remember me"** to stay signed in. Sessions expire after 24 hours.
 
 Only use this on your personal device, not shared computers.
 
@@ -96,26 +75,16 @@ The counter changes color as you approach the limit:
 
 ## Saving Your Work
 
-### Manual Save
+### Saving
 
-Click **Save Changes** or press `Ctrl+S` (Windows) or `Cmd+S` (Mac).
+- **Save as Draft**: Saves a draft (not public)
+- **Save Changes**: Saves and updates published content (admins/editors only)
 
 You'll see a confirmation message when saved successfully.
 
-### Auto-Save (Drafts)
-
-Your work is automatically saved to your browser every 30 seconds. This protects you if:
-- You accidentally close the browser
-- Your internet disconnects
-- Your computer crashes
-
-When you log in again, you'll be asked if you want to restore your draft.
-
-**Note:** Drafts are only saved on the device you're using. They're not published until you click Save.
-
 ### When Changes Go Live
 
-After saving:
+After publishing:
 1. Changes are sent to the server
 2. The website rebuilds automatically
 3. Changes appear publicly in about **60 seconds**
@@ -134,11 +103,7 @@ After saving:
 
 ## Viewing Your Page
 
-Click **Preview** to open your public page in a new tab.
-
-If you just saved, you may need to:
-1. Wait 60 seconds for changes to publish
-2. Refresh the page (`Ctrl+R` or `Cmd+R`)
+Open your public page in a new tab. If you just published, wait ~60 seconds, then refresh.
 
 ---
 
@@ -161,11 +126,9 @@ The admin panel automatically matches your device's dark/light mode setting. No 
 ### Images
 
 If you need to add images:
-1. Upload your image to a service like Imgur, Google Drive (public), or your website
-2. Copy the image URL (should end in .jpg, .png, etc.)
-3. Paste the URL into the image field
-
-The editor will show a preview if the URL is valid.
+1. Click **Upload Image** in the field
+2. Select a file (JPEG/PNG/GIF/WebP, max 10MB)
+3. The URL and preview are added automatically
 
 ### Multiple Lines
 
@@ -179,8 +142,6 @@ You can use standard punctuation and special characters. Avoid using code or HTM
 
 ## Changing Your Password
 
-*This section only applies to Team Mode (Phase 2).*
-
 1. Log in to the admin panel
 2. Click the **My Account** tab
 3. Enter your current password
@@ -192,21 +153,19 @@ Your password is changed immediately. Use the new password next time you log in.
 
 ---
 
-## Team Mode: Understanding Roles
-
-*This section only applies to Team Mode (Phase 2).*
+## Understanding Roles
 
 ### Role Permissions
 
 | Role | What You Can Do |
 |------|-----------------|
-| **Contributor** | Create new content, edit your own content |
-| **Editor** | Edit any content, delete content |
-| **Admin** | Edit any content, delete content, manage users |
+| **Contributor** | Save drafts, edit your own content |
+| **Editor** | Save drafts, publish, edit any content, delete content |
+| **Admin** | Save drafts, publish, edit any content, delete content, manage users |
 
 ### Content Ownership
 
-In Team Mode, content tracks who created it. Contributors can only edit content they created. If you try to edit someone else's content, you'll see a "Permission Denied" error.
+Content tracks who created it. Contributors can only edit content they created. If you try to edit someone else's content, you'll see a "Permission Denied" error.
 
 ### Viewing Your Role
 
@@ -218,7 +177,7 @@ After logging in, your role is displayed next to your username (e.g., "admin" ba
 
 ### I forgot my password
 
-Contact your administrator. They can reset your password using the admin script.
+Contact your administrator. They can reset your password in the admin panel.
 
 ### My changes aren't showing up
 

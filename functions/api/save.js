@@ -59,7 +59,7 @@
  *   - RBAC enforcement on every save
  *
  * @module functions/api/save
- * @version 3.0.0
+ * @version 3.1.0 
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -70,25 +70,43 @@ import { logAudit } from './_audit.js';
  */
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
-// Rate limiting
-const saveAttempts = new Map();
+// Rate limiting constants
 const RATE_LIMIT = { maxRequests: 30, windowMs: 60000 };
 
 /**
- * Check rate limit
+ * Check rate limit using KV (persists across worker restarts)
+ * Key format: ratelimit:save:{ip}
+ * Value: JSON array of timestamps within window
  */
-function checkRateLimit(ip) {
+async function checkRateLimit(db, ip) {
     const now = Date.now();
-    const attempts = saveAttempts.get(ip) || [];
-    const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+    const key = `ratelimit:save:${ip}`;
     
-    if (recent.length >= RATE_LIMIT.maxRequests) {
-        return false;
+    try {
+        const stored = await db.get(key);
+        let attempts = stored ? JSON.parse(stored) : [];
+        
+        // Filter to only recent attempts
+        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+        
+        if (recent.length >= RATE_LIMIT.maxRequests) {
+            return false;
+        }
+        
+        // Add current attempt
+        recent.push(now);
+        
+        // Store updated attempts with TTL matching rate limit window
+        await db.put(key, JSON.stringify(recent), {
+            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
+        });
+        
+        return true;
+    } catch (err) {
+        console.error('Rate limit check error:', err);
+        // Fail open on KV errors (don't block requests)
+        return true;
     }
-    
-    recent.push(now);
-    saveAttempts.set(ip, recent);
-    return true;
 }
 
 /**
@@ -119,7 +137,7 @@ async function fetchGitHubFile(env, path) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS'
+            'User-Agent': 'LOON-CMS/3.1.0', 
         }
     });
     
@@ -141,9 +159,11 @@ async function fetchGitHubFile(env, path) {
 }
 
 /**
- * Commit content to GitHub
+ * Commit content to GitHub with exponential backoff retry
+ * Handles transient failures (rate limits, timeouts) gracefully
+ * Retries on: 429 (rate limit), 5xx errors, network failures
  */
-async function commitToGitHub(env, path, content, message, existingSha) {
+async function commitToGitHub(env, path, content, message, existingSha, retries = 3) {
     const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
     
     const body = {
@@ -155,24 +175,56 @@ async function commitToGitHub(env, path, content, message, existingSha) {
         body.sha = existingSha;
     }
     
-    const res = await fetch(url, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
+    let lastError;
     
-    if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`GitHub PUT failed: ${res.status} - ${errText}`);
+    for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'LOON-CMS/3.1.0', 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            
+            if (res.ok) {
+                const result = await res.json();
+                return result.commit.sha;
+            }
+            
+            // Check if error is retryable
+            if (res.status === 429 || res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504) {
+                const errText = await res.text();
+                lastError = new Error(`GitHub API error: ${res.status} - ${errText}`);
+                
+                // Only retry if we have attempts left
+                if (attempt < retries - 1) {
+                    // Exponential backoff: 1s, 2s, 4s
+                    const backoffMs = Math.pow(2, attempt) * 1000;
+                    console.warn(`GitHub API error (attempt ${attempt + 1}/${retries}), retrying in ${backoffMs}ms: ${res.status}`);
+                    await new Promise(resolve => setTimeout(resolve, backoffMs));
+                    continue;
+                }
+            } else {
+                // Non-retryable error (4xx except 429)
+                const errText = await res.text();
+                throw new Error(`GitHub PUT failed: ${res.status} - ${errText}`);
+            }
+        } catch (err) {
+            lastError = err;
+            if (attempt < retries - 1 && (err instanceof TypeError || err.message.includes('fetch failed'))) {
+                const backoffMs = Math.pow(2, attempt) * 1000;
+                console.warn(`Network error (attempt ${attempt + 1}/${retries}), retrying in ${backoffMs}ms: ${err.message}`);
+                await new Promise(resolve => setTimeout(resolve, backoffMs));
+                continue;
+            }
+        }
     }
     
-    const result = await res.json();
-    return result.commit.sha;
+    throw lastError || new Error('GitHub commit failed after retries');
 }
 
 /**
@@ -225,10 +277,11 @@ export async function onRequestPost(context) {
         return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
     }
 
-    // Rate limit
+    // Rate limit (using KV for persistence across worker restarts)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!checkRateLimit(ip)) {
-        return jsonResponse({ error: 'Rate limit exceeded. Try again later.' }, 429, env, request);
+    const rateLimited = !(await checkRateLimit(db, ip));
+    if (rateLimited) {
+        return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     try {
@@ -241,11 +294,15 @@ export async function onRequestPost(context) {
         }
 
         // Parse request body
-        const { pageId, content } = await request.json();
+        const { pageId, content, saveAs } = await request.json();
 
         if (!pageId || !content) {
             return jsonResponse({ error: 'pageId and content required' }, 400, env, request);
         }
+        
+        // Determine save type: 'draft' or 'direct' (direct for backward compatibility)
+        const requestedSaveType = saveAs || 'direct';
+        let saveType = requestedSaveType;
 
         // Sanitize pageId
         const sanitizedPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
@@ -253,10 +310,29 @@ export async function onRequestPost(context) {
             return jsonResponse({ error: 'Invalid pageId format' }, 400, env, request);
         }
 
-        // Content size limit (1MB)
+        // Content size validation
+        // Serialize content and check size BEFORE encoding
         const contentStr = JSON.stringify(content);
-        if (contentStr.length > 1024 * 1024) {
-            return jsonResponse({ error: 'Content exceeds 1MB limit' }, 413, env, request);
+        const MAX_SIZE = 1024 * 1024; // 1MB
+        
+        if (contentStr.length > MAX_SIZE) {
+            const sizeMB = (contentStr.length / (1024 * 1024)).toFixed(2);
+            return jsonResponse({
+                error: 'Content exceeds 1MB limit',
+                current: `${sizeMB}MB`,
+                max: '1MB',
+                suggestion: 'Reduce content size or split into multiple pages'
+            }, 413, env, request);
+        }
+        
+        // Also validate encoded size (Base64 expands content by ~33%)
+        const encodedSize = btoa(unescape(encodeURIComponent(contentStr))).length;
+        if (encodedSize > MAX_SIZE) {
+            return jsonResponse({
+                error: 'Encoded content exceeds 1MB limit (Base64 expansion)',
+                raw: `${(contentStr.length / (1024 * 1024)).toFixed(2)}MB`,
+                encoded: `${(encodedSize / (1024 * 1024)).toFixed(2)}MB`
+            }, 413, env, request);
         }
 
         // Fetch existing file
@@ -269,34 +345,64 @@ export async function onRequestPost(context) {
             return jsonResponse({ error: permission.reason }, 403, env, request);
         }
 
-        // Inject metadata
-        const finalContent = { ...content };
-        finalContent._meta = finalContent._meta || {};
-        finalContent._meta.lastModified = new Date().toISOString();
-        finalContent._meta.modifiedBy = session.username;
+        // Enforce draft-only saves for contributors
+        if (session.role === 'contributor' && saveType !== 'draft') {
+            saveType = 'draft';
+        }
 
-        if (!existing.exists || !existing.content?._meta?.createdBy) {
+        // Prepare content structure with draft/published workflow
+        const existingData = existing.content || {};
+        const finalContent = {};
+
+        // Preserve existing structure
+        if (existingData.draft) finalContent.draft = existingData.draft;
+        if (existingData.published) finalContent.published = existingData.published;
+
+        // Save to appropriate location
+        if (saveType === 'draft') {
+            // Save as draft
+            finalContent.draft = content;
+        } else {
+            // Direct save (backward compatibility): update both draft and published
+            finalContent.draft = content;
+            finalContent.published = content;
+        }
+
+        // Metadata
+        finalContent._meta = { ...(existingData._meta || {}) };
+        finalContent._meta.status = saveType === 'draft' ? 'draft' : 'published';
+        finalContent._meta.modifiedBy = session.username;
+        finalContent._meta.lastModified = new Date().toISOString();
+
+        if (!existing.exists || !existingData._meta?.createdBy) {
             // New content: set creator
             finalContent._meta.createdBy = session.username;
             finalContent._meta.created = new Date().toISOString();
         } else {
             // Existing content: preserve creator
-            finalContent._meta.createdBy = existing.content._meta.createdBy;
-            finalContent._meta.created = existing.content._meta.created;
+            finalContent._meta.createdBy = existingData._meta.createdBy;
+            finalContent._meta.created = existingData._meta.created;
         }
 
-        // Commit to GitHub
-        const commitMessage = `Update ${sanitizedPageId} by ${session.username} (${session.role})`;
+        const commitMessage = saveType === 'draft'
+            ? `Save draft: ${sanitizedPageId} by ${session.username}`
+            : `Update ${sanitizedPageId} by ${session.username} (${session.role})`;
         const sha = await commitToGitHub(env, filePath, finalContent, commitMessage, existing.sha);
 
         // Audit log
-        await logAudit(db, 'content_save', session.username, { pageId: sanitizedPageId, commit: sha });
+        await logAudit(db, saveType === 'draft' ? 'content_save_draft' : 'content_save', session.username, {
+            pageId: sanitizedPageId,
+            commit: sha,
+            saveType
+        });
 
         return jsonResponse({
             success: true,
             commit: sha,
             pageId: sanitizedPageId,
-            modifiedBy: session.username
+            modifiedBy: session.username,
+            status: finalContent._meta.status,
+            saveType
         }, 200, env, request);
 
     } catch (err) {

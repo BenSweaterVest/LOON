@@ -1,7 +1,7 @@
 /**
  * Tests for Health Endpoint
  * functions/api/health.js
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,7 +13,8 @@ describe('Health Endpoint', () => {
             const checks = {
                 github_repo: !!env.GITHUB_REPO,
                 github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB
+                kv_database: !!env.LOON_DB,
+                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
             };
 
             expect(checks.github_repo).toBe(false);
@@ -26,7 +27,8 @@ describe('Health Endpoint', () => {
             const checks = {
                 github_repo: !!env.GITHUB_REPO,
                 github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB
+                kv_database: !!env.LOON_DB,
+                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
             };
 
             expect(checks.github_repo).toBe(true);
@@ -39,7 +41,8 @@ describe('Health Endpoint', () => {
             const checks = {
                 github_repo: !!env.GITHUB_REPO,
                 github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB
+                kv_database: !!env.LOON_DB,
+                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
             };
 
             expect(checks.github_repo).toBe(true);
@@ -56,7 +59,8 @@ describe('Health Endpoint', () => {
             const checks = {
                 github_repo: !!env.GITHUB_REPO,
                 github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB
+                kv_database: !!env.LOON_DB,
+                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
             };
 
             const allHealthy = Object.values(checks).every(v => v);
@@ -68,17 +72,18 @@ describe('Health Endpoint', () => {
         it('should include all required fields', () => {
             const response = {
                 status: 'ok',
-                version: '3.0.0',
+                version: '3.1.0',
                 timestamp: new Date().toISOString(),
                 checks: {
                     github_repo: true,
                     github_token: true,
-                    kv_database: true
+                    kv_database: true,
+                    images_configured: false
                 }
             };
 
             expect(response.status).toBeDefined();
-            expect(response.version).toBe('3.0.0');
+            expect(response.version).toBe('3.1.0');
             expect(response.timestamp).toBeDefined();
             expect(response.checks).toBeDefined();
             expect(response.checks.kv_database).toBe(true);

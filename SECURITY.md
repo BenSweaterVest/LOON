@@ -4,8 +4,9 @@
 
 | Version | Supported |
 |---------|-----------|
-| 2.0.x   | Yes       |
-| 1.x     | No        |
+| 3.1.x   | Yes       |
+| 3.0.x   | No        |
+| 2.x     | No        |
 
 ## Reporting a Vulnerability
 
@@ -27,13 +28,13 @@ You can expect a response within 48 hours. We will work with you to understand a
 
 ### What LOON Protects
 
-| Asset | Phase 1 | Phase 2 |
-|-------|---------|---------|
-| User passwords | Encrypted env vars | PBKDF2 hashed in KV |
-| GitHub token | Encrypted Cloudflare secret | Encrypted Cloudflare secret |
-| Sessions | N/A | UUID tokens with 24h TTL |
-| Content integrity | Git commit history | Git commit history + user metadata |
-| Authentication | Timing-safe comparison | Timing-safe comparison |
+| Asset | Protection |
+|-------|------------|
+| User passwords | PBKDF2 hashed in KV |
+| GitHub token | Encrypted Cloudflare secret |
+| Sessions | UUID tokens with 24h TTL |
+| Content integrity | Git commit history + user metadata |
+| Authentication | Timing-safe comparison |
 
 ### What LOON Does NOT Protect
 
@@ -41,7 +42,7 @@ You can expect a response within 48 hours. We will work with you to understand a
 |------|------------|
 | Password in transit | HTTPS enforced by Cloudflare |
 | Shared device access | Use private/incognito mode; disable "Remember me" |
-| Weak passwords | Admin responsibility (min 8 chars enforced in Phase 2) |
+| Weak passwords | Admin responsibility (min 8 chars enforced) |
 | Content confidentiality | All content in GitHub repo is readable by repo collaborators |
 | Session theft | Tokens expire after 24h; use HTTPS only |
 
@@ -52,7 +53,7 @@ You can expect a response within 48 hours. We will work with you to understand a
 ### Threats Addressed
 
 1. **Brute force attacks**
-   - Rate limiting: 10 auth attempts per minute per IP
+   - Rate limiting: 5 auth attempts per minute per IP
    - Rate limiting: 30 save requests per minute per IP
 
 2. **Timing attacks**
@@ -101,7 +102,7 @@ You can expect a response within 48 hours. We will work with you to understand a
    - Set expiration date
 
 3. **Rotate credentials periodically**
-   - Use `manage-users.sh reset <page_id>` for user passwords
+   - Use the admin UI to reset passwords
    - Regenerate GitHub token annually
 
 4. **Monitor Git history**
@@ -185,7 +186,7 @@ Keep CORS open (`*`) when:
 If you suspect a security incident:
 
 1. **Rotate the GitHub token** immediately in Cloudflare dashboard
-2. **Reset affected user passwords** using `manage-users.sh reset`
+2. **Reset affected user passwords** using the admin UI
 3. **Review Git history** for unauthorized commits
 4. **Revert unauthorized changes** using `git revert`
 5. **Document the incident** and review for lessons learned

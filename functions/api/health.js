@@ -15,7 +15,7 @@
  * RESPONSE:
  *   {
  *     "status": "ok" | "degraded",
- *     "version": "3.0.0",
+ *     "version": "3.1.0",
  *     "timestamp": "2026-01-30T12:00:00.000Z",
  *     "checks": {
  *       "github_repo": true,
@@ -38,7 +38,7 @@
  *   - Safe to expose publicly (no sensitive data in response)
  *
  * @module functions/api/health
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -56,7 +56,7 @@ const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
  * Current version of the LOON system.
  * Update this when releasing new versions.
  */
-const VERSION = '3.0.0';
+const VERSION = '3.1.0';
 
 // ============================================================================
 // REQUEST HANDLERS
@@ -106,6 +106,11 @@ export async function onRequestGet(context) {
      * LOON_DB is the KV namespace binding (required)
      */
     kv_database: !!env.LOON_DB,
+
+    /**
+     * Optional: Cloudflare Images (media uploads)
+     */
+    images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
   };
 
   // ========================================================================

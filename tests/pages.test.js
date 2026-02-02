@@ -1,7 +1,7 @@
 /**
  * Tests for Pages Endpoint
  * functions/api/pages.js
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { describe, it, expect } from 'vitest';

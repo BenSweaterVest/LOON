@@ -38,7 +38,7 @@ PREREQUISITES:
 - Cloudflare KV namespace "LOON_DB" configured
 - At least one admin user created via bootstrap-admin.sh
 
-VERSION: 3.0.0
+VERSION: 3.1.0
 ================================================================================
 -->
 <html lang="en">
@@ -261,6 +261,7 @@ VERSION: 3.0.0
                 <button onclick="switchTab('editor')" id="tab-editor" class="active">Content Editor</button>
                 <button onclick="switchTab('users')" id="tab-users" class="hidden">Manage Users</button>
                 <button onclick="switchTab('sessions')" id="tab-sessions" class="hidden">Sessions</button>
+                <button onclick="switchTab('audit')" id="tab-audit" class="hidden">Audit Log</button>
                 <button onclick="switchTab('account')" id="tab-account">My Account</button>
                 <button onclick="logout()" class="logout-btn">Logout</button>
             </nav>
@@ -285,11 +286,16 @@ VERSION: 3.0.0
                     <div id="editor-form"></div>
                     
                     <div id="content-meta" class="meta-info hidden"></div>
+                    <div id="content-status" style="margin: 1rem 0; padding: 0.75rem; background: #e7f3ff; border-left: 4px solid #2196F3; display: none;">
+                        <strong id="status-text"></strong>
+                    </div>
                     
                     <div class="save-bar">
                         <span class="last-saved" id="last-saved"></span>
-                        <div style="display: flex; gap: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button onclick="saveContentAsDraft()" id="draft-btn" style="display: none;">Save as Draft</button>
                             <button onclick="saveContent()" id="save-btn">Save Changes</button>
+                            <button onclick="publishContent()" id="publish-btn" class="contrast" style="display: none;">Publish</button>
                             <button onclick="deleteContent()" id="delete-btn" class="outline" style="color: var(--error); display: none;">Delete</button>
                         </div>
                     </div>
@@ -405,11 +411,39 @@ VERSION: 3.0.0
                     <div id="password-change-status"></div>
                 </div>
             </div>
+
+            <!-- Audit Log Tab (Admin only) -->
+            <div id="view-audit" class="hidden">
+                <h3>Audit Log</h3>
+                <p style="color: var(--muted-color); margin-bottom: 1rem;">Track admin actions and content changes.</p>
+                
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="number" id="audit-limit" value="100" style="width: 80px;" placeholder="Limit">
+                    <button onclick="loadAuditLog()" class="secondary">Load</button>
+                    <button onclick="downloadAuditLog()" class="outline">Download CSV</button>
+                </div>
+                
+                <div id="audit-loading" class="hidden" style="text-align: center; padding: 2rem; color: var(--muted-color);">Loading...</div>
+                
+                <table class="user-table" role="grid" id="audit-table" style="font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-list"></tbody>
+                </table>
+                
+                <div id="audit-status"></div>
+            </div>
         </div>
     </main>
 
     <footer class="container" style="text-align: center; margin-top: 3rem; color: var(--muted-color);">
-        <small>LOON v3.0.0</small>
+        <small>LOON v3.1.0</small>
     </footer>
 
     <script>
@@ -593,6 +627,7 @@ VERSION: 3.0.0
             if (SESSION.role === 'admin') {
                 document.getElementById('tab-users').classList.remove('hidden');
                 document.getElementById('tab-sessions').classList.remove('hidden');
+                document.getElementById('tab-audit').classList.remove('hidden');
             }
         }
 
@@ -728,9 +763,9 @@ VERSION: 3.0.0
                 if (CURRENT_CONTENT._meta) {
                     const meta = CURRENT_CONTENT._meta;
                     let metaHtml = '';
-                    if (meta.createdBy) metaHtml += `Created by: ${meta.createdBy}`;
+                    if (meta.createdBy) metaHtml += `Created by: ${escapeHtml(meta.createdBy)}`;
                     if (meta.created) metaHtml += ` on ${new Date(meta.created).toLocaleDateString()}`;
-                    if (meta.modifiedBy) metaHtml += ` | Last modified by: ${meta.modifiedBy}`;
+                    if (meta.modifiedBy) metaHtml += ` | Last modified by: ${escapeHtml(meta.modifiedBy)}`;
                     if (meta.lastModified) metaHtml += ` on ${new Date(meta.lastModified).toLocaleString()}`;
                     
                     const metaEl = document.getElementById('content-meta');
@@ -744,6 +779,34 @@ VERSION: 3.0.0
                     deleteBtn.style.display = 'inline-block';
                 } else {
                     deleteBtn.style.display = 'none';
+                }
+
+                // Show draft/publish buttons based on role
+                const saveBtn = document.getElementById('save-btn');
+                const draftBtn = document.getElementById('draft-btn');
+                const publishBtn = document.getElementById('publish-btn');
+
+                if (SESSION && SESSION.role === 'contributor') {
+                    // Contributors can only save drafts
+                    saveBtn.style.display = 'none';
+                    draftBtn.style.display = 'inline-block';
+                } else {
+                    saveBtn.style.display = 'inline-block';
+                    draftBtn.style.display = 'inline-block';
+                }
+
+                if (SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor')) {
+                    // Only admins and editors can publish
+                    publishBtn.style.display = 'inline-block';
+                } else {
+                    publishBtn.style.display = 'none';
+                }
+
+                // Show content status if available
+                if (CURRENT_CONTENT._meta && CURRENT_CONTENT._meta.status) {
+                    updateContentStatus(CURRENT_CONTENT._meta.status, CURRENT_CONTENT._meta.modifiedBy);
+                } else {
+                    document.getElementById('content-status').style.display = 'none';
                 }
 
                 hideStatus('editor-status');
@@ -846,8 +909,8 @@ VERSION: 3.0.0
                         <td>${s.created ? new Date(s.created).toLocaleString() : 'Unknown'}</td>
                         <td><code style="font-size: 0.8rem;">${escapeHtml(s.ip)}</code></td>
                         <td class="actions">
-                            ${s.isCurrent ? '<span style="color: var(--muted-color);">-</span>' : 
-                              `<button onclick="revokeSession('${escapeHtml(s.tokenPreview)}')" class="outline" style="padding: 0.25rem 0.5rem; color: var(--error);">Revoke</button>`}
+                            ${s.isCurrent ? '<span style="color: var(--muted-color);">Current</span>' : 
+                              `<button onclick="revokeSession('${s.tokenId}')" class="outline" style="padding: 0.25rem 0.5rem; color: var(--error);">Revoke</button>`}
                         </td>
                     </tr>
                 `).join('');
@@ -859,11 +922,31 @@ VERSION: 3.0.0
             }
         }
         
-        async function revokeSession(tokenPreview) {
-            // Find full token from preview (we need to refetch to get full tokens)
-            // Actually, we don't expose full tokens for security. We need to modify the API
-            // For now, show an alert that this needs the full token
-            alert('To revoke a specific session, use "Force Logout User" to revoke all sessions for that user.');
+        async function revokeSession(tokenId) {
+            if (!confirm('Revoke this session? The user will be logged out immediately.')) return;
+            
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ token: tokenId })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to revoke session');
+                }
+                
+                showStatus('sessions-status', 'Session revoked', 'success');
+                loadSessions();
+                
+            } catch (e) {
+                showStatus('sessions-status', e.message, 'error');
+            }
         }
         
         async function forceLogoutUser() {
@@ -1020,6 +1103,24 @@ VERSION: 3.0.0
                         if (field.max !== undefined) input.max = field.max;
                         break;
 
+                    case 'image':
+                        input = document.createElement('div');
+                        input.style.cssText = 'display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap;';
+                        
+                        if (value) {
+                            const img = document.createElement('img');
+                            img.src = value;
+                            img.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 8px; object-fit: cover;';
+                            input.appendChild(img);
+                        }
+                        
+                        const uploadBtn = document.createElement('button');
+                        uploadBtn.type = 'button';
+                        uploadBtn.textContent = value ? 'Change Image' : 'Upload Image';
+                        uploadBtn.onclick = () => uploadImageForField(`field_${field.key}`);
+                        input.appendChild(uploadBtn);
+                        break;
+
                     default:
                         input = document.createElement('input');
                         input.type = field.type || 'text';
@@ -1063,6 +1164,8 @@ VERSION: 3.0.0
                     content[field.key] = input.checked;
                 } else if (field.type === 'number') {
                     content[field.key] = input.value ? Number(input.value) : null;
+                } else if (field.type === 'image') {
+                    content[field.key] = CURRENT_CONTENT[field.key] || '';
                 } else {
                     content[field.key] = input.value;
                 }
@@ -1112,6 +1215,210 @@ VERSION: 3.0.0
             }
         }
 
+        async function saveContentAsDraft() {
+            if (!CURRENT_SCHEMA || !CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'No page loaded', 'error');
+                return;
+            }
+
+            // Gather form data
+            const content = {};
+            CURRENT_SCHEMA.fields.forEach(field => {
+                const input = document.getElementById(`field_${field.key}`);
+                if (!input) return;
+
+                if (field.type === 'checkbox') {
+                    content[field.key] = input.checked;
+                } else if (field.type === 'number') {
+                    content[field.key] = input.value ? Number(input.value) : null;
+                } else if (field.type === 'image') {
+                    // Image type stores URL in hidden field or uses existing value
+                    content[field.key] = CURRENT_CONTENT[field.key] || '';
+                } else {
+                    content[field.key] = input.value;
+                }
+            });
+
+            // Preserve existing metadata
+            if (CURRENT_CONTENT._meta) {
+                content._meta = { ...CURRENT_CONTENT._meta };
+            }
+
+            showStatus('editor-status', 'Saving as draft...', 'info');
+
+            try {
+                const res = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        pageId: CURRENT_PAGE_ID,
+                        content: content,
+                        saveAs: 'draft'
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.status === 401) {
+                    throw new Error(data.error || 'Session expired');
+                }
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Save as draft failed');
+                }
+
+                CURRENT_CONTENT = content;
+                document.getElementById('last-saved').textContent = `Saved as draft just now`;
+                showStatus('editor-status', '📝 Saved as draft (not yet published)', 'success');
+
+                // Update status display
+                updateContentStatus('draft', data.modifiedBy);
+
+                setTimeout(() => hideStatus('editor-status'), 3000);
+
+            } catch (e) {
+                if (!handleSessionError(e)) {
+                    showStatus('editor-status', `Draft save failed: ${e.message}`, 'error');
+                }
+            }
+        }
+
+        async function publishContent() {
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'No page loaded', 'error');
+                return;
+            }
+
+            // Only allow admin and editor roles to publish
+            if (SESSION.role !== 'admin' && SESSION.role !== 'editor') {
+                showStatus('editor-status', 'Only admins and editors can publish content', 'error');
+                return;
+            }
+
+            showStatus('editor-status', 'Publishing...', 'info');
+
+            try {
+                const res = await fetch('/api/publish', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        pageId: CURRENT_PAGE_ID,
+                        action: 'publish'
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.status === 401) {
+                    throw new Error(data.error || 'Session expired');
+                }
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Publish failed');
+                }
+
+                showStatus('editor-status', '✅ Content published successfully!', 'success');
+                updateContentStatus('published', data.publishedBy);
+
+                setTimeout(() => hideStatus('editor-status'), 3000);
+
+            } catch (e) {
+                if (!handleSessionError(e)) {
+                    showStatus('editor-status', `Publish failed: ${e.message}`, 'error');
+                }
+            }
+        }
+
+        function updateContentStatus(status, user) {
+            const statusDiv = document.getElementById('content-status');
+            const statusText = document.getElementById('status-text');
+            
+            statusDiv.style.display = 'block';
+            if (status === 'draft') {
+                statusDiv.style.background = '#fff3cd';
+                statusDiv.style.borderLeftColor = '#ffc107';
+                statusText.innerHTML = `<span style="color: #856404;">📝 This is a draft (not yet published)</span>`;
+            } else if (status === 'published') {
+                statusDiv.style.background = '#d4edda';
+                statusDiv.style.borderLeftColor = '#28a745';
+                statusText.innerHTML = `<span style="color: #155724;">✅ This content is published and live</span>`;
+            }
+        }
+
+        async function uploadImageForField(fieldId) {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // Validate file size (10MB max)
+                if (file.size > 10 * 1024 * 1024) {
+                    showStatus('editor-status', 'Image too large. Maximum 10MB.', 'error');
+                    return;
+                }
+
+                showStatus('editor-status', `Uploading ${file.name}...`, 'info');
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const res = await fetch('/api/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${SESSION.token}`
+                        },
+                        body: formData
+                    });
+
+                    const data = await res.json();
+
+                    if (res.status === 401) {
+                        throw new Error(data.error || 'Session expired');
+                    }
+                    
+                    if (!res.ok) {
+                        throw new Error(data.error || 'Upload failed');
+                    }
+
+                    // Find the input field for this image and update it
+                    const field = document.getElementById(fieldId);
+                    if (field && field.parentElement) {
+                        // Find the image element or create display
+                        let img = field.querySelector('img');
+                        if (!img) {
+                            img = document.createElement('img');
+                            img.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 8px; object-fit: cover;';
+                            field.insertBefore(img, field.firstChild);
+                        }
+                        img.src = data.url;
+                        
+                        // Update the hidden value
+                        CURRENT_CONTENT[fieldId.replace('field_', '')] = data.url;
+                    }
+
+                    showStatus('editor-status', `✅ Image uploaded: ${data.id}`, 'success');
+                    setTimeout(() => hideStatus('editor-status'), 3000);
+
+                } catch (e) {
+                    if (!handleSessionError(e)) {
+                        showStatus('editor-status', `Upload failed: ${e.message}`, 'error');
+                    }
+                }
+            };
+
+            fileInput.click();
+        }
+
         // =================================================================
         // USER MANAGEMENT
         // =================================================================
@@ -1144,12 +1451,18 @@ VERSION: 3.0.0
                 tbody.innerHTML = users.map(user => `
                     <tr>
                         <td><strong>${escapeHtml(user.username)}</strong></td>
-                        <td><span class="role-badge role-${user.role}">${user.role}</span></td>
+                        <td>
+                            <select onchange="changeUserRole('${escapeHtml(user.username)}', this.value)" ${user.username === SESSION.username ? 'disabled' : ''} style="font-size: 0.95rem; padding: 0.25rem;">
+                                <option value="contributor" ${user.role === 'contributor' ? 'selected' : ''}>Contributor</option>
+                                <option value="editor" ${user.role === 'editor' ? 'selected' : ''}>Editor</option>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                        </td>
                         <td>${user.created ? new Date(user.created).toLocaleDateString() : '-'}</td>
                         <td class="actions">
                             ${user.username !== SESSION.username ? `
-                                <button class="secondary" onclick="resetPassword('${escapeHtml(user.username)}')">Reset Password</button>
-                                <button class="contrast" onclick="deleteUser('${escapeHtml(user.username)}')">Delete</button>
+                                <button class="secondary" onclick="resetPassword('${escapeHtml(user.username)}')" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">Reset Password</button>
+                                <button class="contrast" onclick="deleteUser('${escapeHtml(user.username)}')" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">Delete</button>
                             ` : '<em>Current user</em>'}
                         </td>
                     </tr>
@@ -1260,6 +1573,119 @@ VERSION: 3.0.0
 
             } catch (e) {
                 showStatus('users-status', e.message, 'error');
+            }
+        }
+
+        async function changeUserRole(username, newRole) {
+            if (!confirm(`Change ${username}'s role to "${newRole}"?`)) {
+                loadUsers();  // Reload to reset dropdown
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/users', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ username, role: newRole })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to update role');
+                }
+                
+                showStatus('users-status', `${username} role changed to ${newRole}`, 'success');
+                loadUsers();
+                
+            } catch (e) {
+                showStatus('users-status', e.message, 'error');
+                loadUsers();  // Reload to reset dropdown
+            }
+        }
+
+        async function loadAuditLog() {
+            const list = document.getElementById('audit-list');
+            const loading = document.getElementById('audit-loading');
+            const limit = document.getElementById('audit-limit').value || 100;
+            
+            loading.classList.remove('hidden');
+            list.innerHTML = '';
+            
+            try {
+                const res = await fetch(`/api/audit?limit=${limit}`, {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to load audit log');
+                }
+                
+                if (data.logs.length === 0) {
+                    list.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--muted-color);">No audit records</td></tr>';
+                    loading.classList.add('hidden');
+                    return;
+                }
+                
+                list.innerHTML = data.logs.map(log => `
+                    <tr>
+                        <td><small>${new Date(log.timestamp).toLocaleString()}</small></td>
+                        <td><strong>${escapeHtml(log.username)}</strong></td>
+                        <td><code style="font-size: 0.8rem;">${escapeHtml(log.action)}</code></td>
+                        <td><small>${escapeHtml(JSON.stringify(log.details || {}))}</small></td>
+                    </tr>
+                `).join('');
+                
+                showStatus('audit-status', `${data.logs.length} records`, 'info');
+                
+            } catch (e) {
+                list.innerHTML = `<tr><td colspan="4" style="color: var(--error);">Error: ${escapeHtml(e.message)}</td></tr>`;
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+        
+        async function downloadAuditLog() {
+            const limit = document.getElementById('audit-limit').value || 1000;
+            
+            try {
+                const res = await fetch(`/api/audit?limit=${limit}`, {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error || 'Failed to download');
+                
+                // Convert to CSV
+                const csv = [
+                    ['Timestamp', 'User', 'Action', 'Details'],
+                    ...data.logs.map(log => [
+                        new Date(log.timestamp).toISOString(),
+                        log.username,
+                        log.action,
+                        JSON.stringify(log.details || {})
+                    ])
+                ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+                
+                // Download
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `audit-log-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+            } catch (e) {
+                showStatus('audit-status', e.message, 'error');
             }
         }
 

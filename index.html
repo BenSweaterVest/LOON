@@ -29,7 +29,7 @@ NOTE:
 - Content is fetched client-side to avoid Cloudflare Pages build limits
 - For SEO, consider server-side rendering or static generation
 
-VERSION: 2.0.0
+VERSION: 3.1.0
 ================================================================================
 -->
 <html lang="en">
@@ -239,7 +239,7 @@ VERSION: 2.0.0
         </article>
         
         <p class="powered-by">
-            Powered by <a href="https://github.com/BenSweaterVest/loon-skeleton" target="_blank" rel="noopener">Project LOON</a> v2.0.0
+            Powered by <a href="https://github.com/BenSweaterVest/loon-skeleton" target="_blank" rel="noopener">Project LOON</a> v3.1.0
         </p>
     </div>
     
@@ -257,7 +257,18 @@ VERSION: 2.0.0
                 const cacheBuster = Date.now();
                 const res = await fetch(`/data/${PAGE_ID}/content.json?_=${cacheBuster}`);
                 if (!res.ok) throw new Error('Content not found');
-                const content = await res.json();
+                const fullData = await res.json();
+
+                // Filter for published content - only display published state
+                let content = fullData;
+                const hasWorkflow = fullData.published !== undefined || fullData.draft !== undefined;
+
+                if (hasWorkflow) {
+                    if (fullData._meta?.status !== 'published') {
+                        throw new Error('This page has not been published yet. Please ask an editor to publish it.');
+                    }
+                    content = fullData.published || fullData.draft || fullData;
+                }
                 
                 // Try to fetch schema for field labels (optional)
                 let schema = null;

@@ -27,8 +27,8 @@ What actually happened.
 
 ## Environment
 
-- **LOON Version:** (e.g., 2.0.0)
-- **Mode:** Phase 1 (Directory) / Phase 2 (Team)
+- **LOON Version:** (e.g., 3.1.0)
+- **Authentication:** KV-based (unified)
 - **Browser:** (e.g., Chrome 120, Safari 17)
 - **OS:** (e.g., Windows 11, macOS 14)
 

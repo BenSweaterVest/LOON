@@ -62,7 +62,7 @@
  *   - Supports pagination to limit response size
  *
  * @module functions/api/pages
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -365,7 +365,7 @@ async function checkPageExists(env, pageId) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.0'
+            'User-Agent': 'LOON-CMS/3.1.0'
         }
     });
 
@@ -381,7 +381,7 @@ async function loadTemplate(env, templateName) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.0'
+            'User-Agent': 'LOON-CMS/3.1.0'
         }
     });
 
@@ -413,7 +413,7 @@ async function commitToGitHub(env, path, content, message, existingSha) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.0',
+            'User-Agent': 'LOON-CMS/3.1.0',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
@@ -450,7 +450,7 @@ async function fetchPagesFromGitHub(env, minimal = false) {
     const headers = {
         'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/3.0'
+        'User-Agent': 'LOON-CMS/3.1.0'
     };
 
     // Check cache for directory listing

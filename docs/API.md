@@ -1,6 +1,6 @@
 # API Reference
 
-Detailed documentation for LOON's API endpoints (v3.0.0).
+Detailed documentation for LOON's API endpoints (v3.1.0).
 
 ---
 
@@ -13,6 +13,8 @@ LOON exposes the following API endpoints via Cloudflare Functions:
 | `/api/auth` | GET, POST, PATCH, DELETE | Authentication & sessions |
 | `/api/save` | POST | Save content to GitHub |
 | `/api/pages` | GET, POST | List and create pages |
+| `/api/publish` | POST | Publish/unpublish content |
+| `/api/upload` | POST | Upload images (Cloudflare Images) |
 | `/api/templates` | GET | List schema templates |
 | `/api/users` | GET, POST, PATCH, DELETE | User management (admin) |
 | `/api/sessions` | GET, DELETE | Session management (admin) |
@@ -162,6 +164,7 @@ Content-Type: application/json
 
 {
   "pageId": "demo",
+  "saveAs": "draft",
   "content": {
     "title": "My Title",
     "body": "Content here..."
@@ -176,7 +179,9 @@ Content-Type: application/json
   "success": true,
   "commit": "abc123def456",
   "pageId": "demo",
-  "modifiedBy": "admin"
+  "modifiedBy": "admin",
+  "status": "draft",
+  "saveType": "draft"
 }
 ```
 
@@ -193,6 +198,72 @@ Content-Type: application/json
 #### Rate Limit
 
 30 requests per minute per IP address.
+
+---
+
+### POST /api/publish
+
+Publish or unpublish content.
+
+**Roles:** Admin, Editor
+
+#### Request
+
+```http
+POST /api/publish
+Authorization: Bearer <session-token>
+Content-Type: application/json
+
+{
+  "pageId": "demo",
+  "action": "publish"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "pageId": "demo",
+  "status": "published",
+  "publishedBy": "admin",
+  "publishedAt": "2026-02-02T12:00:00Z"
+}
+```
+
+---
+
+### POST /api/upload
+
+Upload an image to Cloudflare Images.
+
+**Roles:** Any authenticated user
+
+#### Request
+
+```http
+POST /api/upload
+Authorization: Bearer <session-token>
+Content-Type: multipart/form-data
+```
+
+Form field: `file` (JPEG/PNG/GIF/WebP, max 10MB)
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "id": "abc123",
+  "url": "https://imagedelivery.net/{account}/abc123/public",
+  "variants": {
+    "thumbnail": "https://imagedelivery.net/{account}/abc123/thumbnail",
+    "medium": "https://imagedelivery.net/{account}/abc123/medium",
+    "large": "https://imagedelivery.net/{account}/abc123/large"
+  }
+}
+```
 
 ---
 
@@ -510,7 +581,7 @@ System status and configuration check.
 ```json
 {
   "status": "ok",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "timestamp": "2026-01-30T12:00:00Z",
   "checks": {
     "github_repo": true,

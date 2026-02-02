@@ -5,6 +5,26 @@ All notable changes to Project LOON will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-02-02
+
+### Added
+- Draft/publish workflow with `POST /api/publish`
+- Image uploads via Cloudflare Images (`POST /api/upload`)
+- JSON Schema conversion and validation utilities
+- Phase 1 → Phase 2 migration script
+- Admin UI support for drafts, publishing, and image uploads
+
+### Changed
+- Public site now displays published content only
+- Health check now reports optional images configuration
+- Updated environment variable template for Images
+
+### Fixed
+- Save endpoint draft workflow metadata handling
+- Contributor saves enforced as draft
+
+---
+
 ## [3.0.0] - 2026-02-01
 
 ### Breaking Changes
@@ -108,10 +128,8 @@ If upgrading from v2.x:
 
 ### Added - Documentation
 - `docs/PHASE2-SETUP.md`: Complete Team Mode setup guide
-- `docs/OPERATIONS.md`: Monitoring, backups, incident response
 - `docs/ONBOARDING.md`: User onboarding checklist
 - `docs/CUSTOMIZATION.md`: Theming, custom domains, i18n
-- `docs/TESTING.md`: Manual testing checklist with curl commands
 - `scripts/backup-content.sh`: Export content for backup
 - `scripts/restore-content.sh`: Restore from backup
 

@@ -1,11 +1,11 @@
-# Project LOON (v3.0.0)
+# Project LOON (v3.1.0)
 
 **L**ightweight **O**nline **O**rganizing **N**etwork
 
 A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No traditional database, no servers, $0/month.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.0.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.1.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -15,8 +15,10 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 - **No Database Server**: Content stored as JSON files in Git
 - **User Management**: Cloudflare KV for unlimited users
 - **Role-Based Access**: Admin, Editor, and Contributor roles
+- **Draft/Publish Workflow**: Stage content before going live
+- **Media Management**: Upload images via Cloudflare Images
+- **JSON Schema Support**: Standards-based schema validation
 - **WYSIWYG Editor**: Dynamic forms generated from schema
-- **In-App Page Creation**: Admins can create pages from the web UI
 - **Mobile-Friendly**: Works on phones and tablets
 - **Dark Mode**: Respects system preference automatically
 - **Audit Logging**: Track all actions in the system
@@ -68,6 +70,18 @@ In Cloudflare Pages → Settings → Environment variables → **Production**:
 | `GITHUB_REPO` | `your-username/loon` |
 | `GITHUB_TOKEN` | `github_pat_xxxxx` (mark as Secret) |
 
+### Optional: One-Command Local Prep
+
+Run the helper script to prepare local dependencies and get guided next steps:
+
+```bash
+# macOS/Linux
+./scripts/first-deploy.sh
+
+# Windows PowerShell
+./scripts/first-deploy.ps1
+```
+
 ### 6. Bootstrap Admin User
 
 ```bash
@@ -77,7 +91,7 @@ export CF_API_TOKEN="your-api-token"
 export KV_NAMESPACE_ID="your-kv-namespace-id"
 
 # Create first admin user
-./scripts/bootstrap-admin.sh admin
+./scripts/bootstrap-admin.sh admin MySecurePassword123
 ```
 
 ### 7. Redeploy
@@ -113,7 +127,9 @@ loon/
 │       ├── _cors.js        # Shared CORS utility (configurable origin)
 │       ├── _audit.js       # Audit logging utility
 │       ├── auth.js         # /api/auth - session auth + password change
-│       ├── save.js         # /api/save - content save with RBAC
+│       ├── save.js         # /api/save - content save with RBAC + drafts
+│       ├── publish.js      # /api/publish - publish/unpublish workflow
+│       ├── upload.js       # /api/upload - image upload (Cloudflare Images)
 │       ├── users.js        # /api/users - user management (admin)
 │       ├── pages.js        # /api/pages - list and create pages
 │       ├── templates.js    # /api/templates - list schema templates
@@ -121,6 +137,8 @@ loon/
 │       ├── content.js      # /api/content - content deletion
 │       ├── audit.js        # /api/audit - view audit logs (admin)
 │       └── health.js       # /api/health - system status
+│   └── lib/
+│       └── schema-validator.js # JSON Schema conversion + validation
 ├── tests/
 │   ├── helpers.js          # Test utilities (mock request, env, KV)
 │   ├── auth.test.js        # Auth endpoint tests
@@ -135,22 +153,24 @@ loon/
 ├── examples/               # 16 ready-to-use schemas
 │   └── ...                 # (see examples/README.md)
 ├── scripts/
+│   ├── first-deploy.sh    # Local prep + guided deploy steps
+│   ├── first-deploy.ps1   # Local prep + guided deploy steps (Windows)
 │   ├── bootstrap-admin.sh  # Create first admin user
 │   ├── bulk-users.sh       # Bulk user creation from CSV
 │   ├── backup-content.sh   # Export content for backup
 │   ├── restore-content.sh  # Restore from backup
+│   ├── migrate-phase1-to-phase2.js # Phase 1 → Phase 2 migration
 │   └── validate-json.mjs   # JSON validation script
 ├── docs/
 │   ├── API.md              # Detailed API reference
 │   ├── CUSTOMIZATION.md    # Theming and customization
-│   ├── OPERATIONS.md       # Day-to-day operations
-│   ├── ONBOARDING.md       # User onboarding checklist
-│   └── TESTING.md          # Manual testing checklist
+│   └── ONBOARDING.md       # User onboarding checklist
 ├── ARCHITECTURE.md         # Technical deep-dive
 ├── CHANGELOG.md            # Version history
 ├── CONTRIBUTING.md         # Contribution guidelines
 ├── LICENSE                 # MIT License
 ├── README.md               # This file
+├── QA_TESTING_GUIDE.md     # Comprehensive testing guide
 ├── SECURITY.md             # Security policy
 ├── TROUBLESHOOTING.md      # Common issues
 └── USER-GUIDE.md           # Guide for content editors
@@ -170,12 +190,9 @@ loon/
 
 ## Adding Pages
 
-### Option A: From the Web UI (Recommended)
+### Option A: API (Recommended)
 
-1. Login as Admin or Editor
-2. Click "Create Page" in the editor
-3. Enter page ID and select a template
-4. Click Create
+Use `POST /api/pages` (admin/editor only) to create a page with a template or custom schema.
 
 ### Option B: Manual Setup
 
@@ -215,7 +232,9 @@ Or use the web UI: Login as admin → Manage Users → Add New User
 | `/api/auth` | POST | Login |
 | `/api/auth` | PATCH | Change password |
 | `/api/auth` | DELETE | Logout |
-| `/api/save` | POST | Save content |
+| `/api/save` | POST | Save content (draft or direct) |
+| `/api/publish` | POST | Publish/unpublish content |
+| `/api/upload` | POST | Upload images (Cloudflare Images) |
 | `/api/pages` | GET | List pages |
 | `/api/pages` | POST | Create page (admin/editor) |
 | `/api/templates` | GET | List schema templates |
@@ -297,12 +316,16 @@ npm run validate
 | Document | Description |
 |----------|-------------|
 | [README.md](README.md) | Quick start guide (this file) |
+| [IMPLEMENTATION_GUIDE_V3.1.md](IMPLEMENTATION_GUIDE_V3.1.md) | v3.1.0 implementation guide |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Technical architecture |
+| [USER-GUIDE.md](USER-GUIDE.md) | Guide for content editors |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and fixes |
+| [OPERATIONS.md](OPERATIONS.md) | System admin operations |
+| [QA_TESTING_GUIDE.md](QA_TESTING_GUIDE.md) | Comprehensive testing guide |
 | [SECURITY.md](SECURITY.md) | Security policy |
-| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues |
 | [docs/API.md](docs/API.md) | API reference |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Operations guide |
-| [USER-GUIDE.md](USER-GUIDE.md) | Editor guide |
+| [docs/ONBOARDING.md](docs/ONBOARDING.md) | User onboarding checklist |
+| [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) | Theming and customization |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 
@@ -318,15 +341,23 @@ MIT License - Use freely, modify freely, no warranty. See [LICENSE](LICENSE).
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### v3.0.0 Highlights
+### v3.1.0 Highlights
 
-- Consolidated to single KV-only architecture
-- In-app page creation from web UI
-- Template system for quick page setup
-- Comprehensive audit logging
-- New `/api/templates` and `/api/audit` endpoints
+- Unified auth (Phase 1 removed, KV-only)
+- Draft/publish workflow with publish endpoint
+- Media management via Cloudflare Images
+- JSON Schema conversion + validation utilities
+- Admin UI enhancements for draft/publish + image upload
+
+### Security & Operations Documentation
+
+**New in v3.1.0+**:
+- [OPERATIONS.md](OPERATIONS.md) - Daily operations, backup/recovery, monitoring
+- [SCALING.md](SCALING.md) - Capacity planning, performance limits, scaling decisions
+- [SECURITY_AUDIT.md](SECURITY_AUDIT.md) - Detailed security review and recommendations
 
 ### Future Enhancements
 
-- [ ] Self-service password reset (v3.1.0)
-- [ ] Two-factor authentication (v3.2.0)
+- [ ] Self-service password reset
+- [ ] Two-factor authentication
+- [ ] Content versioning UI (show history, diffs)

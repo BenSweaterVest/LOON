@@ -83,26 +83,27 @@ See `.github/workflows/ci.yml` for details.
 ### File Structure
 
 ```
-loon-skeleton/
-├── admin.html          # Phase 1 Editor (password per page)
-├── admin-v2.html       # Phase 2 Editor (sessions + RBAC)
+loon/
+├── admin.html          # Admin editor (sessions + RBAC)
 ├── index.html          # Public page - customize per use case
 ├── functions/
 │   └── api/
-│       ├── auth.js     # Phase 1: Password authentication
-│       ├── auth-v2.js  # Phase 2: Session authentication
-│       ├── save.js     # Phase 1: Save with password
-│       ├── save-v2.js  # Phase 2: Save with RBAC
-│       ├── users.js    # Phase 2: User management
+│       ├── auth.js     # Session authentication
+│       ├── save.js     # Save content (draft/direct)
+│       ├── publish.js  # Publish/unpublish content
+│       ├── upload.js   # Image uploads (Cloudflare Images)
+│       ├── users.js    # User management (admin)
 │       ├── pages.js    # List available pages
-│       ├── sessions.js # Phase 2: Session management
-│       ├── content.js  # Phase 2: Content deletion
-│       └── health.js   # Health check (both phases)
+│       ├── sessions.js # Session management (admin)
+│       ├── content.js  # Content deletion (admin/editor)
+│       ├── templates.js # Schema templates
+│       ├── audit.js    # Audit logs (admin)
+│       └── health.js   # Health check
 ├── data/
 │   └── {pageId}/
-│       ├── schema.json # Field definitions
+│       ├── schema.json # Field definitions (JSON Schema)
 │       └── content.json # Actual content
-├── scripts/            # Admin tooling (bash scripts)
+├── scripts/            # Admin tooling (bash/PowerShell scripts)
 ├── docs/               # Detailed documentation
 └── examples/           # Example schemas for common use cases
 ```
