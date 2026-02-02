@@ -3,47 +3,58 @@
  * LOON Pages Endpoint (functions/api/pages.js)
  * ============================================================================
  *
- * Lists available pages/content that users can edit. Works with both Phase 1
- * and Phase 2 authentication modes.
+ * Lists and creates pages for the CMS.
  *
  * ENDPOINTS:
- *   GET /api/pages - List all available pages
+ *   GET  /api/pages - List all available pages
+ *   POST /api/pages - Create a new page (admin/editor only)
  *
- * QUERY PARAMETERS:
+ * GET QUERY PARAMETERS:
  *   ?minimal=true  - Return only pageId list (reduces GitHub API calls)
  *   ?page=1        - Page number for pagination (default: 1)
  *   ?limit=20      - Items per page (default: 20, max: 100)
  *
- * PHASE 1 (Directory Mode):
- *   No authentication required - returns all pages with schemas
- *
- * PHASE 2 (Team Mode):
- *   Optional authentication - if token provided:
- *   - Contributors see only pages they created
- *   - Editors/Admins see all pages
- *
- * RESPONSE:
+ * GET RESPONSE:
  *   {
  *     "pages": [
  *       {
  *         "pageId": "demo",
  *         "title": "Demo Page",
  *         "hasContent": true,
- *         "createdBy": "admin",        // Phase 2 only
- *         "lastModified": "2025-01-30" // If content exists
+ *         "createdBy": "admin",
+ *         "lastModified": "2026-01-30"
  *       }
  *     ],
- *     "mode": "team",       // "directory" or "team"
- *     "canEditAll": true,   // Whether user can edit all pages
- *     "total": 25,          // Total pages available
- *     "page": 1,            // Current page number
- *     "limit": 20,          // Items per page
- *     "hasMore": true       // Whether more pages exist
+ *     "canEditAll": true,
+ *     "total": 25,
+ *     "page": 1,
+ *     "limit": 20,
+ *     "hasMore": true
  *   }
  *
+ * POST REQUEST (Create Page):
+ *   Headers: Authorization: Bearer <session-token>
+ *   Body: {
+ *     "pageId": "my-page",           // Required: lowercase alphanumeric + hyphens
+ *     "title": "My Page Title",      // Optional: defaults to pageId
+ *     "template": "blog-post",       // Optional: use template from examples/
+ *     "schema": { ... }              // Optional: custom schema (overrides template)
+ *   }
+ *
+ * POST RESPONSE:
+ *   {
+ *     "success": true,
+ *     "pageId": "my-page",
+ *     "schemaCommit": "abc123...",
+ *     "contentCommit": "def456...",
+ *     "createdBy": "admin"
+ *   }
+ *
+ * AUTHENTICATION:
+ *   GET:  Optional - contributors see only their pages
+ *   POST: Required - admin/editor role needed
+ *
  * PERFORMANCE NOTES:
- *   This endpoint previously made 2 GitHub API calls per page (schema + content),
- *   which could hit rate limits with many pages. The current implementation:
  *   - Uses a single directory listing call for minimal mode
  *   - Fetches schema/content in parallel with Promise.all
  *   - Supports ?minimal=true for lightweight listing
@@ -51,15 +62,16 @@
  *   - Supports pagination to limit response size
  *
  * @module functions/api/pages
- * @version 2.1.0 (Shared - Both Phases)
+ * @version 3.0.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { logAudit } from './_audit.js';
 
 /**
  * CORS options for this endpoint.
  */
-const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
+const CORS_OPTIONS = { methods: 'GET, POST, OPTIONS' };
 
 // ============================================================================
 // CONFIGURATION
@@ -153,8 +165,7 @@ export async function onRequestGet(context) {
             }
         }
 
-        // Determine mode and permissions
-        const mode = db ? 'team' : 'directory';
+        // Determine permissions
         const canEditAll = !session || session.role === 'admin' || session.role === 'editor';
 
         // Fetch page list from GitHub
@@ -178,7 +189,6 @@ export async function onRequestGet(context) {
 
         return jsonResponse({
             pages: paginatedPages,
-            mode: mode,
             canEditAll: canEditAll,
             total: total,
             page: page,
@@ -190,6 +200,232 @@ export async function onRequestGet(context) {
         console.error('Pages API error:', err);
         return jsonResponse({ error: 'Failed to list pages', details: err.message }, 500, env, request);
     }
+}
+
+/**
+ * Handle POST request - Create a new page
+ *
+ * Creates a new page with schema and initial empty content.
+ * Admin or Editor role required.
+ *
+ * Request body:
+ *   - pageId: Required. Lowercase alphanumeric, hyphens, underscores (3-50 chars)
+ *   - title: Optional. Human-readable title (defaults to pageId)
+ *   - template: Optional. Name of template from examples/ directory
+ *   - schema: Optional. Custom schema object (overrides template)
+ */
+export async function onRequestPost(context) {
+    const { request, env } = context;
+    const db = env.LOON_DB;
+
+    // Check required bindings
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+    }
+
+    if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
+        return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
+    }
+
+    try {
+        // Validate session
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        }
+
+        const token = authHeader.slice(7);
+        const sessionRaw = await db.get(`session:${token}`);
+
+        if (!sessionRaw) {
+            return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
+        }
+
+        const session = JSON.parse(sessionRaw);
+
+        // Check role - only admin/editor can create pages
+        if (session.role !== 'admin' && session.role !== 'editor') {
+            return jsonResponse({ error: 'Admin or Editor role required to create pages' }, 403, env, request);
+        }
+
+        // Parse request body
+        const { pageId, title, template, schema: customSchema } = await request.json();
+
+        // Validate pageId
+        if (!pageId) {
+            return jsonResponse({ error: 'pageId is required' }, 400, env, request);
+        }
+
+        // Sanitize and validate pageId format
+        const sanitizedPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (sanitizedPageId !== pageId.toLowerCase()) {
+            return jsonResponse({ error: 'Invalid pageId format. Use lowercase letters, numbers, hyphens, and underscores only.' }, 400, env, request);
+        }
+
+        if (sanitizedPageId.length < 3 || sanitizedPageId.length > 50) {
+            return jsonResponse({ error: 'pageId must be 3-50 characters' }, 400, env, request);
+        }
+
+        // Check if page already exists
+        const existingCheck = await checkPageExists(env, sanitizedPageId);
+        if (existingCheck.exists) {
+            return jsonResponse({ error: `Page "${sanitizedPageId}" already exists` }, 409, env, request);
+        }
+
+        // Determine schema to use
+        let schemaContent;
+        if (customSchema) {
+            // Use provided custom schema
+            schemaContent = customSchema;
+        } else if (template) {
+            // Load template from examples/
+            const templateSchema = await loadTemplate(env, template);
+            if (!templateSchema) {
+                return jsonResponse({ error: `Template "${template}" not found` }, 404, env, request);
+            }
+            schemaContent = templateSchema;
+        } else {
+            // Default minimal schema
+            schemaContent = {
+                title: title || sanitizedPageId,
+                description: `Content for ${sanitizedPageId}`,
+                fields: [
+                    {
+                        key: 'content',
+                        label: 'Content',
+                        type: 'textarea',
+                        placeholder: 'Enter content here...'
+                    }
+                ]
+            };
+        }
+
+        // Override title if provided
+        if (title) {
+            schemaContent.title = title;
+        }
+
+        // Create initial content with metadata
+        const contentData = {
+            _meta: {
+                createdBy: session.username,
+                created: new Date().toISOString(),
+                modifiedBy: session.username,
+                lastModified: new Date().toISOString()
+            }
+        };
+
+        // Commit schema to GitHub
+        const schemaPath = `data/${sanitizedPageId}/schema.json`;
+        const schemaCommit = await commitToGitHub(
+            env,
+            schemaPath,
+            schemaContent,
+            `Create ${sanitizedPageId} schema by ${session.username}`,
+            null
+        );
+
+        // Commit content to GitHub
+        const contentPath = `data/${sanitizedPageId}/content.json`;
+        const contentCommit = await commitToGitHub(
+            env,
+            contentPath,
+            contentData,
+            `Create ${sanitizedPageId} content by ${session.username}`,
+            null
+        );
+
+        // Invalidate cache
+        directoryCache.data = null;
+        directoryCache.timestamp = 0;
+
+        // Audit log
+        await logAudit(db, 'page_create', session.username, { pageId: sanitizedPageId, template: template || 'custom' });
+
+        return jsonResponse({
+            success: true,
+            pageId: sanitizedPageId,
+            schemaCommit: schemaCommit,
+            contentCommit: contentCommit,
+            createdBy: session.username
+        }, 201, env, request);
+
+    } catch (err) {
+        console.error('Create page error:', err);
+        return jsonResponse({ error: 'Failed to create page', details: err.message }, 500, env, request);
+    }
+}
+
+/**
+ * Check if a page already exists in GitHub
+ */
+async function checkPageExists(env, pageId) {
+    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/data/${pageId}`;
+    const res = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'LOON-CMS/3.0'
+        }
+    });
+
+    return { exists: res.ok };
+}
+
+/**
+ * Load a template schema from the examples/ directory
+ */
+async function loadTemplate(env, templateName) {
+    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/examples/${templateName}/schema.json`;
+    const res = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'LOON-CMS/3.0'
+        }
+    });
+
+    if (!res.ok) {
+        return null;
+    }
+
+    const data = await res.json();
+    return JSON.parse(atob(data.content));
+}
+
+/**
+ * Commit a file to GitHub
+ */
+async function commitToGitHub(env, path, content, message, existingSha) {
+    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
+
+    const body = {
+        message: message,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2))))
+    };
+
+    if (existingSha) {
+        body.sha = existingSha;
+    }
+
+    const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'LOON-CMS/3.0',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`GitHub PUT failed: ${res.status} - ${errText}`);
+    }
+
+    const result = await res.json();
+    return result.commit.sha;
 }
 
 // ============================================================================
@@ -214,7 +450,7 @@ async function fetchPagesFromGitHub(env, minimal = false) {
     const headers = {
         'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/2.1'
+        'User-Agent': 'LOON-CMS/3.0'
     };
 
     // Check cache for directory listing
@@ -354,7 +590,7 @@ function jsonResponse(data, status = 200, env = null, request = null) {
         : {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization'
         };
 

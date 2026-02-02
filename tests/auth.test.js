@@ -1,105 +1,137 @@
 /**
- * Tests for Phase 1 Auth Endpoint
+ * Tests for Auth Endpoint
  * functions/api/auth.js
+ * @version 3.0.0
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createMockRequest, createMockEnv, createMockContext, parseResponse } from './helpers.js';
-
-// Import the function to test
-// Note: In a real setup, you'd use miniflare to properly simulate the Worker environment
-// For now, we test the logic patterns
+import { createMockKV } from './helpers.js';
 
 describe('Auth Endpoint', () => {
-    let mockEnv;
+    let mockKV;
     
     beforeEach(() => {
-        mockEnv = createMockEnv();
+        mockKV = createMockKV();
     });
     
-    describe('Input Validation', () => {
-        it('should reject requests without pageId', async () => {
-            const request = createMockRequest('POST', { password: 'test' });
-            // Test would call onRequestPost and verify 400 response
-            expect(request.method).toBe('POST');
+    describe('Username Sanitization', () => {
+        it('should lowercase usernames', () => {
+            const username = 'JohnDoe';
+            const sanitized = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            expect(sanitized).toBe('johndoe');
         });
         
-        it('should reject requests without password', async () => {
-            const request = createMockRequest('POST', { pageId: 'demo' });
-            expect(request.method).toBe('POST');
-        });
-        
-        it('should reject invalid pageId format', async () => {
-            const request = createMockRequest('POST', { 
-                pageId: '../etc/passwd', 
-                password: 'test' 
-            });
-            // Should sanitize and reject path traversal attempts
-            expect(request.method).toBe('POST');
-        });
-    });
-    
-    describe('Page ID Sanitization', () => {
-        it('should lowercase page IDs', () => {
-            const pageId = 'DeMo';
-            const sanitized = pageId.toLowerCase().replace(/[^a-z0-9-]/g, '');
-            expect(sanitized).toBe('demo');
+        it('should allow underscores and hyphens', () => {
+            const username = 'john_doe-123';
+            const sanitized = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            expect(sanitized).toBe('john_doe-123');
         });
         
         it('should remove special characters', () => {
-            const pageId = 'test_page!@#';
-            const sanitized = pageId.toLowerCase().replace(/[^a-z0-9-]/g, '');
-            expect(sanitized).toBe('testpage');
-        });
-        
-        it('should allow hyphens', () => {
-            const pageId = 'my-test-page';
-            const sanitized = pageId.toLowerCase().replace(/[^a-z0-9-]/g, '');
-            expect(sanitized).toBe('my-test-page');
+            const username = 'john@doe.com';
+            const sanitized = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            expect(sanitized).toBe('johndoecom');
         });
     });
     
-    describe('Environment Variable Lookup', () => {
-        it('should build correct env var key', () => {
-            const pageId = 'demo';
-            const envKey = `USER_${pageId.toUpperCase()}_PASSWORD`;
-            expect(envKey).toBe('USER_DEMO_PASSWORD');
+    describe('Session Token Generation', () => {
+        it('should generate valid UUID format', () => {
+            const token = crypto.randomUUID();
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            expect(token).toMatch(uuidRegex);
+        });
+    });
+    
+    describe('KV Operations', () => {
+        it('should store and retrieve user', async () => {
+            const user = { role: 'admin', hash: 'test-hash', salt: 'test-salt' };
+            await mockKV.put('user:testuser', JSON.stringify(user));
+            
+            const retrieved = await mockKV.get('user:testuser', { type: 'json' });
+            expect(retrieved.role).toBe('admin');
         });
         
-        it('should handle hyphenated page IDs', () => {
-            const pageId = 'food-truck';
-            const envKey = `USER_${pageId.toUpperCase()}_PASSWORD`;
-            expect(envKey).toBe('USER_FOOD-TRUCK_PASSWORD');
+        it('should store and retrieve session', async () => {
+            const session = { username: 'admin', role: 'admin', created: Date.now() };
+            await mockKV.put('session:test-token', JSON.stringify(session));
+            
+            const retrieved = await mockKV.get('session:test-token', { type: 'json' });
+            expect(retrieved.username).toBe('admin');
+        });
+        
+        it('should return null for non-existent keys', async () => {
+            const result = await mockKV.get('user:nonexistent');
+            expect(result).toBeNull();
+        });
+        
+        it('should delete sessions', async () => {
+            await mockKV.put('session:to-delete', '{"username":"test"}');
+            await mockKV.delete('session:to-delete');
+            
+            const result = await mockKV.get('session:to-delete');
+            expect(result).toBeNull();
+        });
+        
+        it('should list keys by prefix', async () => {
+            await mockKV.put('user:alice', '{}');
+            await mockKV.put('user:bob', '{}');
+            await mockKV.put('session:token1', '{}');
+            
+            const users = await mockKV.list({ prefix: 'user:' });
+            expect(users.keys.length).toBe(2);
+        });
+    });
+    
+    describe('Password Requirements', () => {
+        it('should require minimum 8 characters', () => {
+            const password = 'short';
+            expect(password.length >= 8).toBe(false);
+        });
+        
+        it('should accept valid passwords', () => {
+            const password = 'validpassword123';
+            expect(password.length >= 8).toBe(true);
         });
     });
 });
 
-describe('Rate Limiting Logic', () => {
-    it('should track requests per IP', () => {
-        const rateLimitMap = new Map();
-        const clientIP = '192.168.1.1';
+describe('Role-Based Access Control', () => {
+    describe('Role Validation', () => {
+        const validRoles = ['admin', 'editor', 'contributor'];
         
-        // Simulate adding requests
-        if (!rateLimitMap.has(clientIP)) {
-            rateLimitMap.set(clientIP, { requests: [] });
-        }
+        it('should accept valid roles', () => {
+            expect(validRoles.includes('admin')).toBe(true);
+            expect(validRoles.includes('editor')).toBe(true);
+            expect(validRoles.includes('contributor')).toBe(true);
+        });
         
-        const entry = rateLimitMap.get(clientIP);
-        entry.requests.push(Date.now());
-        
-        expect(entry.requests.length).toBe(1);
+        it('should reject invalid roles', () => {
+            expect(validRoles.includes('superuser')).toBe(false);
+            expect(validRoles.includes('guest')).toBe(false);
+        });
     });
     
-    it('should expire old requests', () => {
-        const windowMs = 60000;
-        const now = Date.now();
-        const requests = [
-            now - 70000, // Expired
-            now - 30000, // Valid
-            now - 10000, // Valid
-        ];
+    describe('Permission Checks', () => {
+        function canUserEdit(role, isOwner) {
+            if (role === 'admin' || role === 'editor') return true;
+            if (role === 'contributor' && isOwner) return true;
+            return false;
+        }
         
-        const validRequests = requests.filter(time => time > now - windowMs);
-        expect(validRequests.length).toBe(2);
+        it('should allow admin to edit any content', () => {
+            expect(canUserEdit('admin', false)).toBe(true);
+        });
+        
+        it('should allow editor to edit any content', () => {
+            expect(canUserEdit('editor', false)).toBe(true);
+        });
+        
+        it('should allow contributor to edit own content', () => {
+            expect(canUserEdit('contributor', true)).toBe(true);
+        });
+        
+        it('should deny contributor from editing others content', () => {
+            expect(canUserEdit('contributor', false)).toBe(false);
+        });
     });
 });

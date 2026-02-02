@@ -15,17 +15,18 @@
  * RESPONSE:
  *   {
  *     "status": "ok" | "degraded",
- *     "version": "2.0.0",
- *     "timestamp": "2025-01-30T12:00:00.000Z",
+ *     "version": "3.0.0",
+ *     "timestamp": "2026-01-30T12:00:00.000Z",
  *     "checks": {
  *       "github_repo": true,
- *       "github_token": true
+ *       "github_token": true,
+ *       "kv_database": true
  *     }
  *   }
  *
  * STATUS VALUES:
- *   - "ok": All required environment variables are configured
- *   - "degraded": One or more required variables are missing
+ *   - "ok": All required configuration is present (GitHub + KV)
+ *   - "degraded": One or more required items are missing
  *
  * HTTP STATUS CODES:
  *   - 200: System is healthy (status: "ok")
@@ -37,7 +38,7 @@
  *   - Safe to expose publicly (no sensitive data in response)
  *
  * @module functions/api/health
- * @version 2.0.0 (Shared - Both Phases)
+ * @version 3.0.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -55,7 +56,7 @@ const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
  * Current version of the LOON system.
  * Update this when releasing new versions.
  */
-const VERSION = '2.0.0';
+const VERSION = '3.0.0';
 
 // ============================================================================
 // REQUEST HANDLERS
@@ -102,21 +103,17 @@ export async function onRequestGet(context) {
     github_token: !!env.GITHUB_TOKEN,
     
     /**
-     * LOON_DB is the KV namespace binding for Phase 2 (Team Mode)
-     * Optional - system works without it in Phase 1 mode
+     * LOON_DB is the KV namespace binding (required)
      */
     kv_database: !!env.LOON_DB,
   };
-  
-  // Determine which mode is active
-  const mode = env.LOON_DB ? 'team' : 'directory';
-  
+
   // ========================================================================
   // DETERMINE OVERALL STATUS
   // ========================================================================
-  // System is "ok" if required variables are configured
-  // KV is optional (only needed for Phase 2 / Team Mode)
-  const requiredChecks = [checks.github_repo, checks.github_token];
+  // System is "ok" if all required variables are configured
+  // KV is now required (v3.0.0 consolidated to KV-only)
+  const requiredChecks = [checks.github_repo, checks.github_token, checks.kv_database];
   const allHealthy = requiredChecks.every(v => v);
   
   // ========================================================================
@@ -135,12 +132,6 @@ export async function onRequestGet(context) {
      */
     version: VERSION,
     
-    /**
-     * Operating mode
-     * "directory" = Phase 1 (password per page, env vars)
-     * "team" = Phase 2 (sessions, RBAC, KV database)
-     */
-    mode: mode,
     
     /**
      * Current server timestamp (useful for debugging timezone issues)

@@ -1,6 +1,7 @@
 /**
  * Tests for Health Endpoint
  * functions/api/health.js
+ * @version 3.0.0
  */
 
 import { describe, it, expect } from 'vitest';
@@ -8,79 +9,79 @@ import { describe, it, expect } from 'vitest';
 describe('Health Endpoint', () => {
     describe('Configuration Checks', () => {
         it('should detect missing GITHUB_REPO', () => {
-            const env = { GITHUB_TOKEN: 'token' };
+            const env = { GITHUB_TOKEN: 'token', LOON_DB: {} };
             const checks = {
                 github_repo: !!env.GITHUB_REPO,
-                github_token: !!env.GITHUB_TOKEN
+                github_token: !!env.GITHUB_TOKEN,
+                kv_database: !!env.LOON_DB
             };
-            
+
             expect(checks.github_repo).toBe(false);
             expect(checks.github_token).toBe(true);
+            expect(checks.kv_database).toBe(true);
         });
-        
+
         it('should detect missing GITHUB_TOKEN', () => {
-            const env = { GITHUB_REPO: 'user/repo' };
+            const env = { GITHUB_REPO: 'user/repo', LOON_DB: {} };
             const checks = {
                 github_repo: !!env.GITHUB_REPO,
-                github_token: !!env.GITHUB_TOKEN
+                github_token: !!env.GITHUB_TOKEN,
+                kv_database: !!env.LOON_DB
             };
-            
+
             expect(checks.github_repo).toBe(true);
             expect(checks.github_token).toBe(false);
+            expect(checks.kv_database).toBe(true);
         });
-        
+
+        it('should detect missing KV database', () => {
+            const env = { GITHUB_REPO: 'user/repo', GITHUB_TOKEN: 'token' };
+            const checks = {
+                github_repo: !!env.GITHUB_REPO,
+                github_token: !!env.GITHUB_TOKEN,
+                kv_database: !!env.LOON_DB
+            };
+
+            expect(checks.github_repo).toBe(true);
+            expect(checks.github_token).toBe(true);
+            expect(checks.kv_database).toBe(false);
+        });
+
         it('should pass when all required vars present', () => {
-            const env = { 
-                GITHUB_REPO: 'user/repo', 
-                GITHUB_TOKEN: 'token' 
+            const env = {
+                GITHUB_REPO: 'user/repo',
+                GITHUB_TOKEN: 'token',
+                LOON_DB: {} // Mock KV binding
             };
             const checks = {
                 github_repo: !!env.GITHUB_REPO,
-                github_token: !!env.GITHUB_TOKEN
+                github_token: !!env.GITHUB_TOKEN,
+                kv_database: !!env.LOON_DB
             };
-            
+
             const allHealthy = Object.values(checks).every(v => v);
             expect(allHealthy).toBe(true);
         });
     });
-    
-    describe('Mode Detection', () => {
-        it('should detect directory mode when no KV', () => {
-            const env = { GITHUB_REPO: 'user/repo', GITHUB_TOKEN: 'token' };
-            const mode = env.LOON_DB ? 'team' : 'directory';
-            expect(mode).toBe('directory');
-        });
-        
-        it('should detect team mode when KV present', () => {
-            const env = { 
-                GITHUB_REPO: 'user/repo', 
-                GITHUB_TOKEN: 'token',
-                LOON_DB: {} // Mock KV binding
-            };
-            const mode = env.LOON_DB ? 'team' : 'directory';
-            expect(mode).toBe('team');
-        });
-    });
-    
+
     describe('Response Format', () => {
         it('should include all required fields', () => {
             const response = {
                 status: 'ok',
-                version: '2.0.0',
-                mode: 'directory',
+                version: '3.0.0',
                 timestamp: new Date().toISOString(),
                 checks: {
                     github_repo: true,
                     github_token: true,
-                    kv_database: false
+                    kv_database: true
                 }
             };
-            
+
             expect(response.status).toBeDefined();
-            expect(response.version).toBeDefined();
-            expect(response.mode).toBeDefined();
+            expect(response.version).toBe('3.0.0');
             expect(response.timestamp).toBeDefined();
             expect(response.checks).toBeDefined();
+            expect(response.checks.kv_database).toBe(true);
         });
         
         it('should return valid ISO timestamp', () => {

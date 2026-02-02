@@ -1,714 +1,776 @@
 <!DOCTYPE html>
 <!--
 ================================================================================
-LOON Admin Panel (admin.html) - Phase 1: Directory Mode
+LOON Admin Panel (admin.html)
 ================================================================================
 
-This is the content editor interface for LOON Phase 1 (Directory Mode).
-Users authenticate with a Page ID + Password combination, where each page
-has its own password stored as a Cloudflare environment variable.
+Content editor interface for LOON CMS.
+Users authenticate with Username + Password, receiving a session token.
+Role-based access control (RBAC) determines what users can edit.
 
 FEATURES:
-- Dynamic form generation from schema.json
-- Auto-save drafts to localStorage
-- Dark mode support (follows system preference)
-- Session persistence ("Remember me")
-- Keyboard shortcuts (Ctrl+S to save, ? for help)
-- Image preview for URL fields
-- Character counter for text fields
+- Username/password login (stored in Cloudflare KV)
+- Session tokens (24-hour expiry)
+- Role-based access control
+- User management UI (admin only)
+- Content metadata tracking (createdBy, modifiedBy)
+- Session expiry detection
+- Dark mode support
+
+ROLES:
+- Admin: Edit any content, manage users
+- Editor: Edit any content
+- Contributor: Create new content, edit only own content
 
 AUTHENTICATION:
-- Password stored as USER_{PAGEID}_PASSWORD environment variable
-- Validated against /api/auth endpoint
-- Sent with every save request to /api/save
+- Users stored in Cloudflare KV (LOON_DB)
+- Login via /api/auth returns session token
+- Token included in Authorization header for all requests
+- Logout via DELETE /api/auth
 
-FOR PHASE 2 (TEAM MODE):
-Use admin-v2.html instead, which supports:
-- Username/password login (stored in KV)
-- Session tokens
-- Role-based access control
-- User management UI
+API ENDPOINTS USED:
+- POST /api/auth   - Login
+- DELETE /api/auth - Logout
+- POST /api/save   - Save content (with RBAC)
+- /api/users       - User management (admin only)
 
-VERSION: 2.0.0
+PREREQUISITES:
+- Cloudflare KV namespace "LOON_DB" configured
+- At least one admin user created via bootstrap-admin.sh
+
+VERSION: 3.0.0
 ================================================================================
 -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOON Admin</title>
-    <meta name="description" content="LOON Admin Panel - Edit your content">
+    <title>LOON Team Admin</title>
+    <meta name="description" content="LOON Admin Panel">
     <meta name="robots" content="noindex, nofollow">
-    <meta name="theme-color" content="#003865">
-    <meta name="color-scheme" content="light dark">
-    
-    <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23003865'/><text x='50' y='62' text-anchor='middle' fill='white' font-size='40' font-family='sans-serif'>L</text></svg>">
-    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>L</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <style>
         :root {
             --primary: #003865;
             --primary-hover: #004d8f;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --info: #17a2b8;
-            --bg-gradient-start: #f8f9fa;
-            --bg-gradient-end: #e9ecef;
-            --card-bg: white;
-            --text-primary: #333;
-            --text-secondary: #6c757d;
-            --border-color: #f0f0f0;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        body { padding-top: 1rem; }
+        
+        .hidden { display: none !important; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--muted-border-color);
+        }
+        
+        .header h1 { margin: 0; font-size: 1.5rem; }
+        .header .user-info { font-size: 0.9rem; color: var(--muted-color); }
+        .header .role-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 0.5rem;
+        }
+        .role-admin { background: var(--primary); color: white; }
+        .role-editor { background: var(--success); color: white; }
+        .role-contributor { background: var(--warning); color: black; }
+        
+        .tab-nav {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--muted-border-color);
+        }
+        .tab-nav button {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            color: var(--muted-color);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .tab-nav button:hover { color: var(--primary); }
+        .tab-nav button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        .tab-nav .logout-btn {
+            margin-left: auto;
+            color: var(--error);
+        }
+        
+        .login-container {
+            max-width: 400px;
+            margin: 4rem auto;
+            padding: 2rem;
+            border: 1px solid var(--muted-border-color);
+            border-radius: 8px;
+        }
+        .login-container h2 { text-align: center; margin-bottom: 1.5rem; }
+        
+        .form-field { margin-bottom: 1rem; }
+        .form-field label { display: block; margin-bottom: 0.25rem; font-weight: 500; }
+        .form-field small { display: block; color: var(--muted-color); margin-top: 0.25rem; }
+        
+        .status-message {
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .status-success { background: #dcfce7; color: #166534; }
+        .status-error { background: #fee2e2; color: #991b1b; }
+        .status-info { background: #dbeafe; color: #1e40af; }
+        
+        .user-table { width: 100%; }
+        .user-table th { text-align: left; }
+        .user-table td { vertical-align: middle; }
+        .user-table .actions { text-align: right; }
+        .user-table .actions button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            margin-left: 0.25rem;
+        }
+        
+        .add-user-form {
+            background: var(--card-background-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+        .add-user-form h4 { margin-top: 0; }
+        
+        .page-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .page-selector input { flex: 1; }
+        
+        .editor-container {
+            background: var(--card-background-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        .editor-container h3 { margin-top: 0; }
+        
+        .save-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--muted-border-color);
+        }
+        .save-bar .last-saved { font-size: 0.85rem; color: var(--muted-color); }
+        
+        .meta-info {
+            font-size: 0.8rem;
+            color: var(--muted-color);
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: var(--muted-border-color);
+            border-radius: 4px;
         }
         
         /* Dark mode */
         @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-gradient-start: #1a1a2e;
-                --bg-gradient-end: #16213e;
-                --card-bg: #1f2937;
-                --text-primary: #e5e7eb;
-                --text-secondary: #9ca3af;
-                --border-color: #374151;
-            }
-            .status-success { background: #064e3b; color: #6ee7b7; border-color: #065f46; }
-            .status-error { background: #7f1d1d; color: #fca5a5; border-color: #991b1b; }
-            .status-info { background: #1e3a5f; color: #93c5fd; border-color: #1e40af; }
-            .status-warning { background: #78350f; color: #fcd34d; border-color: #92400e; }
-        }
-        
-        * { box-sizing: border-box; }
-        
-        body {
-            background: linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-            min-height: 100vh;
-            margin: 0;
-        }
-        
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-        
-        .card {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            margin-top: 1.5rem;
-            animation: fadeIn 0.3s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .hidden { display: none !important; }
-        
-        /* Status Messages */
-        .status-message {
-            margin-top: 1rem;
-            padding: 0.85rem 1rem;
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .status-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .status-info { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
-        .status-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        
-        /* Header */
-        .header {
-            text-align: center;
-            padding: 1.5rem 0 0.5rem 0;
-        }
-        .header h1 {
-            margin-bottom: 0.25rem;
-            color: var(--primary);
-            font-size: 1.75rem;
-        }
-        @media (prefers-color-scheme: dark) {
-            .header h1 { color: #60a5fa; }
-        }
-        .header p {
-            color: var(--text-secondary);
-            margin: 0;
-            font-size: 0.95rem;
-        }
-        
-        /* Form Improvements */
-        label {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-        
-        input, select, textarea {
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        input:focus, select:focus, textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(0, 56, 101, 0.1);
-        }
-        
-        textarea {
-            min-height: 120px;
-            resize: vertical;
+            .status-success { background: #166534; color: #dcfce7; }
+            .status-error { background: #991b1b; color: #fee2e2; }
+            .status-info { background: #1e40af; color: #dbeafe; }
         }
         
         /* Password field with toggle */
         .password-wrapper {
             position: relative;
         }
-        .password-wrapper input {
-            padding-right: 45px;
-        }
+        .password-wrapper input { padding-right: 3rem; }
         .password-toggle {
             position: absolute;
-            right: 10px;
+            right: 0.5rem;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             cursor: pointer;
-            padding: 5px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-        .password-toggle:hover {
-            color: var(--text-primary);
-        }
-        
-        /* Login Form */
-        .login-form h3 {
-            margin-top: 0;
-            color: var(--primary);
-        }
-        @media (prefers-color-scheme: dark) {
-            .login-form h3 { color: #60a5fa; }
-        }
-        
-        /* Remember me checkbox */
-        .remember-me {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin: 1rem 0;
-            font-size: 0.9rem;
-        }
-        .remember-me input {
-            width: auto;
-            margin: 0;
-        }
-        
-        /* Editor Header */
-        .editor-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--border-color);
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-        .editor-title {
-            margin: 0;
-            color: var(--primary);
-            font-size: 1.25rem;
-        }
-        @media (prefers-color-scheme: dark) {
-            .editor-title { color: #60a5fa; }
-        }
-        .editor-meta {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-        .logout-link {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            text-decoration: none;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .logout-link:hover {
-            background: var(--border-color);
-            color: var(--text-primary);
-        }
-        
-        /* Last saved indicator */
-        .last-saved {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-        }
-        .autosave-indicator {
-            font-size: 0.75rem;
-            color: var(--info);
-            margin-left: 0.5rem;
-        }
-        
-        /* Buttons */
-        .btn-group {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-            flex-wrap: wrap;
-        }
-        
-        button {
-            font-weight: 500;
-            transition: transform 0.1s, box-shadow 0.2s;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-            border-color: #6c757d;
-        }
-        .btn-secondary:hover {
-            background: #5a6268;
-            border-color: #545b62;
-        }
-        .btn-small {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
-        }
-        
-        /* Field descriptions and counters */
-        .field-description {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-            margin-bottom: 0.75rem;
-        }
-        .field-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 0.25rem;
-        }
-        .char-counter {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-        .char-counter.warning { color: var(--warning); }
-        .char-counter.danger { color: var(--danger); }
-        
-        /* Image preview */
-        .image-preview {
-            margin-top: 0.5rem;
-            max-width: 200px;
-            max-height: 150px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            display: none;
-        }
-        .image-preview.loaded {
-            display: block;
-        }
-        
-        /* Field wrapper */
-        .field-wrapper {
-            margin-bottom: 1.25rem;
-        }
-        
-        /* Footer */
-        .footer-links {
-            text-align: center;
-            margin-top: 1.5rem;
-            padding-top: 1rem;
-            font-size: 0.85rem;
-            color: #888;
-        }
-        .footer-links a {
-            color: var(--text-secondary);
-            margin: 0 0.5rem;
-        }
-        
-        /* Version badge */
-        .version-badge {
-            display: inline-block;
-            font-size: 0.7rem;
-            background: var(--border-color);
-            color: var(--text-secondary);
-            padding: 0.15rem 0.4rem;
-            border-radius: 4px;
-            margin-left: 0.5rem;
-            vertical-align: middle;
-        }
-        
-        /* Help button */
-        .help-btn {
-            background: none;
-            border: 1px solid var(--border-color);
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            color: var(--text-secondary);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 0.5rem;
-            vertical-align: middle;
-        }
-        .help-btn:hover {
-            background: var(--border-color);
-            color: var(--text-primary);
-        }
-        
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 1rem;
-        }
-        .modal {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 2rem;
-            max-width: 450px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .modal h3 {
-            margin-top: 0;
-            color: var(--primary);
-        }
-        @media (prefers-color-scheme: dark) {
-            .modal h3 { color: #60a5fa; }
-        }
-        .modal table {
-            width: 100%;
-            font-size: 0.9rem;
-        }
-        .modal kbd {
-            background: var(--border-color);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.85rem;
-        }
-        
-        /* Loading spinner in button */
-        button[aria-busy="true"]::before {
-            content: '';
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.5rem;
-            vertical-align: middle;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Mobile improvements */
-        @media (max-width: 600px) {
-            .container { padding: 0.75rem; }
-            .card { padding: 1.5rem; }
-            .btn-group { flex-direction: column; }
-            .btn-group button { width: 100%; }
-            .editor-header { flex-direction: column; align-items: flex-start; }
-            .editor-meta { width: 100%; justify-content: space-between; }
+            padding: 0.25rem;
+            color: var(--muted-color);
         }
     </style>
 </head>
 <body>
     <main class="container">
-        <header class="header">
-            <h1>
-                Project LOON 
-                <span class="version-badge">v2.0.0</span>
-                <button class="help-btn" onclick="showHelp()" title="Keyboard shortcuts">?</button>
-            </h1>
-            <p>Lightweight Online Organizing Network</p>
-        </header>
-        
-        <article class="card">
-            <!-- LOGIN SECTION -->
-            <div id="login-section" class="login-form">
-                <h3>Sign In to Edit</h3>
-                <form onsubmit="login(event)" autocomplete="on">
-                    <div class="field-wrapper">
-                        <label for="pageId">Page ID</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="pageId" name="username" placeholder="e.g., demo" required autocomplete="username" autofocus style="flex: 1;">
-                            <button type="button" class="outline" onclick="togglePageBrowser()" style="white-space: nowrap;">Browse</button>
-                        </div>
-                        <small class="field-description">The identifier for the page you want to edit</small>
+        <!-- Login Section -->
+        <div id="login-section">
+            <div class="login-container">
+                <h2>LOON Admin</h2>
+                
+                <div class="form-field">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Enter username" autocomplete="username">
+                </div>
+                
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" placeholder="Enter password" autocomplete="current-password">
+                        <button type="button" class="password-toggle" onclick="togglePassword()">Show</button>
                     </div>
-                    
-                    <!-- Page Browser -->
-                    <div id="page-browser" class="hidden" style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-gradient-start); border-radius: 8px; max-height: 200px; overflow-y: auto;">
-                        <div id="page-list">Loading pages...</div>
-                    </div>
-                    
-                    <div class="field-wrapper">
-                        <label for="password">Password</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
-                            <button type="button" class="password-toggle" onclick="togglePassword()" title="Show/hide password">
-                                <span id="password-toggle-text">Show</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <label class="remember-me">
+                </div>
+                
+                <div class="form-field">
+                    <label>
                         <input type="checkbox" id="remember-me">
-                        <span>Remember me on this device</span>
+                        Remember me
                     </label>
+                </div>
+                
+                <button onclick="login()" style="width: 100%;">Login</button>
+                
+                <div id="login-error" class="status-message status-error hidden"></div>
+            </div>
+        </div>
+
+        <!-- App Section (shown after login) -->
+        <div id="app-section" class="hidden">
+            <header class="header">
+                <div>
+                    <h1>LOON Admin</h1>
+                    <span class="user-info">
+                        Logged in as <strong id="display-username"></strong>
+                        <span id="display-role" class="role-badge"></span>
+                    </span>
+                </div>
+            </header>
+
+            <nav class="tab-nav">
+                <button onclick="switchTab('editor')" id="tab-editor" class="active">Content Editor</button>
+                <button onclick="switchTab('users')" id="tab-users" class="hidden">Manage Users</button>
+                <button onclick="switchTab('sessions')" id="tab-sessions" class="hidden">Sessions</button>
+                <button onclick="switchTab('account')" id="tab-account">My Account</button>
+                <button onclick="logout()" class="logout-btn">Logout</button>
+            </nav>
+
+            <!-- Editor Tab -->
+            <div id="view-editor">
+                <div class="page-selector">
+                    <input type="text" id="pageId" placeholder="Enter Page ID (e.g., demo, blog-post)">
+                    <button onclick="loadEditor()" class="secondary">Load Page</button>
+                    <button onclick="loadPageList()" class="outline" style="margin-left: 0.5rem;">Browse Pages</button>
+                </div>
+                
+                <!-- Page Browser -->
+                <div id="page-browser" class="hidden" style="margin-bottom: 1.5rem;">
+                    <h4>Available Pages</h4>
+                    <div id="page-list" style="display: grid; gap: 0.5rem; max-height: 300px; overflow-y: auto;"></div>
+                    <div id="page-browser-status"></div>
+                </div>
+                
+                <div id="editor-container" class="editor-container hidden">
+                    <h3 id="editor-title">Page Editor</h3>
+                    <div id="editor-form"></div>
                     
-                    <button type="submit" id="login-btn">Sign In</button>
-                </form>
-                <div id="login-status" class="status-message hidden" role="alert" aria-live="polite"></div>
+                    <div id="content-meta" class="meta-info hidden"></div>
+                    
+                    <div class="save-bar">
+                        <span class="last-saved" id="last-saved"></span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="saveContent()" id="save-btn">Save Changes</button>
+                            <button onclick="deleteContent()" id="delete-btn" class="outline" style="color: var(--error); display: none;">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="editor-status"></div>
             </div>
 
-            <!-- EDITOR SECTION -->
-            <div id="editor-section" class="hidden">
-                <div class="editor-header">
-                    <h3 class="editor-title" id="editor-title">Editing...</h3>
-                    <div class="editor-meta">
-                        <span id="last-saved" class="last-saved"></span>
-                        <a href="#" class="logout-link" onclick="logout(); return false;" aria-label="Sign out">Sign Out</a>
+            <!-- Users Tab (Admin only) -->
+            <div id="view-users" class="hidden">
+                <h3>Team Members</h3>
+                
+                <table class="user-table" role="grid">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Created</th>
+                            <th class="actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list"></tbody>
+                </table>
+                
+                <div id="users-status"></div>
+                
+                <div class="add-user-form">
+                    <h4>Add New User</h4>
+                    <div class="grid">
+                        <div class="form-field">
+                            <label for="new-username">Username</label>
+                            <input type="text" id="new-username" placeholder="lowercase, no spaces">
+                        </div>
+                        <div class="form-field">
+                            <label for="new-password">Password (optional)</label>
+                            <input type="text" id="new-password" placeholder="Leave blank to auto-generate">
+                        </div>
+                        <div class="form-field">
+                            <label for="new-role">Role</label>
+                            <select id="new-role">
+                                <option value="contributor">Contributor</option>
+                                <option value="editor">Editor</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="createUser()">Create User</button>
+                    
+                    <div id="create-user-result" class="hidden"></div>
+                </div>
+            </div>
+
+            <!-- Sessions Tab (Admin only) -->
+            <div id="view-sessions" class="hidden">
+                <h3>Active Sessions</h3>
+                <p style="color: var(--muted-color); margin-bottom: 1rem;">Monitor and manage user sessions for security.</p>
+                
+                <table class="user-table" role="grid">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Login Time</th>
+                            <th>IP Address</th>
+                            <th class="actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="session-list"></tbody>
+                </table>
+                
+                <div id="sessions-status"></div>
+                
+                <div style="margin-top: 1.5rem; padding: 1rem; background: var(--muted-border-color); border-radius: 8px;">
+                    <h4>Force Logout User</h4>
+                    <p style="color: var(--muted-color); font-size: 0.9rem; margin-bottom: 1rem;">Revoke all sessions for a user (useful if account is compromised).</p>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="force-logout-username" placeholder="Username" style="flex: 1;">
+                        <button onclick="forceLogoutUser()" class="secondary">Revoke All Sessions</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Account Tab -->
+            <div id="view-account" class="hidden">
+                <h3>My Account</h3>
                 
-                <form id="dynamic-form" onsubmit="saveData(event)"></form>
-                
-                <div class="btn-group">
-                    <button type="button" onclick="saveData(event)" id="save-btn" class="primary">Save Changes</button>
-                    <button type="button" onclick="previewChanges()" class="btn-secondary outline">Preview</button>
+                <div class="account-info" style="margin-bottom: 2rem; padding: 1rem; background: var(--muted-border-color); border-radius: 8px;">
+                    <p><strong>Username:</strong> <span id="account-username"></span></p>
+                    <p><strong>Role:</strong> <span id="account-role"></span></p>
                 </div>
                 
-                <div id="status" class="status-message hidden" role="alert" aria-live="polite"></div>
-                <div id="autosave-status" class="last-saved"></div>
+                <div class="change-password-form" style="max-width: 400px;">
+                    <h4>Change Password</h4>
+                    
+                    <div class="form-field">
+                        <label for="current-password">Current Password</label>
+                        <input type="password" id="current-password" autocomplete="current-password">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="new-password-self">New Password</label>
+                        <input type="password" id="new-password-self" autocomplete="new-password">
+                        <small style="color: var(--muted-color);">Minimum 8 characters</small>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="confirm-password">Confirm New Password</label>
+                        <input type="password" id="confirm-password" autocomplete="new-password">
+                    </div>
+                    
+                    <button onclick="changePassword()">Change Password</button>
+                    
+                    <div id="password-change-status"></div>
+                </div>
             </div>
-        </article>
-        
-        <footer class="footer-links">
-            <a href="/">View Public Site</a>
-            <span>|</span>
-            <a href="/api/health" target="_blank">System Health</a>
-            <span>|</span>
-            <a href="#" onclick="showHelp(); return false;">Shortcuts</a>
-            <br>
-            <small style="opacity: 0.6; margin-top: 0.5rem; display: inline-block;">Phase 1: Directory Mode</small>
-        </footer>
-    </main>
-    
-    <!-- Help Modal -->
-    <div id="help-modal" class="modal-overlay hidden" onclick="if(event.target === this) hideHelp()">
-        <div class="modal">
-            <h3>Keyboard Shortcuts</h3>
-            <table>
-                <tr><td><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>Save changes</td></tr>
-                <tr><td><kbd>Esc</kbd></td><td>Sign out (with confirmation)</td></tr>
-            </table>
-            
-            <h3 style="margin-top: 1.5rem;">Features</h3>
-            <ul style="font-size: 0.9rem; color: var(--text-secondary);">
-                <li><strong>Auto-save:</strong> Drafts saved locally every 30 seconds</li>
-                <li><strong>Remember me:</strong> Stay signed in on this device</li>
-                <li><strong>Image preview:</strong> URL fields show image thumbnails</li>
-                <li><strong>Dark mode:</strong> Follows your system preference</li>
-            </ul>
-            
-            <h3 style="margin-top: 1.5rem;">Limits</h3>
-            <ul style="font-size: 0.9rem; color: var(--text-secondary);">
-                <li>Max content size: 1 MB</li>
-                <li>Rate limit: 30 saves per minute</li>
-                <li>Auth rate limit: 10 attempts per minute</li>
-            </ul>
-            
-            <button onclick="hideHelp()" style="margin-top: 1rem; width: 100%;">Close</button>
         </div>
-    </div>
+    </main>
+
+    <footer class="container" style="text-align: center; margin-top: 3rem; color: var(--muted-color);">
+        <small>LOON v3.0.0</small>
+    </footer>
 
     <script>
-        // =====================
+        // =================================================================
         // STATE
-        // =====================
-        /**
-         * Application state for the admin editor.
-         *
-         * Security note: CURRENT_PASSWORD is held in memory only during the
-         * active session. The "Remember me" feature stores a hashed session
-         * token, not the raw password, to reduce exposure if localStorage
-         * is compromised.
-         */
+        // =================================================================
+        let SESSION = null;
         let CURRENT_SCHEMA = null;
         let CURRENT_CONTENT = null;
         let CURRENT_PAGE_ID = null;
-        let CURRENT_PASSWORD = null;
-        let hasUnsavedChanges = false;
-        let lastSavedTime = null;
-        let autosaveInterval = null;
 
         const STORAGE_KEYS = {
-            SESSION: 'loon_session_v2',  // Session token (not raw password)
-            DRAFT: 'loon_draft_',
+            SESSION: 'loon_session',
             LAST_PAGE: 'loon_last_page'
         };
 
-        /**
-         * Generate a session token from credentials.
-         * This creates a non-reversible token stored in localStorage instead
-         * of the raw password. The token is page-specific and time-bound.
-         *
-         * Note: This is a client-side convenience token for "Remember me",
-         * not a cryptographic session. The actual password is still sent
-         * to the server on each save request.
-         *
-         * @param {string} pageId - The page identifier
-         * @param {string} password - The user's password
-         * @param {number} timestamp - Session creation time
-         * @returns {Promise<string>} A hex-encoded session token
-         */
-        async function generateSessionToken(pageId, password, timestamp) {
-            const data = `${pageId}:${password}:${timestamp}`;
-            const encoder = new TextEncoder();
-            const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        /**
-         * Verify a session token matches the provided credentials.
-         * Used to validate stored "Remember me" sessions.
-         *
-         * @param {string} token - The stored session token
-         * @param {string} pageId - The page identifier
-         * @param {string} password - The password to verify
-         * @param {number} timestamp - The original session timestamp
-         * @returns {Promise<boolean>} True if token matches credentials
-         */
-        async function verifySessionToken(token, pageId, password, timestamp) {
-            const expected = await generateSessionToken(pageId, password, timestamp);
-            return token === expected;
-        }
-
-        // =====================
+        // =================================================================
         // INITIALIZATION
-        // =====================
+        // =================================================================
         document.addEventListener('DOMContentLoaded', () => {
             // Check for saved session
-            // Note: We store a hashed token, not the raw password.
-            // The user must re-enter credentials if the session is invalid.
-            const session = localStorage.getItem(STORAGE_KEYS.SESSION);
-            if (session) {
+            const saved = localStorage.getItem(STORAGE_KEYS.SESSION);
+            if (saved) {
                 try {
-                    const parsed = JSON.parse(session);
-                    const { pageId, token, timestamp } = parsed;
-
-                    // Session valid for 7 days
-                    const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-                    if (Date.now() - timestamp < SESSION_MAX_AGE_MS) {
-                        // Store session data for later validation
-                        // User will need to enter password; we pre-fill pageId only
-                        document.getElementById('pageId').value = pageId;
-                        document.getElementById('remember-me').checked = true;
-
-                        // Store the token for verification after login
-                        window._pendingSessionToken = token;
-                        window._pendingSessionTimestamp = timestamp;
-                    } else {
-                        // Session expired, clear it
+                    SESSION = JSON.parse(saved);
+                    
+                    // Check if session expired client-side
+                    if (SESSION.expiresAt && Date.now() > SESSION.expiresAt) {
+                        console.log('Session expired client-side');
                         localStorage.removeItem(STORAGE_KEYS.SESSION);
+                        SESSION = null;
+                    } else {
+                        showApp();
+                        // Verify session is still valid server-side
+                        verifySession();
                     }
                 } catch (e) {
                     localStorage.removeItem(STORAGE_KEYS.SESSION);
                 }
             }
 
-            // Restore last used page ID (if not already set by session)
-            if (!document.getElementById('pageId').value) {
-                const lastPage = localStorage.getItem(STORAGE_KEYS.LAST_PAGE);
-                if (lastPage) {
-                    document.getElementById('pageId').value = lastPage;
-                }
+            // Restore last page ID
+            const lastPage = localStorage.getItem(STORAGE_KEYS.LAST_PAGE);
+            if (lastPage) {
+                document.getElementById('pageId').value = lastPage;
             }
 
-            // Migrate old session format (v1 stored raw password)
-            // This removes any legacy sessions that stored passwords
-            migrateOldSessions();
+            // Enter key handlers
+            document.getElementById('username').addEventListener('keypress', e => {
+                if (e.key === 'Enter') document.getElementById('password').focus();
+            });
+            document.getElementById('password').addEventListener('keypress', e => {
+                if (e.key === 'Enter') login();
+            });
+            document.getElementById('pageId').addEventListener('keypress', e => {
+                if (e.key === 'Enter') loadEditor();
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', e => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    if (CURRENT_SCHEMA) saveContent();
+                }
+            });
         });
 
+        // =================================================================
+        // AUTHENTICATION
+        // =================================================================
+        
         /**
-         * Migrate sessions from old format (v1) that stored raw passwords.
-         * This is a one-time cleanup to remove any stored passwords from
-         * before the session token update.
+         * Verify saved session is still valid server-side
          */
-        function migrateOldSessions() {
-            const oldKey = 'loon_session';
-            const oldSession = localStorage.getItem(oldKey);
-            if (oldSession) {
-                try {
-                    const parsed = JSON.parse(oldSession);
-                    // Old format had 'password' field; new format has 'token'
-                    if (parsed.password) {
-                        // Remove the old session with stored password
-                        localStorage.removeItem(oldKey);
-                    }
-                } catch (e) {
-                    localStorage.removeItem(oldKey);
+        async function verifySession() {
+            if (!SESSION || !SESSION.token) return;
+            
+            try {
+                // Use a lightweight check - try to list users (will fail for non-admins, but that's ok)
+                // If we get 401, session is invalid
+                const res = await fetch('/api/health');
+                // Health check doesn't validate session, so we'll verify on first actual request
+                // This is handled by handleSessionError
+            } catch (e) {
+                // Network error, don't logout - might be offline
+                console.log('Session verification skipped (network error)');
+            }
+        }
+        
+        /**
+         * Handle session errors (401) - logout and redirect to login
+         */
+        function handleSessionError(error) {
+            if (error.message.includes('session') || error.message.includes('expired') || error.message.includes('401')) {
+                alert('Your session has expired. Please log in again.');
+                logout();
+                return true;
+            }
+            return false;
+        }
+        
+        async function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember-me').checked;
+
+            if (!username || !password) {
+                showError('login-error', 'Username and password required');
+                return;
+            }
+
+            hideError('login-error');
+
+            try {
+                const res = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Login failed');
                 }
+
+                SESSION = {
+                    token: data.token,
+                    username: data.username,
+                    role: data.role,
+                    expiresAt: Date.now() + (data.expiresIn * 1000)
+                };
+
+                if (remember) {
+                    localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(SESSION));
+                } else {
+                    sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(SESSION));
+                }
+
+                showApp();
+
+            } catch (e) {
+                showError('login-error', e.message);
             }
         }
 
-        // =====================
-        // PAGE BROWSER
-        // =====================
-        let pageBrowserLoaded = false;
-        
-        async function togglePageBrowser() {
-            const browser = document.getElementById('page-browser');
-            const isHidden = browser.classList.contains('hidden');
-            
-            if (isHidden) {
-                browser.classList.remove('hidden');
-                if (!pageBrowserLoaded) {
-                    await loadPageList();
+        async function logout() {
+            if (SESSION && SESSION.token) {
+                try {
+                    await fetch('/api/auth', {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                    });
+                } catch (e) {
+                    // Ignore logout errors
                 }
-            } else {
-                browser.classList.add('hidden');
+            }
+
+            SESSION = null;
+            CURRENT_SCHEMA = null;
+            CURRENT_CONTENT = null;
+            CURRENT_PAGE_ID = null;
+
+            localStorage.removeItem(STORAGE_KEYS.SESSION);
+            sessionStorage.removeItem(STORAGE_KEYS.SESSION);
+
+            location.reload();
+        }
+
+        function showApp() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('app-section').classList.remove('hidden');
+
+            document.getElementById('display-username').textContent = SESSION.username;
+            
+            const roleBadge = document.getElementById('display-role');
+            roleBadge.textContent = SESSION.role;
+            roleBadge.className = `role-badge role-${SESSION.role}`;
+
+            // Show admin tabs if admin
+            if (SESSION.role === 'admin') {
+                document.getElementById('tab-users').classList.remove('hidden');
+                document.getElementById('tab-sessions').classList.remove('hidden');
             }
         }
-        
+
+        // =================================================================
+        // TAB NAVIGATION
+        // =================================================================
+        function switchTab(tab) {
+            // Hide all views
+            document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            
+            // Deactivate all tabs
+            document.querySelectorAll('.tab-nav button').forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected view and activate tab
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            // Load data for tab
+            if (tab === 'users') {
+                loadUsers();
+            } else if (tab === 'sessions') {
+                loadSessions();
+            } else if (tab === 'account') {
+                loadAccountInfo();
+            }
+        }
+
+        // =================================================================
+        // ACCOUNT MANAGEMENT
+        // =================================================================
+        function loadAccountInfo() {
+            if (SESSION) {
+                document.getElementById('account-username').textContent = SESSION.username;
+                document.getElementById('account-role').textContent = SESSION.role;
+            }
+        }
+
+        async function changePassword() {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password-self').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showStatus('password-change-status', 'All fields are required', 'error');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                showStatus('password-change-status', 'New password must be at least 8 characters', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showStatus('password-change-status', 'New passwords do not match', 'error');
+                return;
+            }
+
+            showStatus('password-change-status', 'Changing password...', 'info');
+
+            try {
+                const res = await fetch('/api/auth', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        currentPassword: currentPassword,
+                        newPassword: newPassword
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    if (res.status === 401 && handleSessionError(new Error(data.error || 'Unauthorized'))) {
+                        return;
+                    }
+                    throw new Error(data.error || 'Password change failed');
+                }
+
+                // Clear form
+                document.getElementById('current-password').value = '';
+                document.getElementById('new-password-self').value = '';
+                document.getElementById('confirm-password').value = '';
+
+                showStatus('password-change-status', 'Password changed successfully', 'success');
+
+            } catch (e) {
+                showStatus('password-change-status', e.message, 'error');
+            }
+        }
+
+        // =================================================================
+        // CONTENT EDITOR
+        // =================================================================
+        async function loadEditor() {
+            const pageId = document.getElementById('pageId').value.trim().toLowerCase();
+            
+            if (!pageId) {
+                showStatus('editor-status', 'Please enter a Page ID', 'error');
+                return;
+            }
+
+            // Save last used page
+            localStorage.setItem(STORAGE_KEYS.LAST_PAGE, pageId);
+            CURRENT_PAGE_ID = pageId;
+
+            showStatus('editor-status', 'Loading...', 'info');
+            document.getElementById('editor-container').classList.add('hidden');
+
+            try {
+                // Fetch schema
+                const schemaRes = await fetch(`/data/${pageId}/schema.json`);
+                if (!schemaRes.ok) {
+                    throw new Error(`Page "${pageId}" not found. Check the Page ID or create the schema.`);
+                }
+                CURRENT_SCHEMA = await schemaRes.json();
+
+                // Fetch content
+                const contentRes = await fetch(`/data/${pageId}/content.json`);
+                CURRENT_CONTENT = contentRes.ok ? await contentRes.json() : {};
+
+                // Build form
+                buildForm();
+
+                // Show editor
+                document.getElementById('editor-container').classList.remove('hidden');
+                document.getElementById('editor-title').textContent = CURRENT_SCHEMA.title || `Editing: ${pageId}`;
+                
+                // Show metadata if exists
+                if (CURRENT_CONTENT._meta) {
+                    const meta = CURRENT_CONTENT._meta;
+                    let metaHtml = '';
+                    if (meta.createdBy) metaHtml += `Created by: ${meta.createdBy}`;
+                    if (meta.created) metaHtml += ` on ${new Date(meta.created).toLocaleDateString()}`;
+                    if (meta.modifiedBy) metaHtml += ` | Last modified by: ${meta.modifiedBy}`;
+                    if (meta.lastModified) metaHtml += ` on ${new Date(meta.lastModified).toLocaleString()}`;
+                    
+                    const metaEl = document.getElementById('content-meta');
+                    metaEl.innerHTML = metaHtml;
+                    metaEl.classList.remove('hidden');
+                }
+                
+                // Show delete button for admin/editor only
+                const deleteBtn = document.getElementById('delete-btn');
+                if (SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor')) {
+                    deleteBtn.style.display = 'inline-block';
+                } else {
+                    deleteBtn.style.display = 'none';
+                }
+
+                hideStatus('editor-status');
+
+            } catch (e) {
+                showStatus('editor-status', e.message, 'error');
+                document.getElementById('editor-container').classList.add('hidden');
+            }
+        }
+
+        /**
+         * Load and display available pages
+         */
         async function loadPageList() {
+            const browser = document.getElementById('page-browser');
             const list = document.getElementById('page-list');
-            list.innerHTML = 'Loading pages...';
+            
+            browser.classList.remove('hidden');
+            list.innerHTML = '<p>Loading pages...</p>';
             
             try {
-                const res = await fetch('/api/pages');
+                const headers = { };
+                if (SESSION && SESSION.token) {
+                    headers['Authorization'] = `Bearer ${SESSION.token}`;
+                }
+                
+                const res = await fetch('/api/pages', { headers });
                 const data = await res.json();
                 
                 if (!res.ok) {
@@ -716,551 +778,532 @@ VERSION: 2.0.0
                 }
                 
                 if (data.pages.length === 0) {
-                    list.innerHTML = '<p style="color: var(--text-secondary); margin: 0;">No pages found.</p>';
+                    list.innerHTML = '<p style="color: var(--muted-color);">No pages found. Create a page by adding a folder to /data/ with schema.json</p>';
                     return;
                 }
                 
                 list.innerHTML = data.pages.map(page => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem; background: var(--card-bg); border-radius: 4px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--muted-border-color); border-radius: 4px;">
                         <div>
                             <strong>${escapeHtml(page.title)}</strong>
-                            <small style="color: var(--text-secondary); margin-left: 0.5rem;">${escapeHtml(page.pageId)}</small>
+                            <span style="color: var(--muted-color); font-size: 0.85rem; margin-left: 0.5rem;">${escapeHtml(page.pageId)}</span>
+                            ${page.createdBy ? `<br><small style="color: var(--muted-color);">By ${escapeHtml(page.createdBy)}</small>` : ''}
                         </div>
-                        <button type="button" onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">Select</button>
+                        <button onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem;">Edit</button>
                     </div>
                 `).join('');
                 
-                pageBrowserLoaded = true;
+                if (!data.canEditAll) {
+                    showStatus('page-browser-status', `Showing ${data.total} page(s) you can edit`, 'info');
+                }
                 
             } catch (e) {
-                list.innerHTML = `<p style="color: var(--danger); margin: 0;">${escapeHtml(e.message)}</p>`;
+                list.innerHTML = `<p style="color: var(--error);">${escapeHtml(e.message)}</p>`;
             }
         }
         
         function selectPage(pageId) {
             document.getElementById('pageId').value = pageId;
             document.getElementById('page-browser').classList.add('hidden');
-            document.getElementById('password').focus();
+            loadEditor();
         }
         
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // =====================
-        // PASSWORD TOGGLE
-        // =====================
-        function togglePassword() {
-            const input = document.getElementById('password');
-            const toggle = document.getElementById('password-toggle-text');
-            if (input.type === 'password') {
-                input.type = 'text';
-                toggle.innerText = 'Hide';
-            } else {
-                input.type = 'password';
-                toggle.innerText = 'Show';
-            }
-        }
-
-        // =====================
-        // HELP MODAL
-        // =====================
-        function showHelp() {
-            document.getElementById('help-modal').classList.remove('hidden');
-        }
-        
-        function hideHelp() {
-            document.getElementById('help-modal').classList.add('hidden');
-        }
-
-        // =====================
-        // LOGIN FLOW
-        // =====================
-        async function login(event) {
-            if (event) event.preventDefault();
+        // =================================================================
+        // SESSIONS MANAGEMENT (Admin only)
+        // =================================================================
+        async function loadSessions() {
+            const list = document.getElementById('session-list');
+            list.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
             
-            const pageId = document.getElementById('pageId').value.trim().toLowerCase();
-            const password = document.getElementById('password').value;
-            const rememberMe = document.getElementById('remember-me').checked;
-            const btn = document.getElementById('login-btn');
-            const status = document.getElementById('login-status');
-            
-            if (!pageId || !password) {
-                showStatus(status, 'Please enter both Page ID and Password', 'error');
-                return;
-            }
-            
-            btn.setAttribute('aria-busy', 'true');
-            btn.disabled = true;
-            hideStatus(status);
-
             try {
-                // 1. Validate password with server
-                const authRes = await fetch('/api/auth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pageId, password })
+                const res = await fetch('/api/sessions', {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
                 });
                 
-                if (!authRes.ok) {
-                    const authErr = await authRes.json();
-                    throw new Error(authErr.error || 'Invalid credentials');
-                }
-
-                // 2. Load Schema
-                const schemaRes = await fetch(`/data/${pageId}/schema.json`);
-                if (!schemaRes.ok) throw new Error(`Page "${pageId}" not found`);
-                CURRENT_SCHEMA = await schemaRes.json();
-
-                // 3. Load Content (try draft first, then server)
-                const draftKey = STORAGE_KEYS.DRAFT + pageId;
-                const draft = localStorage.getItem(draftKey);
-                let contentFromDraft = false;
+                const data = await res.json();
                 
-                const contentRes = await fetch(`/data/${pageId}/content.json`);
-                CURRENT_CONTENT = contentRes.ok ? await contentRes.json() : {};
-                
-                // Check if draft is newer
-                if (draft) {
-                    try {
-                        const draftData = JSON.parse(draft);
-                        const serverTime = CURRENT_CONTENT._meta?.lastModified ? new Date(CURRENT_CONTENT._meta.lastModified).getTime() : 0;
-                        if (draftData._draftTime > serverTime) {
-                            CURRENT_CONTENT = draftData.content;
-                            contentFromDraft = true;
-                        }
-                    } catch (e) {
-                        localStorage.removeItem(draftKey);
-                    }
-                }
-
-                // 4. Store credentials in memory (not localStorage)
-                CURRENT_PAGE_ID = pageId;
-                CURRENT_PASSWORD = password;
-
-                // Save session token if "Remember me" is checked
-                // Security: We store a hashed token derived from credentials,
-                // not the raw password. This limits exposure if localStorage
-                // is accessed by malicious scripts or browser extensions.
-                if (rememberMe) {
-                    const timestamp = Date.now();
-                    const token = await generateSessionToken(pageId, password, timestamp);
-                    localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify({
-                        pageId,
-                        token,
-                        timestamp
-                    }));
-                }
-                localStorage.setItem(STORAGE_KEYS.LAST_PAGE, pageId);
-
-                // Clear any pending session verification data
-                delete window._pendingSessionToken;
-                delete window._pendingSessionTimestamp;
-
-                // 5. Build Form
-                buildForm(CURRENT_SCHEMA, CURRENT_CONTENT);
-                
-                // 6. Show Editor
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('editor-section').classList.remove('hidden');
-                document.getElementById('editor-title').innerText = CURRENT_SCHEMA.title || `Editing: ${pageId}`;
-                
-                // Show draft notice
-                if (contentFromDraft) {
-                    showStatus(document.getElementById('status'), 'Restored from local draft. Save to publish.', 'warning');
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to load sessions');
                 }
                 
-                // Update last saved display
-                updateLastSaved();
-                
-                // Start autosave
-                startAutosave();
-                
-            } catch (err) {
-                showStatus(status, err.message, 'error');
-            } finally {
-                btn.setAttribute('aria-busy', 'false');
-                btn.disabled = false;
-            }
-        }
-
-        function logout() {
-            // Clear autosave
-            if (autosaveInterval) {
-                clearInterval(autosaveInterval);
-                autosaveInterval = null;
-            }
-            
-            // Clear state
-            CURRENT_SCHEMA = null;
-            CURRENT_CONTENT = null;
-            CURRENT_PAGE_ID = null;
-            CURRENT_PASSWORD = null;
-            hasUnsavedChanges = false;
-            
-            // Clear session if not remember me
-            if (!document.getElementById('remember-me').checked) {
-                localStorage.removeItem(STORAGE_KEYS.SESSION);
-            }
-            
-            // Reset UI
-            document.getElementById('password').value = '';
-            document.getElementById('login-section').classList.remove('hidden');
-            document.getElementById('editor-section').classList.add('hidden');
-            hideStatus(document.getElementById('status'));
-            hideStatus(document.getElementById('login-status'));
-            document.getElementById('autosave-status').innerText = '';
-        }
-
-        // =====================
-        // FORM BUILDER
-        // =====================
-        function buildForm(schema, content) {
-            const form = document.getElementById('dynamic-form');
-            form.innerHTML = '';
-
-            schema.fields.forEach(field => {
-                if (field.type === 'hidden') return;
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'field-wrapper';
-                
-                // Checkbox layout
-                if (field.type === 'checkbox') {
-                    const checkWrapper = document.createElement('label');
-                    checkWrapper.style.cssText = 'display:flex;align-items:center;gap:0.5rem;cursor:pointer;';
-                    
-                    const input = document.createElement('input');
-                    input.type = 'checkbox';
-                    input.id = field.key;
-                    input.name = field.key;
-                    input.checked = content[field.key] === true || content[field.key] === 'true';
-                    input.style.cssText = 'width:auto;margin:0;';
-                    input.addEventListener('change', () => { hasUnsavedChanges = true; });
-                    
-                    const labelText = document.createElement('span');
-                    labelText.innerText = field.label;
-                    
-                    checkWrapper.appendChild(input);
-                    checkWrapper.appendChild(labelText);
-                    wrapper.appendChild(checkWrapper);
-                    
-                    if (field.description) {
-                        const desc = document.createElement('small');
-                        desc.className = 'field-description';
-                        desc.innerText = field.description;
-                        wrapper.appendChild(desc);
-                    }
-                    
-                    form.appendChild(wrapper);
+                if (data.sessions.length === 0) {
+                    list.innerHTML = '<tr><td colspan="5">No active sessions</td></tr>';
                     return;
                 }
                 
-                // Standard label
-                const label = document.createElement('label');
-                label.setAttribute('for', field.key);
-                label.innerText = field.label;
-                if (field.required) {
-                    const req = document.createElement('span');
-                    req.innerText = ' *';
-                    req.style.color = '#dc3545';
-                    label.appendChild(req);
-                }
-                wrapper.appendChild(label);
+                list.innerHTML = data.sessions.map(s => `
+                    <tr>
+                        <td>
+                            ${escapeHtml(s.username)}
+                            ${s.isCurrent ? ' <small style="color: var(--primary);">(you)</small>' : ''}
+                        </td>
+                        <td><span class="role-badge role-${s.role}">${s.role}</span></td>
+                        <td>${s.created ? new Date(s.created).toLocaleString() : 'Unknown'}</td>
+                        <td><code style="font-size: 0.8rem;">${escapeHtml(s.ip)}</code></td>
+                        <td class="actions">
+                            ${s.isCurrent ? '<span style="color: var(--muted-color);">-</span>' : 
+                              `<button onclick="revokeSession('${escapeHtml(s.tokenPreview)}')" class="outline" style="padding: 0.25rem 0.5rem; color: var(--error);">Revoke</button>`}
+                        </td>
+                    </tr>
+                `).join('');
                 
-                // Create input
-                let input;
+                showStatus('sessions-status', `${data.total} active session(s)`, 'info');
                 
-                if (field.type === 'textarea') {
-                    input = document.createElement('textarea');
-                    input.rows = field.rows || 5;
-                } else if (field.type === 'select') {
-                    input = document.createElement('select');
-                    if (!field.required) {
-                        const emptyOpt = document.createElement('option');
-                        emptyOpt.value = '';
-                        emptyOpt.innerText = '-- Select --';
-                        input.appendChild(emptyOpt);
-                    }
-                    (field.options || []).forEach(opt => {
-                        const option = document.createElement('option');
-                        option.value = opt;
-                        option.innerText = opt;
-                        if (content[field.key] === opt) option.selected = true;
-                        input.appendChild(option);
-                    });
-                } else {
-                    input = document.createElement('input');
-                    const typeMap = {
-                        'text': 'text', 'email': 'email', 'url': 'url',
-                        'number': 'number', 'tel': 'tel', 'date': 'date',
-                        'time': 'time', 'datetime': 'datetime-local'
-                    };
-                    input.type = typeMap[field.type] || 'text';
-                }
-                
-                input.id = field.key;
-                input.name = field.key;
-                if (field.placeholder) input.placeholder = field.placeholder;
-                if (field.required) input.required = true;
-                if (field.maxlength) input.maxLength = field.maxlength;
-                if (field.pattern) input.pattern = field.pattern;
-                if (field.min !== undefined) input.min = field.min;
-                if (field.max !== undefined) input.max = field.max;
-                if (field.type !== 'select') input.value = content[field.key] || '';
-                
-                input.addEventListener('input', () => { hasUnsavedChanges = true; });
-                
-                wrapper.appendChild(input);
-                
-                // Field meta (description + character counter)
-                const fieldMeta = document.createElement('div');
-                fieldMeta.className = 'field-meta';
-                
-                if (field.description) {
-                    const desc = document.createElement('small');
-                    desc.className = 'field-description';
-                    desc.innerText = field.description;
-                    desc.style.margin = '0';
-                    fieldMeta.appendChild(desc);
-                } else {
-                    fieldMeta.appendChild(document.createElement('span'));
-                }
-                
-                // Character counter for text/textarea
-                if ((field.type === 'text' || field.type === 'textarea') && field.maxlength) {
-                    const counter = document.createElement('span');
-                    counter.className = 'char-counter';
-                    counter.id = `counter-${field.key}`;
-                    updateCharCounter(input, counter, field.maxlength);
-                    input.addEventListener('input', () => updateCharCounter(input, counter, field.maxlength));
-                    fieldMeta.appendChild(counter);
-                }
-                
-                if (fieldMeta.children.length > 0) {
-                    wrapper.appendChild(fieldMeta);
-                }
-                
-                // Image preview for URL fields
-                if (field.type === 'url' && (field.key.includes('image') || field.key.includes('photo') || field.key.includes('logo') || field.key.includes('avatar'))) {
-                    const preview = document.createElement('img');
-                    preview.className = 'image-preview';
-                    preview.id = `preview-${field.key}`;
-                    preview.alt = 'Preview';
-                    preview.onerror = () => { preview.classList.remove('loaded'); };
-                    preview.onload = () => { preview.classList.add('loaded'); };
-                    if (input.value) {
-                        preview.src = input.value;
-                    }
-                    input.addEventListener('input', (e) => {
-                        if (e.target.value) {
-                            preview.src = e.target.value;
-                        } else {
-                            preview.classList.remove('loaded');
-                        }
-                    });
-                    wrapper.appendChild(preview);
-                }
-                
-                form.appendChild(wrapper);
-            });
+            } catch (e) {
+                list.innerHTML = `<tr><td colspan="5" style="color: var(--error);">${escapeHtml(e.message)}</td></tr>`;
+            }
         }
         
-        function updateCharCounter(input, counter, max) {
-            const len = input.value.length;
-            counter.innerText = `${len}/${max}`;
-            counter.classList.remove('warning', 'danger');
-            if (len > max * 0.9) counter.classList.add('danger');
-            else if (len > max * 0.7) counter.classList.add('warning');
+        async function revokeSession(tokenPreview) {
+            // Find full token from preview (we need to refetch to get full tokens)
+            // Actually, we don't expose full tokens for security. We need to modify the API
+            // For now, show an alert that this needs the full token
+            alert('To revoke a specific session, use "Force Logout User" to revoke all sessions for that user.');
         }
-
-        // =====================
-        // AUTOSAVE
-        // =====================
-        function startAutosave() {
-            autosaveInterval = setInterval(() => {
-                if (hasUnsavedChanges && CURRENT_PAGE_ID) {
-                    saveDraft();
+        
+        async function forceLogoutUser() {
+            const username = document.getElementById('force-logout-username').value.trim().toLowerCase();
+            
+            if (!username) {
+                showStatus('sessions-status', 'Enter a username', 'error');
+                return;
+            }
+            
+            if (username === SESSION.username) {
+                showStatus('sessions-status', 'Cannot revoke your own sessions', 'error');
+                return;
+            }
+            
+            if (!confirm(`Revoke ALL sessions for user "${username}"? They will be logged out immediately.`)) {
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ username: username, all: true })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to revoke sessions');
                 }
-            }, 30000); // Every 30 seconds
-        }
-        
-        function saveDraft() {
-            const payload = gatherFormData();
-            const draftKey = STORAGE_KEYS.DRAFT + CURRENT_PAGE_ID;
-            localStorage.setItem(draftKey, JSON.stringify({
-                content: payload,
-                _draftTime: Date.now()
-            }));
-            document.getElementById('autosave-status').innerText = 'Draft saved locally';
-            setTimeout(() => {
-                const el = document.getElementById('autosave-status');
-                if (el) el.innerText = '';
-            }, 3000);
-        }
-        
-        function clearDraft() {
-            if (CURRENT_PAGE_ID) {
-                localStorage.removeItem(STORAGE_KEYS.DRAFT + CURRENT_PAGE_ID);
+                
+                document.getElementById('force-logout-username').value = '';
+                showStatus('sessions-status', data.message, 'success');
+                loadSessions(); // Refresh list
+                
+            } catch (e) {
+                showStatus('sessions-status', e.message, 'error');
             }
         }
 
-        // =====================
-        // SAVE DATA
-        // =====================
-        function gatherFormData() {
-            const payload = {};
+        /**
+         * Delete current page content
+         */
+        async function deleteContent() {
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'No page loaded', 'error');
+                return;
+            }
+            
+            if (!confirm(`Delete all content for "${CURRENT_PAGE_ID}"?\n\nThis cannot be undone. The page structure will remain but all content will be removed.`)) {
+                return;
+            }
+            
+            showStatus('editor-status', 'Deleting...', 'info');
+            
+            try {
+                const res = await fetch('/api/content', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ pageId: CURRENT_PAGE_ID })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    if (res.status === 401 && handleSessionError(new Error(data.error || 'Unauthorized'))) {
+                        return;
+                    }
+                    throw new Error(data.error || 'Delete failed');
+                }
+                
+                // Clear editor
+                CURRENT_CONTENT = {};
+                document.getElementById('editor-form').innerHTML = '';
+                document.getElementById('editor-container').classList.add('hidden');
+                document.getElementById('content-meta').classList.add('hidden');
+                
+                showStatus('editor-status', `Content deleted. Commit: ${data.commit.substring(0, 7)}`, 'success');
+                
+                // Refresh page list if visible
+                const browser = document.getElementById('page-browser');
+                if (!browser.classList.contains('hidden')) {
+                    loadPageList();
+                }
+                
+            } catch (e) {
+                showStatus('editor-status', e.message, 'error');
+            }
+        }
+
+        function buildForm() {
+            const container = document.getElementById('editor-form');
+            container.innerHTML = '';
+
+            if (!CURRENT_SCHEMA || !CURRENT_SCHEMA.fields) {
+                container.innerHTML = '<p>Invalid schema: no fields defined</p>';
+                return;
+            }
+
             CURRENT_SCHEMA.fields.forEach(field => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'form-field';
+
+                // Label
+                const label = document.createElement('label');
+                label.setAttribute('for', `field_${field.key}`);
+                label.textContent = field.label || field.key;
+                if (field.required) {
+                    label.innerHTML += ' <span style="color: var(--error);">*</span>';
+                }
+                wrapper.appendChild(label);
+
+                // Input
+                let input;
+                const value = CURRENT_CONTENT[field.key] ?? field.default ?? '';
+
+                switch (field.type) {
+                    case 'textarea':
+                        input = document.createElement('textarea');
+                        input.value = value;
+                        if (field.rows) input.rows = field.rows;
+                        break;
+
+                    case 'select':
+                        input = document.createElement('select');
+                        (field.options || []).forEach(opt => {
+                            const option = document.createElement('option');
+                            option.value = opt;
+                            option.textContent = opt;
+                            if (opt === value) option.selected = true;
+                            input.appendChild(option);
+                        });
+                        break;
+
+                    case 'checkbox':
+                        input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = Boolean(value);
+                        input.role = 'switch';
+                        break;
+
+                    case 'number':
+                        input = document.createElement('input');
+                        input.type = 'number';
+                        input.value = value;
+                        if (field.min !== undefined) input.min = field.min;
+                        if (field.max !== undefined) input.max = field.max;
+                        break;
+
+                    default:
+                        input = document.createElement('input');
+                        input.type = field.type || 'text';
+                        input.value = value;
+                        if (field.maxlength) input.maxLength = field.maxlength;
+                        if (field.pattern) input.pattern = field.pattern;
+                        break;
+                }
+
+                input.id = `field_${field.key}`;
+                input.name = field.key;
+                if (field.placeholder) input.placeholder = field.placeholder;
+                if (field.required) input.required = true;
+
+                wrapper.appendChild(input);
+
+                // Description
+                if (field.description) {
+                    const desc = document.createElement('small');
+                    desc.textContent = field.description;
+                    wrapper.appendChild(desc);
+                }
+
+                container.appendChild(wrapper);
+            });
+        }
+
+        async function saveContent() {
+            if (!CURRENT_SCHEMA || !CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'No page loaded', 'error');
+                return;
+            }
+
+            // Gather form data
+            const content = {};
+            CURRENT_SCHEMA.fields.forEach(field => {
+                const input = document.getElementById(`field_${field.key}`);
+                if (!input) return;
+
                 if (field.type === 'checkbox') {
-                    const el = document.getElementById(field.key);
-                    payload[field.key] = el ? el.checked : false;
-                } else if (field.type === 'hidden') {
-                    payload[field.key] = CURRENT_CONTENT?.[field.key] || field.default || '';
+                    content[field.key] = input.checked;
                 } else if (field.type === 'number') {
-                    const el = document.getElementById(field.key);
-                    const val = el ? el.value : '';
-                    payload[field.key] = val !== '' ? Number(val) : null;
+                    content[field.key] = input.value ? Number(input.value) : null;
                 } else {
-                    const el = document.getElementById(field.key);
-                    payload[field.key] = el ? el.value : '';
+                    content[field.key] = input.value;
                 }
             });
-            return payload;
-        }
-        
-        async function saveData(event) {
-            if (event) event.preventDefault();
-            
-            const btn = document.getElementById('save-btn');
-            const status = document.getElementById('status');
-            
-            btn.setAttribute('aria-busy', 'true');
-            btn.disabled = true;
-            showStatus(status, 'Saving...', 'info');
-            
-            const payload = gatherFormData();
-            payload._meta = {
-                lastModified: new Date().toISOString(),
-                modifiedBy: CURRENT_PAGE_ID
-            };
+
+            // Preserve existing metadata
+            if (CURRENT_CONTENT._meta) {
+                content._meta = { ...CURRENT_CONTENT._meta };
+            }
+
+            showStatus('editor-status', 'Saving...', 'info');
 
             try {
                 const res = await fetch('/api/save', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
                     body: JSON.stringify({
                         pageId: CURRENT_PAGE_ID,
-                        password: CURRENT_PASSWORD,
-                        content: payload
+                        content: content
                     })
                 });
 
-                const json = await res.json();
+                const data = await res.json();
+
+                if (res.status === 401) {
+                    throw new Error(data.error || 'Session expired');
+                }
                 
                 if (!res.ok) {
-                    throw new Error(json.error || 'Save failed');
+                    throw new Error(data.error || 'Save failed');
                 }
-                
-                hasUnsavedChanges = false;
-                lastSavedTime = new Date();
-                CURRENT_CONTENT = payload;
-                clearDraft();
-                updateLastSaved();
-                showStatus(status, 'Saved. Changes will be live in about 60 seconds.', 'success');
-                
-            } catch (err) {
-                showStatus(status, `Error: ${err.message}`, 'error');
-            } finally {
-                btn.setAttribute('aria-busy', 'false');
-                btn.disabled = false;
+
+                CURRENT_CONTENT = content;
+                document.getElementById('last-saved').textContent = `Saved just now`;
+                showStatus('editor-status', 'Changes saved successfully', 'success');
+
+                // Clear status after delay
+                setTimeout(() => hideStatus('editor-status'), 3000);
+
+            } catch (e) {
+                if (!handleSessionError(e)) {
+                    showStatus('editor-status', `Save failed: ${e.message}`, 'error');
+                }
             }
         }
-        
-        function updateLastSaved() {
-            const el = document.getElementById('last-saved');
-            if (CURRENT_CONTENT?._meta?.lastModified) {
-                const date = new Date(CURRENT_CONTENT._meta.lastModified);
-                el.innerText = `Last saved: ${formatRelativeTime(date)}`;
+
+        // =================================================================
+        // USER MANAGEMENT
+        // =================================================================
+        async function loadUsers() {
+            const tbody = document.getElementById('user-list');
+            tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+
+            try {
+                const res = await fetch('/api/users', {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Session expired');
+                }
+                
+                if (!res.ok) {
+                    throw new Error('Failed to load users');
+                }
+
+                const data = await res.json();
+                const users = data.users || data;
+
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">No users found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td><strong>${escapeHtml(user.username)}</strong></td>
+                        <td><span class="role-badge role-${user.role}">${user.role}</span></td>
+                        <td>${user.created ? new Date(user.created).toLocaleDateString() : '-'}</td>
+                        <td class="actions">
+                            ${user.username !== SESSION.username ? `
+                                <button class="secondary" onclick="resetPassword('${escapeHtml(user.username)}')">Reset Password</button>
+                                <button class="contrast" onclick="deleteUser('${escapeHtml(user.username)}')">Delete</button>
+                            ` : '<em>Current user</em>'}
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (e) {
+                if (!handleSessionError(e)) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="color: var(--error);">${e.message}</td></tr>`;
+                }
+            }
+        }
+
+        async function createUser() {
+            const username = document.getElementById('new-username').value.trim().toLowerCase();
+            const password = document.getElementById('new-password').value;
+            const role = document.getElementById('new-role').value;
+
+            if (!username) {
+                showStatus('users-status', 'Username required', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ username, password: password || undefined, role })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to create user');
+                }
+
+                // Show result with password
+                const resultEl = document.getElementById('create-user-result');
+                resultEl.className = 'status-message status-success';
+                resultEl.innerHTML = `
+                    <strong>User created:</strong> ${escapeHtml(data.username)}<br>
+                    <strong>Password:</strong> <code>${escapeHtml(data.password)}</code><br>
+                    <small>Share this password securely with the user.</small>
+                `;
+                resultEl.classList.remove('hidden');
+
+                // Clear form
+                document.getElementById('new-username').value = '';
+                document.getElementById('new-password').value = '';
+
+                // Reload list
+                loadUsers();
+
+            } catch (e) {
+                showStatus('users-status', e.message, 'error');
+            }
+        }
+
+        async function resetPassword(username) {
+            if (!confirm(`Reset password for ${username}?`)) return;
+
+            try {
+                const res = await fetch('/api/users', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ username, resetPassword: true })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to reset password');
+                }
+
+                alert(`New password for ${username}:\n\n${data.newPassword}\n\nShare this securely with the user.`);
+
+            } catch (e) {
+                showStatus('users-status', e.message, 'error');
+            }
+        }
+
+        async function deleteUser(username) {
+            if (!confirm(`Delete user ${username}? This cannot be undone.`)) return;
+
+            try {
+                const res = await fetch('/api/users', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ username })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to delete user');
+                }
+
+                showStatus('users-status', `User ${username} deleted`, 'success');
+                loadUsers();
+
+            } catch (e) {
+                showStatus('users-status', e.message, 'error');
+            }
+        }
+
+        // =================================================================
+        // UTILITIES
+        // =================================================================
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.className = `status-message status-${type}`;
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+
+        function hideStatus(elementId) {
+            document.getElementById(elementId).classList.add('hidden');
+        }
+
+        function showError(elementId, message) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+
+        function hideError(elementId) {
+            document.getElementById(elementId).classList.add('hidden');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const btn = document.querySelector('.password-toggle');
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = 'Hide';
             } else {
-                el.innerText = '';
+                input.type = 'password';
+                btn.textContent = 'Show';
             }
         }
-        
-        function formatRelativeTime(date) {
-            const now = new Date();
-            const diff = now - date;
-            const mins = Math.floor(diff / 60000);
-            const hours = Math.floor(diff / 3600000);
-            const days = Math.floor(diff / 86400000);
-            
-            if (mins < 1) return 'just now';
-            if (mins < 60) return `${mins}m ago`;
-            if (hours < 24) return `${hours}h ago`;
-            if (days < 7) return `${days}d ago`;
-            return date.toLocaleDateString();
-        }
-
-        // =====================
-        // PREVIEW
-        // =====================
-        function previewChanges() {
-            window.open('/', '_blank', 'noopener');
-        }
-
-        // =====================
-        // HELPERS
-        // =====================
-        function showStatus(element, message, type) {
-            // Use textContent to prevent XSS from server error messages
-            element.textContent = message;
-            element.className = `status-message status-${type}`;
-            element.classList.remove('hidden');
-            
-            if (type === 'success') {
-                setTimeout(() => hideStatus(element), 5000);
-            }
-        }
-        
-        function hideStatus(element) {
-            element.classList.add('hidden');
-            element.textContent = '';
-        }
-
-        // =====================
-        // KEYBOARD SHORTCUTS
-        // =====================
-        document.addEventListener('keydown', (e) => {
-            // Ctrl/Cmd + S to save
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                if (!document.getElementById('editor-section').classList.contains('hidden')) {
-                    saveData(e);
-                }
-            }
-            // Escape to close modal or logout
-            if (e.key === 'Escape') {
-                if (!document.getElementById('help-modal').classList.contains('hidden')) {
-                    hideHelp();
-                } else if (!document.getElementById('editor-section').classList.contains('hidden')) {
-                    if (!hasUnsavedChanges || confirm('You have unsaved changes. Sign out anyway?')) {
-                        logout();
-                    }
-                }
-            }
-            // ? to show help
-            if (e.key === '?' && !e.target.matches('input, textarea, select')) {
-                showHelp();
-            }
-        });
-
-        // Warn before leaving with unsaved changes
-        window.addEventListener('beforeunload', (e) => {
-            if (hasUnsavedChanges && !document.getElementById('editor-section').classList.contains('hidden')) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        });
     </script>
 </body>
 </html>

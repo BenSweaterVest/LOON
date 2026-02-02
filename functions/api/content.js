@@ -4,7 +4,7 @@
  * ============================================================================
  *
  * Content management operations beyond save - currently supports deletion.
- * Works with Phase 2 authentication only (requires session token).
+ * Requires session token authentication.
  *
  * ENDPOINTS:
  *   DELETE /api/content - Delete a page's content (admin/editor only)
@@ -23,10 +23,11 @@
  * delete the folder via Git.
  *
  * @module functions/api/content
- * @version 2.0.0 (Phase 2 - Team Mode)
+ * @version 3.0.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { logAudit } from './_audit.js';
 
 /**
  * CORS options for this endpoint.
@@ -109,7 +110,7 @@ export async function onRequestDelete(context) {
 
     // Check bindings
     if (!db) {
-        return jsonResponse({ error: 'KV not configured. Phase 2 only.' }, 500, env, request);
+        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     }
 
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
@@ -147,6 +148,9 @@ export async function onRequestDelete(context) {
         if (!result.success) {
             return jsonResponse({ error: result.error }, 404, env, request);
         }
+
+        // Audit log
+        await logAudit(db, 'content_delete', auth.session.username, { pageId: sanitizedPageId, commit: result.commit });
 
         return jsonResponse({
             success: true,

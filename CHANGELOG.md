@@ -5,6 +5,52 @@ All notable changes to Project LOON will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-02-01
+
+### Breaking Changes
+- **Removed Phase 1 (Directory Mode)**: Environment variable-based authentication has been removed
+- **KV Required**: Cloudflare KV namespace `LOON_DB` is now mandatory
+- **API Path Changes**: Removed `-v2` suffix from endpoints:
+  - `/api/auth-v2` → `/api/auth`
+  - `/api/save-v2` → `/api/save`
+- **Removed Files**:
+  - `admin-v2.html` renamed to `admin.html`
+  - `scripts/manage-users.sh` (Phase 1 user management)
+
+### Added
+- **In-App Page Creation**: Admin/Editor can create pages from the web UI
+  - `POST /api/pages` - Create new page with template or custom schema
+  - `GET /api/templates` - List available schema templates
+- **Audit Logging**: Track all key actions
+  - `_audit.js` utility for consistent logging
+  - `GET /api/audit` - View audit logs (admin only)
+  - Tracked actions: login, logout, password_change, content_save, content_delete, page_create, user_create, user_delete, user_update, password_reset
+  - 30-day retention with automatic expiration
+- **Template System**: Use schemas from `examples/` folder when creating pages
+
+### Changed
+- **Consolidated Architecture**: Single KV-only mode (no more Phase 1/Phase 2 distinction)
+- **Health Endpoint**: KV database check is now mandatory for healthy status
+- **Version**: Updated to 3.0.0 across all files
+- **Documentation**: README rewritten to reflect unified architecture
+
+### Removed
+- Phase 1 authentication (environment variable passwords)
+- `manage-users.sh` script
+- Mode detection in health check
+
+### Migration Guide
+
+If upgrading from v2.x:
+
+1. **Required**: Set up Cloudflare KV namespace `LOON_DB` if not already configured
+2. **Required**: Create admin user via `./scripts/bootstrap-admin.sh`
+3. **Update**: Change API calls from `/api/auth-v2` to `/api/auth`
+4. **Update**: Change API calls from `/api/save-v2` to `/api/save`
+5. **Remove**: Delete `USER_*_PASSWORD` environment variables (no longer used)
+
+---
+
 ## [2.0.0] - 2026-01-30
 
 ### Added - Testing & CI/CD

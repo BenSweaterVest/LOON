@@ -1,6 +1,7 @@
 /**
- * Tests for Save Endpoints
- * functions/api/save.js and functions/api/save-v2.js
+ * Tests for Save Endpoint
+ * functions/api/save.js
+ * @version 3.0.0
  */
 
 import { describe, it, expect } from 'vitest';
@@ -107,12 +108,12 @@ describe('GitHub API Integration', () => {
             expect(message).toContain('LOON');
         });
         
-        it('should include username in Phase 2', () => {
+        it('should include username and role in commit message', () => {
             const pageId = 'demo';
             const username = 'admin';
             const role = 'editor';
             const message = `Update ${pageId} by ${username} (${role})`;
-            
+
             expect(message).toContain('admin');
             expect(message).toContain('editor');
         });

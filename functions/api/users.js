@@ -2,8 +2,8 @@
  * ============================================================================
  * LOON Users Endpoint (functions/api/users.js)
  * ============================================================================
- * 
- * Phase 2 (Team Mode) user management API. Admin-only access for creating,
+ *
+ * User management API. Admin-only access for creating,
  * listing, updating, and deleting users.
  * 
  * ENDPOINTS:
@@ -56,10 +56,11 @@
  *   - Deleting user also invalidates their sessions
  * 
  * @module functions/api/users
- * @version 2.0.0 (Phase 2 - Team Mode)
+ * @version 3.0.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { logAudit } from './_audit.js';
 
 /**
  * CORS options for this endpoint.
@@ -206,6 +207,9 @@ async function handlePost(db, session, body, env, request) {
 
     await db.put(`user:${sanitizedUsername}`, JSON.stringify(userRecord));
 
+    // Audit log
+    await logAudit(db, 'user_create', session.username, { newUser: sanitizedUsername, role: role });
+
     return jsonResponse({
         success: true,
         username: sanitizedUsername,
@@ -249,6 +253,9 @@ async function handleDelete(db, session, body, env, request) {
             await db.delete(key.name);
         }
     }
+
+    // Audit log
+    await logAudit(db, 'user_delete', session.username, { deletedUser: sanitizedUsername });
 
     return jsonResponse({
         success: true,
@@ -304,6 +311,14 @@ async function handlePatch(db, session, body, env, request) {
     // Apply updates
     const updatedUser = { ...userRaw, ...updates };
     await db.put(`user:${sanitizedUsername}`, JSON.stringify(updatedUser));
+
+    // Audit log
+    if (newPassword) {
+        await logAudit(db, 'password_reset', session.username, { targetUser: sanitizedUsername });
+    }
+    if (role) {
+        await logAudit(db, 'user_update', session.username, { targetUser: sanitizedUsername, newRole: role });
+    }
 
     const response = {
         success: true,

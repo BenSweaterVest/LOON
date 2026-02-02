@@ -3,488 +3,328 @@
  * LOON Save Endpoint (functions/api/save.js)
  * ============================================================================
  *
- * This is the core "write" endpoint for Project LOON. It handles:
- *   1. Rate limiting to prevent abuse
- *   2. Authentication (password verification)
- *   3. Authorization (ensuring users can only edit their own content)
- *   4. Committing content to GitHub via the GitHub API
+ * Content saving with Role-Based Access Control (RBAC).
+ * Validates session tokens and enforces permission rules based on user roles.
  *
  * ENDPOINT: POST /api/save
  *
+ * REQUEST HEADERS:
+ *   Authorization: Bearer <session-token>
+ *
  * REQUEST BODY:
  *   {
- *     "pageId": "demo",           // The page identifier (e.g., "demo", "tacos")
- *     "password": "secret123",    // The user's password
- *     "content": { ... }          // The JSON content to save
+ *     "pageId": "demo",         // Page identifier (lowercase alphanumeric)
+ *     "content": { ... }        // JSON content to save
  *   }
  *
- * REQUIRED ENVIRONMENT VARIABLES:
- *   - GITHUB_TOKEN: A GitHub Personal Access Token with write access to the repo
- *   - GITHUB_REPO: The repository in "owner/repo-name" format
- *   - USER_{PAGEID}_PASSWORD: One password per page (e.g., USER_DEMO_PASSWORD)
+ * RESPONSE (Success):
+ *   {
+ *     "success": true,
+ *     "commit": "abc123...",    // Git commit SHA
+ *     "pageId": "demo",
+ *     "modifiedBy": "admin"
+ *   }
  *
- * RESPONSE CODES:
- *   - 200: Success - content saved to GitHub
- *   - 400: Bad request - missing or invalid fields
- *   - 401: Unauthorized - invalid password
- *   - 413: Payload too large - content exceeds size limit
- *   - 429: Too many requests - rate limit exceeded
- *   - 500: Server error - GitHub API failure or other error
+ * ROLE-BASED ACCESS CONTROL:
+ *   | Role        | Create | Edit Own | Edit Others |
+ *   |-------------|--------|----------|-------------|
+ *   | admin       | Yes    | Yes      | Yes         |
+ *   | editor      | Yes    | Yes      | Yes         |
+ *   | contributor | Yes    | Yes      | No          |
+ *
+ *   Contributors can only edit content where _meta.createdBy matches their
+ *   username. Creating new content is allowed for all roles.
+ *
+ * CONTENT METADATA:
+ *   The system automatically injects/preserves metadata in saved content:
+ *   {
+ *     "_meta": {
+ *       "createdBy": "username",       // Set on first save
+ *       "created": "2026-01-30T...",   // Set on first save
+ *       "modifiedBy": "username",      // Updated on every save
+ *       "lastModified": "2026-01-30T..." // Updated on every save
+ *     }
+ *   }
+ *
+ * REQUIRED:
+ *   - KV Namespace binding: LOON_DB (for session validation)
+ *   - GITHUB_TOKEN environment variable
+ *   - GITHUB_REPO environment variable
  *
  * SECURITY FEATURES:
- *   - Timing-safe password comparison (prevents timing attacks)
- *   - Rate limiting per IP address (prevents brute force)
- *   - Content size limits (prevents resource exhaustion)
- *   - Input sanitization (prevents path traversal)
- *
- * ARCHITECTURE NOTES:
- *   - This runs as a Cloudflare Pages Function (similar to Cloudflare Workers)
- *   - Rate limit state is in-memory and resets when the worker restarts
- *   - For high-traffic scenarios, consider using Cloudflare KV for rate limits
+ *   - Session token validation via KV
+ *   - Rate limiting: 30 requests per minute per IP
+ *   - Content size limit: 1MB maximum
+ *   - Page ID sanitization (alphanumeric + hyphens only)
+ *   - RBAC enforcement on every save
  *
  * @module functions/api/save
- * @version 1.0.0 (Phase 1 - Directory Mode)
+ * @version 3.0.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
-
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-/**
- * Configuration constants for the save endpoint.
- * Adjust these values based on your use case and traffic patterns.
- */
-const CONFIG = {
-  /**
-   * Maximum allowed content size in bytes.
-   * Default: 1MB (1,048,576 bytes)
-   * 
-   * Why 1MB? JSON content for typical pages should be well under this.
-   * Larger files may timeout during the GitHub API call.
-   */
-  MAX_CONTENT_SIZE: 1024 * 1024,
-  
-  /**
-   * Maximum number of save requests allowed per IP within the rate limit window.
-   * Default: 30 requests per minute
-   * 
-   * Why 30? Allows for reasonable editing (save every 2 seconds for a minute)
-   * while preventing abuse.
-   */
-  RATE_LIMIT_REQUESTS: 30,
-  
-  /**
-   * Rate limit window duration in milliseconds.
-   * Default: 60000ms (1 minute)
-   */
-  RATE_LIMIT_WINDOW_MS: 60000,
-};
-
-// ============================================================================
-// RATE LIMITING
-// ============================================================================
-
-/**
- * In-memory storage for rate limit tracking.
- * 
- * Structure: Map<clientIP, { requests: number[] }>
- * - Each IP has an array of timestamps for recent requests
- * 
- * IMPORTANT: This resets when the Cloudflare Worker is restarted.
- * For persistent rate limiting, use Cloudflare KV or Durable Objects.
- */
-const rateLimitMap = new Map();
+import { logAudit } from './_audit.js';
 
 /**
  * CORS options for this endpoint.
  */
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
-// ============================================================================
-// REQUEST HANDLERS
-// ============================================================================
+// Rate limiting
+const saveAttempts = new Map();
+const RATE_LIMIT = { maxRequests: 30, windowMs: 60000 };
 
 /**
- * Handles CORS preflight requests (OPTIONS method).
- *
- * Browsers send a preflight OPTIONS request before making cross-origin
- * POST requests. This handler responds with the appropriate CORS headers.
- * Uses shared CORS utility that respects CORS_ORIGIN environment variable.
- *
- * @param {Object} context - Cloudflare Pages Function context
- * @returns {Response} Empty response with CORS headers
+ * Check rate limit
  */
-export async function onRequestOptions(context) {
-  return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const attempts = saveAttempts.get(ip) || [];
+    const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+    
+    if (recent.length >= RATE_LIMIT.maxRequests) {
+        return false;
+    }
+    
+    recent.push(now);
+    saveAttempts.set(ip, recent);
+    return true;
 }
 
 /**
- * Main request handler for POST /api/save
- * 
- * This function orchestrates the entire save flow:
- *   1. Rate limiting check
- *   2. Request validation
- *   3. Authentication (password check)
- *   4. Authorization (file path check)
- *   5. GitHub commit
- * 
- * @param {Object} context - Cloudflare Pages Function context
- * @param {Request} context.request - The incoming HTTP request
- * @param {Object} context.env - Environment variables (secrets)
- * @returns {Response} JSON response indicating success or failure
+ * Validate session and return session data
+ */
+async function validateSession(db, authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+    
+    const token = authHeader.slice(7);
+    const sessionRaw = await db.get(`session:${token}`);
+    
+    if (!sessionRaw) {
+        return null;
+    }
+    
+    return JSON.parse(sessionRaw);
+}
+
+/**
+ * Fetch file from GitHub to check metadata
+ */
+async function fetchGitHubFile(env, path) {
+    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
+    
+    const res = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'LOON-CMS'
+        }
+    });
+    
+    if (!res.ok) {
+        if (res.status === 404) {
+            return { exists: false, sha: null, content: null };
+        }
+        throw new Error(`GitHub GET failed: ${res.status}`);
+    }
+    
+    const json = await res.json();
+    const content = JSON.parse(atob(json.content));
+    
+    return {
+        exists: true,
+        sha: json.sha,
+        content: content
+    };
+}
+
+/**
+ * Commit content to GitHub
+ */
+async function commitToGitHub(env, path, content, message, existingSha) {
+    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
+    
+    const body = {
+        message: message,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+    };
+    
+    if (existingSha) {
+        body.sha = existingSha;
+    }
+    
+    const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'LOON-CMS',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+    
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`GitHub PUT failed: ${res.status} - ${errText}`);
+    }
+    
+    const result = await res.json();
+    return result.commit.sha;
+}
+
+/**
+ * Check if user can edit this content (RBAC)
+ */
+function canUserEdit(session, existingContent) {
+    const role = session.role;
+    
+    // Admins and editors can edit anything
+    if (role === 'admin' || role === 'editor') {
+        return { allowed: true };
+    }
+    
+    // Contributors can only edit their own content
+    if (role === 'contributor') {
+        // New content: allowed
+        if (!existingContent) {
+            return { allowed: true };
+        }
+        
+        // Existing content: must be the creator
+        const meta = existingContent._meta || {};
+        if (meta.createdBy === session.username) {
+            return { allowed: true };
+        }
+        
+        return {
+            allowed: false,
+            reason: 'Contributors can only edit content they created'
+        };
+    }
+    
+    // Unknown role: deny
+    return { allowed: false, reason: 'Unknown role' };
+}
+
+/**
+ * Handle POST request (Save)
  */
 export async function onRequestPost(context) {
-  const { request, env } = context;
+    const { request, env } = context;
+    const db = env.LOON_DB;
 
-  // Helper to get CORS headers for responses
-  const getHeaders = () => getCorsHeaders(env, request, CORS_OPTIONS);
-
-  try {
-    // ========================================================================
-    // STEP 1: Rate Limiting
-    // ========================================================================
-    // Get the client's IP address from Cloudflare's header
-    // This is more reliable than request.ip as Cloudflare sits in front
-    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-
-    // Check if this IP has exceeded the rate limit
-    if (!checkRateLimit(clientIP)) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded. Try again in 60 seconds.' }),
-        { status: 429, headers: getHeaders() }
-      );
+    // Check bindings
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured. See Phase 2 setup.' }, 500, env, request);
     }
 
-    // ========================================================================
-    // STEP 2: Request Validation - Size Check (Pre-parse)
-    // ========================================================================
-    // Check Content-Length header before parsing to fail fast on oversized requests
-    const contentLength = parseInt(request.headers.get('Content-Length') || '0');
-    if (contentLength > CONFIG.MAX_CONTENT_SIZE) {
-      return new Response(
-        JSON.stringify({ error: 'Content too large', maxSize: CONFIG.MAX_CONTENT_SIZE }),
-        { status: 413, headers: getHeaders() }
-      );
+    if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
+        return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
     }
 
-    // ========================================================================
-    // STEP 3: Parse and Validate Request Body
-    // ========================================================================
-    const body = await request.json();
-    const { pageId, password, content } = body;
-
-    // Double-check content size after parsing (in case Content-Length was wrong)
-    const contentSize = JSON.stringify(content).length;
-    if (contentSize > CONFIG.MAX_CONTENT_SIZE) {
-      return new Response(
-        JSON.stringify({ error: 'Content too large', maxSize: CONFIG.MAX_CONTENT_SIZE }),
-        { status: 413, headers: getHeaders() }
-      );
+    // Rate limit
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!checkRateLimit(ip)) {
+        return jsonResponse({ error: 'Rate limit exceeded. Try again later.' }, 429, env, request);
     }
 
-    // Ensure all required fields are present
-    if (!pageId || !password || !content) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: pageId, password, content' }),
-        { status: 400, headers: getHeaders() }
-      );
-    }
-
-    // ========================================================================
-    // STEP 4: Sanitize Page ID
-    // ========================================================================
-    // Page IDs must be alphanumeric with hyphens and underscores only
-    // (e.g., "demo", "food-truck-1", "my_page")
-    // This prevents path traversal attacks (e.g., "../../../etc/passwd")
-    // Note: Pattern must match auth.js, save-v2.js, and auth-v2.js for consistency.
-    const cleanPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    if (cleanPageId !== pageId.toLowerCase()) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid page ID format' }),
-        { status: 400, headers: getHeaders() }
-      );
-    }
-
-    // ========================================================================
-    // STEP 5: Authentication - Password Verification
-    // ========================================================================
-    // Look up the expected password from environment variables
-    // Environment variable naming convention: USER_DEMO_PASSWORD, USER_TACOS_PASSWORD, etc.
-    const envKey = `USER_${cleanPageId.toUpperCase()}_PASSWORD`;
-    const expectedPassword = env[envKey];
-
-    // If no password is configured for this page, reject the request
-    // We use a generic error message to avoid revealing which pages exist
-    if (!expectedPassword) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid credentials' }),
-        { status: 401, headers: getHeaders() }
-      );
-    }
-
-    // Use timing-safe comparison to prevent timing attacks
-    // (attackers can't determine password correctness by measuring response time)
-    const isValid = await secureCompare(password, expectedPassword);
-    if (!isValid) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid credentials' }),
-        { status: 401, headers: getHeaders() }
-      );
-    }
-
-    // ========================================================================
-    // STEP 6: Authorization - File Path Enforcement
-    // ========================================================================
-    // In "Directory Mode", each user can ONLY edit their own content.json file
-    // The file path is derived from the page ID, not user-supplied
-    // This ensures users can't edit other users' content
-    const allowedFilePath = `data/${cleanPageId}/content.json`;
-
-    // ========================================================================
-    // STEP 7: Commit to GitHub
-    // ========================================================================
-    const commitResult = await commitToGitHub({
-      token: env.GITHUB_TOKEN,
-      repo: env.GITHUB_REPO,
-      filePath: allowedFilePath,
-      content: content,
-      message: `LOON: Update ${cleanPageId} content`
-    });
-
-    if (!commitResult.success) {
-      return new Response(
-        JSON.stringify({ error: 'GitHub error', details: commitResult.error }),
-        { status: 500, headers: getHeaders() }
-      );
-    }
-
-    // ========================================================================
-    // STEP 8: Return Success Response
-    // ========================================================================
-    return new Response(
-      JSON.stringify({ success: true, commit: commitResult.sha }),
-      { status: 200, headers: getHeaders() }
-    );
-
-  } catch (err) {
-    // Catch any unexpected errors and return a generic server error
-    return new Response(
-      JSON.stringify({ error: 'Server error', details: err.message }),
-      { status: 500, headers: getCorsHeaders(env, request, CORS_OPTIONS) }
-    );
-  }
-}
-
-// ============================================================================
-// GITHUB API INTEGRATION
-// ============================================================================
-
-/**
- * Commits a JSON file to a GitHub repository using the GitHub API.
- * 
- * This function handles both creating new files and updating existing files.
- * For updates, the GitHub API requires the current file's SHA, which we
- * fetch first with a GET request.
- * 
- * API Documentation: https://docs.github.com/en/rest/repos/contents
- * 
- * @param {Object} options - Commit options
- * @param {string} options.token - GitHub Personal Access Token
- * @param {string} options.repo - Repository in "owner/repo" format
- * @param {string} options.filePath - Path to the file within the repo
- * @param {Object} options.content - JSON content to save
- * @param {string} options.message - Commit message
- * @returns {Promise<{success: boolean, sha?: string, error?: string}>}
- */
-async function commitToGitHub({ token, repo, filePath, content, message }) {
-  const apiBase = 'https://api.github.com';
-  
-  // Headers required for GitHub API authentication
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'Project-LOON/1.0',  // GitHub requires a User-Agent
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    // ------------------------------------------------------------------------
-    // STEP 1: Get current file SHA (required for updates)
-    // ------------------------------------------------------------------------
-    // If the file already exists, we need its SHA to update it
-    // If it doesn't exist (404), we'll create a new file
-    const getUrl = `${apiBase}/repos/${repo}/contents/${filePath}`;
-    const getRes = await fetch(getUrl, { headers });
-    
-    let sha = null;
-    if (getRes.ok) {
-      // File exists - extract its SHA for the update
-      const existing = await getRes.json();
-      sha = existing.sha;
-    } else if (getRes.status !== 404) {
-      // Unexpected error (not "file not found")
-      const errText = await getRes.text();
-      throw new Error(`GitHub GET failed: ${getRes.status} - ${errText}`);
-    }
-    // If 404, sha remains null, and we'll create a new file
-
-    // ------------------------------------------------------------------------
-    // STEP 2: Encode content as base64
-    // ------------------------------------------------------------------------
-    // GitHub API requires file content to be base64 encoded
-    // We use a UTF-8 safe encoding method to handle special characters
-    const jsonString = JSON.stringify(content, null, 2);  // Pretty-print JSON
-    const base64Content = btoa(unescape(encodeURIComponent(jsonString)));
-
-    // ------------------------------------------------------------------------
-    // STEP 3: Create or update the file
-    // ------------------------------------------------------------------------
-    // Note: GitHub API rejects requests with "sha": null
-    // Only include sha property when updating existing files
-    const putBody = {
-      message: message,
-      content: base64Content,
-      ...(sha ? { sha } : {})  // Only include sha for updates, omit for new files
-    };
-
-    const putRes = await fetch(getUrl, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(putBody)
-    });
-
-    if (!putRes.ok) {
-      const errText = await putRes.text();
-      throw new Error(`GitHub PUT failed: ${putRes.status} - ${errText}`);
-    }
-
-    // Return the commit SHA for reference
-    const result = await putRes.json();
-    return { success: true, sha: result.commit.sha };
-
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
-
-// ============================================================================
-// SECURITY UTILITIES
-// ============================================================================
-
-/**
- * Performs a timing-safe string comparison to prevent timing attacks.
- * 
- * WHAT IS A TIMING ATTACK?
- * When comparing passwords with regular string comparison (===), the operation
- * short-circuits on the first mismatched character. An attacker can measure
- * response times to determine how many characters they've guessed correctly.
- * 
- * HOW WE PREVENT IT:
- * We use crypto.subtle.timingSafeEqual(), which compares all bytes regardless
- * of whether there's a mismatch, making the operation take constant time.
- * 
- * WHY THE LENGTH CHECK?
- * If strings have different lengths, we still perform a comparison (of the
- * shorter string with itself) to maintain constant time. Otherwise, attackers
- * could determine password length by measuring response time.
- * 
- * @param {string} a - First string to compare
- * @param {string} b - Second string to compare
- * @returns {Promise<boolean>} True if strings are equal, false otherwise
- */
-async function secureCompare(a, b) {
-  // Type checking
-  if (typeof a !== 'string' || typeof b !== 'string') {
-    return false;
-  }
-
-  // Convert strings to byte arrays for comparison
-  const encoder = new TextEncoder();
-  const aBytes = encoder.encode(a);
-  const bBytes = encoder.encode(b);
-
-  // Handle length mismatch with constant-time behavior
-  if (aBytes.length !== bBytes.length) {
-    // Still perform a comparison to maintain constant time
     try {
-      await crypto.subtle.timingSafeEqual(aBytes, aBytes);
-    } catch (e) {
-      // Fallback for environments without timingSafeEqual
-    }
-    return false;
-  }
+        // Validate session
+        const authHeader = request.headers.get('Authorization');
+        const session = await validateSession(db, authHeader);
 
-  // Perform the actual timing-safe comparison
-  try {
-    return await crypto.subtle.timingSafeEqual(aBytes, bBytes);
-  } catch (e) {
-    // Fallback for older environments (less secure but functional)
-    return a === b;
-  }
+        if (!session) {
+            return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
+        }
+
+        // Parse request body
+        const { pageId, content } = await request.json();
+
+        if (!pageId || !content) {
+            return jsonResponse({ error: 'pageId and content required' }, 400, env, request);
+        }
+
+        // Sanitize pageId
+        const sanitizedPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (sanitizedPageId !== pageId.toLowerCase()) {
+            return jsonResponse({ error: 'Invalid pageId format' }, 400, env, request);
+        }
+
+        // Content size limit (1MB)
+        const contentStr = JSON.stringify(content);
+        if (contentStr.length > 1024 * 1024) {
+            return jsonResponse({ error: 'Content exceeds 1MB limit' }, 413, env, request);
+        }
+
+        // Fetch existing file
+        const filePath = `data/${sanitizedPageId}/content.json`;
+        const existing = await fetchGitHubFile(env, filePath);
+
+        // RBAC check
+        const permission = canUserEdit(session, existing.content);
+        if (!permission.allowed) {
+            return jsonResponse({ error: permission.reason }, 403, env, request);
+        }
+
+        // Inject metadata
+        const finalContent = { ...content };
+        finalContent._meta = finalContent._meta || {};
+        finalContent._meta.lastModified = new Date().toISOString();
+        finalContent._meta.modifiedBy = session.username;
+
+        if (!existing.exists || !existing.content?._meta?.createdBy) {
+            // New content: set creator
+            finalContent._meta.createdBy = session.username;
+            finalContent._meta.created = new Date().toISOString();
+        } else {
+            // Existing content: preserve creator
+            finalContent._meta.createdBy = existing.content._meta.createdBy;
+            finalContent._meta.created = existing.content._meta.created;
+        }
+
+        // Commit to GitHub
+        const commitMessage = `Update ${sanitizedPageId} by ${session.username} (${session.role})`;
+        const sha = await commitToGitHub(env, filePath, finalContent, commitMessage, existing.sha);
+
+        // Audit log
+        await logAudit(db, 'content_save', session.username, { pageId: sanitizedPageId, commit: sha });
+
+        return jsonResponse({
+            success: true,
+            commit: sha,
+            pageId: sanitizedPageId,
+            modifiedBy: session.username
+        }, 200, env, request);
+
+    } catch (err) {
+        console.error('Save error:', err);
+        return jsonResponse({ error: 'Save failed', details: err.message }, 500, env, request);
+    }
 }
 
 /**
- * Checks if a request from the given IP should be rate-limited.
- * 
- * This implements a sliding window rate limiter:
- * - Track timestamps of recent requests per IP
- * - Reject if too many requests within the window
- * 
- * LIMITATIONS:
- * - In-memory storage resets when the worker restarts
- * - Distributed workers may have inconsistent state
- * - For production, consider Cloudflare KV or Durable Objects
- * 
- * @param {string} clientIP - The client's IP address
- * @returns {boolean} True if request is allowed, false if rate limited
+ * Handle OPTIONS (CORS preflight)
+ * Uses shared CORS utility that respects CORS_ORIGIN environment variable.
  */
-function checkRateLimit(clientIP) {
-  const now = Date.now();
-  const windowStart = now - CONFIG.RATE_LIMIT_WINDOW_MS;
-  
-  // Get or create entry for this IP
-  let entry = rateLimitMap.get(clientIP);
-  
-  if (!entry) {
-    entry = { requests: [] };
-    rateLimitMap.set(clientIP, entry);
-  }
-  
-  // Remove expired timestamps (outside the current window)
-  entry.requests = entry.requests.filter(time => time > windowStart);
-  
-  // Check if over limit
-  if (entry.requests.length >= CONFIG.RATE_LIMIT_REQUESTS) {
-    return false;  // Rate limited
-  }
-  
-  // Record this request
-  entry.requests.push(now);
-  
-  // Periodically clean up old entries to prevent memory bloat
-  // We do this probabilistically (1% chance) to avoid overhead on every request
-  if (Math.random() < 0.01) {
-    cleanupRateLimitMap(windowStart);
-  }
-  
-  return true;  // Request allowed
+export async function onRequestOptions(context) {
+    return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }
 
 /**
- * Removes old entries from the rate limit map to prevent memory bloat.
- * 
- * This is called probabilistically from checkRateLimit() to avoid
- * running on every request.
- * 
- * @param {number} windowStart - Timestamp marking the start of the current window
+ * JSON response helper with configurable CORS.
  */
-function cleanupRateLimitMap(windowStart) {
-  for (const [ip, entry] of rateLimitMap.entries()) {
-    // If all requests from this IP are outside the window, remove the entry
-    if (entry.requests.every(time => time < windowStart)) {
-      rateLimitMap.delete(ip);
-    }
-  }
+function jsonResponse(data, status = 200, env = null, request = null) {
+    const headers = env && request
+        ? getCorsHeaders(env, request, CORS_OPTIONS)
+        : {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        };
+
+    return new Response(JSON.stringify(data), { status, headers });
 }

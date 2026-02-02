@@ -3,278 +3,443 @@
  * LOON Auth Endpoint (functions/api/auth.js)
  * ============================================================================
  *
- * This endpoint validates credentials before allowing access to the editor.
- * It's called by admin.html when a user attempts to log in.
+ * Session-based authentication using Cloudflare KV for user storage
+ * and session tokens for authentication.
  *
- * WHY A SEPARATE AUTH ENDPOINT?
- * The save endpoint also validates passwords, so why have a separate auth
- * endpoint? Two reasons:
- *   1. Better UX: Users find out immediately if their password is wrong,
- *      instead of after editing content
- *   2. Stricter rate limiting: Auth attempts are limited to 10/minute
- *      (vs 30/minute for saves) to prevent brute force attacks
+ * ENDPOINTS:
+ *   GET    /api/auth - Verify session token, get session info
+ *   POST   /api/auth - Login and receive session token
+ *   PATCH  /api/auth - Change own password (authenticated)
+ *   DELETE /api/auth - Logout and invalidate session
  *
- * ENDPOINT: POST /api/auth
+ * GET REQUEST (Session Verification):
+ *   Headers: Authorization: Bearer <session-token>
+ *   Response: { "valid": true, "username": "...", "role": "...", "expiresIn": 12345 }
  *
- * REQUEST BODY:
- *   {
- *     "pageId": "demo",         // The page identifier
- *     "password": "secret123"   // The user's password
- *   }
+ * POST REQUEST (Login):
+ *   Body: { "username": "admin", "password": "secret123" }
+ *   Response: { "success": true, "token": "...", "role": "admin", "expiresIn": 86400 }
  *
- * RESPONSE CODES:
- *   - 200: Success - credentials are valid
- *   - 400: Bad request - missing fields
- *   - 401: Unauthorized - invalid credentials
- *   - 429: Too many requests - rate limit exceeded
- *   - 500: Server error
+ * PATCH REQUEST (Password Change):
+ *   Headers: Authorization: Bearer <session-token>
+ *   Body: { "currentPassword": "old", "newPassword": "new" }
+ *   Response: { "success": true, "message": "Password changed" }
  *
- * SECURITY NOTES:
- *   - Rate limited to 10 attempts per minute (stricter than save endpoint)
- *   - Uses timing-safe comparison to prevent timing attacks
- *   - Returns generic error messages to avoid revealing valid page IDs
+ * DELETE REQUEST (Logout):
+ *   Headers: Authorization: Bearer <session-token>
+ *   Response: { "success": true, "message": "Logged out" }
+ *
+ * REQUIRED:
+ *   - KV Namespace binding: LOON_DB
+ *   - Bootstrap user created via scripts/bootstrap-admin.sh
+ *
+ * SECURITY FEATURES:
+ *   - PBKDF2 password hashing (100,000 iterations)
+ *   - Timing-safe password comparison
+ *   - Rate limiting: 5 login attempts per minute per IP
+ *   - Session tokens expire after 24 hours
+ *   - Bootstrap users auto-upgrade to hashed passwords on first login
+ *   - Password change requires current password verification
+ *
+ * KV DATA STRUCTURE:
+ *   user:{username}    -> { role, hash, salt, created, ... }
+ *   session:{token}    -> { username, role, created, ip } [TTL: 24h]
  *
  * @module functions/api/auth
- * @version 1.0.0 (Phase 1 - Directory Mode)
+ * @version 3.0.0
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
-
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-/**
- * Configuration for the auth endpoint.
- * Note: Rate limits are stricter here than on /api/save because auth
- * endpoints are common targets for brute force attacks.
- */
-const CONFIG = {
-  /**
-   * Maximum auth attempts per IP within the rate limit window.
-   * Default: 10 attempts per minute
-   * 
-   * This is lower than the save endpoint (30/min) because:
-   * - Auth endpoints are prime targets for brute force attacks
-   * - Normal users only need to authenticate once per session
-   */
-  RATE_LIMIT_REQUESTS: 10,
-  
-  /**
-   * Rate limit window duration in milliseconds.
-   * Default: 60000ms (1 minute)
-   */
-  RATE_LIMIT_WINDOW_MS: 60000,
-};
-
-// ============================================================================
-// RATE LIMITING
-// ============================================================================
-
-/**
- * In-memory storage for rate limit tracking.
- * See save.js for detailed explanation of this approach.
- */
-const rateLimitMap = new Map();
+import { logAudit } from './_audit.js';
 
 /**
  * CORS options for this endpoint.
  */
-const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
+const CORS_OPTIONS = { methods: 'GET, POST, PATCH, DELETE, OPTIONS' };
 
-// ============================================================================
-// REQUEST HANDLERS
-// ============================================================================
+// Rate limiting (in-memory, resets on worker restart)
+const loginAttempts = new Map();
+const RATE_LIMIT = { maxAttempts: 5, windowMs: 60000 }; // 5 attempts per minute
 
 /**
- * Handles CORS preflight requests.
- * Uses shared CORS utility that respects CORS_ORIGIN environment variable.
- * @param {Object} context - Cloudflare Pages Function context
- * @returns {Response} Empty response with CORS headers
+ * Check rate limit for IP
  */
-export async function onRequestOptions(context) {
-  return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const attempts = loginAttempts.get(ip) || [];
+    const recentAttempts = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+    
+    if (recentAttempts.length >= RATE_LIMIT.maxAttempts) {
+        return false;
+    }
+    
+    recentAttempts.push(now);
+    loginAttempts.set(ip, recentAttempts);
+    return true;
 }
 
 /**
- * Main handler for POST /api/auth
- * 
- * Validates a page ID and password combination without performing any
- * write operations. Used by the admin UI to verify credentials before
- * showing the editor.
- * 
- * @param {Object} context - Cloudflare Pages Function context
- * @param {Request} context.request - The incoming HTTP request
- * @param {Object} context.env - Environment variables
- * @returns {Response} JSON response indicating success or failure
+ * Hash password using PBKDF2
+ * Uses Web Crypto API available in Cloudflare Workers
+ */
+async function hashPassword(password, salt) {
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(password),
+        'PBKDF2',
+        false,
+        ['deriveBits']
+    );
+    
+    const derivedBits = await crypto.subtle.deriveBits(
+        {
+            name: 'PBKDF2',
+            salt: encoder.encode(salt),
+            iterations: 100000,
+            hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+    );
+    
+    return btoa(String.fromCharCode(...new Uint8Array(derivedBits)));
+}
+
+/**
+ * Verify password against stored hash
+ */
+async function verifyPassword(password, storedHash, salt) {
+    const computedHash = await hashPassword(password, salt);
+    
+    // Timing-safe comparison
+    const encoder = new TextEncoder();
+    const a = encoder.encode(computedHash);
+    const b = encoder.encode(storedHash);
+    
+    if (a.length !== b.length) return false;
+    return crypto.subtle.timingSafeEqual(a, b);
+}
+
+/**
+ * Generate secure session token
+ */
+function generateSessionToken() {
+    return crypto.randomUUID();
+}
+
+/**
+ * Handle POST request (Login)
  */
 export async function onRequestPost(context) {
-  const { request, env } = context;
+    const { request, env } = context;
+    const db = env.LOON_DB;
 
-  // Helper to get CORS headers for responses
-  const getHeaders = () => getCorsHeaders(env, request, CORS_OPTIONS);
-
-  try {
-    // ========================================================================
-    // STEP 1: Rate Limiting (Strict for auth endpoint)
-    // ========================================================================
-    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-
-    if (!checkRateLimit(clientIP)) {
-      return new Response(
-        JSON.stringify({ error: 'Too many login attempts. Try again in 60 seconds.' }),
-        { status: 429, headers: getHeaders() }
-      );
+    // Check KV binding exists
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured. See Phase 2 setup.' }, 500, env, request);
     }
 
-    // ========================================================================
-    // STEP 2: Parse and Validate Request
-    // ========================================================================
-    const body = await request.json();
-    const { pageId, password } = body;
-
-    if (!pageId || !password) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: pageId, password' }),
-        { status: 400, headers: getHeaders() }
-      );
+    // Rate limit check
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!checkRateLimit(ip)) {
+        return jsonResponse({ error: 'Too many login attempts. Try again later.' }, 429, env, request);
     }
 
-    // ========================================================================
-    // STEP 3: Sanitize Page ID
-    // ========================================================================
-    // Only allow alphanumeric characters, hyphens, and underscores.
-    // This prevents directory traversal and other injection attacks.
-    // Note: Pattern must match save.js, save-v2.js, and auth-v2.js for consistency.
-    const cleanPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    if (cleanPageId !== pageId.toLowerCase()) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid page ID format' }),
-        { status: 400, headers: getHeaders() }
-      );
-    }
-
-    // ========================================================================
-    // STEP 4: Look Up Expected Password
-    // ========================================================================
-    // Password is stored in an environment variable named USER_{PAGEID}_PASSWORD
-    const envKey = `USER_${cleanPageId.toUpperCase()}_PASSWORD`;
-    const expectedPassword = env[envKey];
-
-    // SECURITY: Don't reveal whether the page exists
-    // Return the same error for "page doesn't exist" and "wrong password"
-    if (!expectedPassword) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid credentials' }),
-        { status: 401, headers: getHeaders() }
-      );
-    }
-
-    // ========================================================================
-    // STEP 5: Timing-Safe Password Comparison
-    // ========================================================================
-    const isValid = await secureCompare(password, expectedPassword);
-
-    if (!isValid) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid credentials' }),
-        { status: 401, headers: getHeaders() }
-      );
-    }
-
-    // ========================================================================
-    // STEP 6: Return Success
-    // ========================================================================
-    // Return the cleaned page ID so the client knows what to use
-    return new Response(
-      JSON.stringify({ success: true, pageId: cleanPageId }),
-      { status: 200, headers: getHeaders() }
-    );
-
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Server error', details: err.message }),
-      { status: 500, headers: getCorsHeaders(env, request, CORS_OPTIONS) }
-    );
-  }
-}
-
-// ============================================================================
-// SECURITY UTILITIES
-// ============================================================================
-
-/**
- * Performs a timing-safe string comparison.
- * See save.js for detailed documentation on timing attacks and prevention.
- * 
- * @param {string} a - First string
- * @param {string} b - Second string
- * @returns {Promise<boolean>} True if equal
- */
-async function secureCompare(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') {
-    return false;
-  }
-
-  const encoder = new TextEncoder();
-  const aBytes = encoder.encode(a);
-  const bBytes = encoder.encode(b);
-
-  // Handle length mismatch with constant-time behavior
-  if (aBytes.length !== bBytes.length) {
     try {
-      await crypto.subtle.timingSafeEqual(aBytes, aBytes);
-    } catch (e) {
-      // Fallback for environments without timingSafeEqual
-    }
-    return false;
-  }
+        const { username, password } = await request.json();
 
-  try {
-    return await crypto.subtle.timingSafeEqual(aBytes, bBytes);
-  } catch (e) {
-    // Fallback for older environments
-    return a === b;
-  }
+        // Validate input
+        if (!username || !password) {
+            return jsonResponse({ error: 'Username and password required' }, 400, env, request);
+        }
+
+        // Sanitize username
+        const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (sanitizedUsername !== username.toLowerCase()) {
+            return jsonResponse({ error: 'Invalid username format' }, 400, env, request);
+        }
+
+        // Fetch user from KV
+        const userRecord = await db.get(`user:${sanitizedUsername}`, { type: 'json' });
+
+        if (!userRecord) {
+            // Generic error to prevent username enumeration
+            return jsonResponse({ error: 'Invalid credentials' }, 401, env, request);
+        }
+
+        // Verify password
+        let isValid = false;
+
+        if (userRecord.bootstrap) {
+            // Bootstrap user: plain text comparison, then upgrade
+            isValid = (password === userRecord.password);
+
+            if (isValid) {
+                // Upgrade to secure hash
+                const salt = crypto.randomUUID();
+                const hash = await hashPassword(password, salt);
+
+                const upgradedUser = {
+                    ...userRecord,
+                    hash: hash,
+                    salt: salt,
+                    bootstrap: false,
+                    upgraded: new Date().toISOString()
+                };
+                delete upgradedUser.password; // Remove plain password
+
+                await db.put(`user:${sanitizedUsername}`, JSON.stringify(upgradedUser));
+            }
+        } else {
+            // Secure user: hash comparison
+            isValid = await verifyPassword(password, userRecord.hash, userRecord.salt);
+        }
+
+        if (!isValid) {
+            return jsonResponse({ error: 'Invalid credentials' }, 401, env, request);
+        }
+
+        // Create session
+        const token = generateSessionToken();
+        const sessionData = {
+            username: sanitizedUsername,
+            role: userRecord.role,
+            created: Date.now(),
+            ip: ip
+        };
+
+        // Store session in KV (expires in 24 hours)
+        await db.put(`session:${token}`, JSON.stringify(sessionData), {
+            expirationTtl: 86400 // 24 hours
+        });
+
+        // Audit log
+        await logAudit(db, 'login', sanitizedUsername, { ip, role: userRecord.role });
+
+        return jsonResponse({
+            success: true,
+            token: token,
+            role: userRecord.role,
+            username: sanitizedUsername,
+            expiresIn: 86400
+        }, 200, env, request);
+
+    } catch (err) {
+        console.error('Auth error:', err);
+        return jsonResponse({ error: 'Authentication failed' }, 500, env, request);
+    }
 }
 
 /**
- * Sliding window rate limiter for auth attempts.
- * See save.js for detailed documentation.
+ * Handle GET request (Session Verification)
+ * Verifies if a session token is still valid and returns session info.
  * 
- * @param {string} clientIP - Client's IP address
- * @returns {boolean} True if request allowed, false if rate limited
+ * Request:
+ *   GET /api/auth
+ *   Headers: Authorization: Bearer <session-token>
+ * 
+ * Response (200):
+ *   { "valid": true, "username": "...", "role": "...", "expiresIn": 12345 }
+ * 
+ * Response (401):
+ *   { "valid": false, "error": "Session expired" }
  */
-function checkRateLimit(clientIP) {
-  const now = Date.now();
-  const windowStart = now - CONFIG.RATE_LIMIT_WINDOW_MS;
-  
-  let entry = rateLimitMap.get(clientIP);
-  
-  if (!entry) {
-    entry = { requests: [] };
-    rateLimitMap.set(clientIP, entry);
-  }
-  
-  // Remove expired timestamps
-  entry.requests = entry.requests.filter(time => time > windowStart);
-  
-  // Check limit
-  if (entry.requests.length >= CONFIG.RATE_LIMIT_REQUESTS) {
-    return false;
-  }
-  
-  // Record request
-  entry.requests.push(now);
-  
-  // Periodic cleanup (1% chance per request)
-  if (Math.random() < 0.01) {
-    for (const [ip, e] of rateLimitMap.entries()) {
-      if (e.requests.every(time => time < windowStart)) {
-        rateLimitMap.delete(ip);
-      }
+export async function onRequestGet(context) {
+    const { request, env } = context;
+    const db = env.LOON_DB;
+
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     }
-  }
-  
-  return true;
+
+    try {
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return jsonResponse({ valid: false, error: 'No token provided' }, 401, env, request);
+        }
+
+        const token = authHeader.slice(7);
+        const sessionRaw = await db.get(`session:${token}`);
+
+        if (!sessionRaw) {
+            return jsonResponse({ valid: false, error: 'Session expired or invalid' }, 401, env, request);
+        }
+
+        const session = JSON.parse(sessionRaw);
+
+        // Calculate remaining time (sessions are created with 24h TTL)
+        const createdAt = session.created || Date.now();
+        const expiresAt = createdAt + (86400 * 1000); // 24 hours
+        const expiresIn = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+
+        return jsonResponse({
+            valid: true,
+            username: session.username,
+            role: session.role,
+            expiresIn: expiresIn
+        }, 200, env, request);
+
+    } catch (err) {
+        return jsonResponse({ valid: false, error: 'Session verification failed' }, 500, env, request);
+    }
+}
+
+/**
+ * Handle DELETE request (Logout)
+ */
+export async function onRequestDelete(context) {
+    const { request, env } = context;
+    const db = env.LOON_DB;
+
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+    }
+
+    try {
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return jsonResponse({ error: 'No token provided' }, 400, env, request);
+        }
+
+        const token = authHeader.slice(7);
+
+        // Get session info for audit log before deleting
+        const sessionRaw = await db.get(`session:${token}`);
+        let username = 'unknown';
+        if (sessionRaw) {
+            const session = JSON.parse(sessionRaw);
+            username = session.username;
+        }
+
+        // Delete session from KV
+        await db.delete(`session:${token}`);
+
+        // Audit log
+        await logAudit(db, 'logout', username, {});
+
+        return jsonResponse({ success: true, message: 'Logged out' }, 200, env, request);
+
+    } catch (err) {
+        return jsonResponse({ error: 'Logout failed' }, 500, env, request);
+    }
+}
+
+/**
+ * Handle PATCH request (Change Own Password)
+ * Allows authenticated users to change their own password.
+ * 
+ * Request:
+ *   PATCH /api/auth
+ *   Headers: Authorization: Bearer <session-token>
+ *   Body: { "currentPassword": "...", "newPassword": "..." }
+ * 
+ * Response (200):
+ *   { "success": true, "message": "Password changed" }
+ */
+export async function onRequestPatch(context) {
+    const { request, env } = context;
+    const db = env.LOON_DB;
+
+    if (!db) {
+        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+    }
+
+    try {
+        // Validate session
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return jsonResponse({ error: 'No token provided' }, 401, env, request);
+        }
+
+        const token = authHeader.slice(7);
+        const sessionRaw = await db.get(`session:${token}`);
+
+        if (!sessionRaw) {
+            return jsonResponse({ error: 'Session expired or invalid' }, 401, env, request);
+        }
+
+        const session = JSON.parse(sessionRaw);
+
+        // Parse request body
+        const { currentPassword, newPassword } = await request.json();
+
+        if (!currentPassword || !newPassword) {
+            return jsonResponse({ error: 'Current and new password required' }, 400, env, request);
+        }
+
+        if (newPassword.length < 8) {
+            return jsonResponse({ error: 'New password must be at least 8 characters' }, 400, env, request);
+        }
+
+        // Fetch user record
+        const userRecord = await db.get(`user:${session.username}`, { type: 'json' });
+
+        if (!userRecord) {
+            return jsonResponse({ error: 'User not found' }, 404, env, request);
+        }
+
+        // Verify current password
+        let isCurrentValid = false;
+
+        if (userRecord.bootstrap) {
+            isCurrentValid = (currentPassword === userRecord.password);
+        } else {
+            isCurrentValid = await verifyPassword(currentPassword, userRecord.hash, userRecord.salt);
+        }
+
+        if (!isCurrentValid) {
+            return jsonResponse({ error: 'Current password is incorrect' }, 401, env, request);
+        }
+
+        // Hash new password
+        const newSalt = crypto.randomUUID();
+        const newHash = await hashPassword(newPassword, newSalt);
+
+        // Update user record
+        const updatedUser = {
+            ...userRecord,
+            hash: newHash,
+            salt: newSalt,
+            bootstrap: false,
+            passwordChanged: new Date().toISOString()
+        };
+        delete updatedUser.password; // Remove any bootstrap password
+
+        await db.put(`user:${session.username}`, JSON.stringify(updatedUser));
+
+        // Audit log
+        await logAudit(db, 'password_change', session.username, {});
+
+        return jsonResponse({ success: true, message: 'Password changed successfully' }, 200, env, request);
+
+    } catch (err) {
+        console.error('Password change error:', err);
+        return jsonResponse({ error: 'Password change failed' }, 500, env, request);
+    }
+}
+
+/**
+ * Handle OPTIONS (CORS preflight)
+ * Uses shared CORS utility that respects CORS_ORIGIN environment variable.
+ */
+export async function onRequestOptions(context) {
+    return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
+}
+
+/**
+ * JSON response helper with configurable CORS.
+ * Falls back to permissive CORS if env/request not available.
+ */
+function jsonResponse(data, status = 200, env = null, request = null) {
+    const headers = env && request
+        ? getCorsHeaders(env, request, CORS_OPTIONS)
+        : {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        };
+
+    return new Response(JSON.stringify(data), { status, headers });
 }
