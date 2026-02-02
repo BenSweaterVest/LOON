@@ -401,7 +401,7 @@ async function commitToGitHub(env, path, content, message, existingSha) {
 
     const body = {
         message: message,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2))))
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(content))))
     };
 
     if (existingSha) {
@@ -594,5 +594,5 @@ function jsonResponse(data, status = 200, env = null, request = null) {
             'Access-Control-Allow-Headers': 'Content-Type, Authorization'
         };
 
-    return new Response(JSON.stringify(data, null, 2), { status, headers });
+    return new Response(JSON.stringify(data), { status, headers });
 }

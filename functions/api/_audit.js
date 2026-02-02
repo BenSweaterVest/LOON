@@ -96,20 +96,31 @@ export async function getAuditLogs(db, options = {}) {
         // List all audit keys
         const listResult = await db.list({ prefix: 'audit:', limit: 1000 });
 
-        // Fetch and filter logs
+        // Pre-filter keys by pattern before fetching
+        const filteredKeys = listResult.keys.filter(key => {
+            if (action && !key.name.includes(`:${action}:`)) return false;
+            if (username && !key.name.endsWith(`:${username}`)) return false;
+            return true;
+        });
+
+        // Parallel fetch audit logs to avoid N+1 query problem
+        // Fetch in batches to avoid overwhelming the system with 1000+ concurrent requests
+        const BATCH_SIZE = 50;
         const logs = [];
-
-        for (const key of listResult.keys) {
-            // Quick filter by key pattern if username/action specified
-            if (action && !key.name.includes(`:${action}:`)) continue;
-            if (username && !key.name.endsWith(`:${username}`)) continue;
-
-            const value = await db.get(key.name, { type: 'json' });
-            if (value) {
-                logs.push(value);
-            }
-
-            if (logs.length >= limit) break;
+        
+        for (let i = 0; i < filteredKeys.length; i += BATCH_SIZE) {
+            // Only fetch keys up to the limit to avoid unnecessary fetches
+            const remainingNeeded = limit - logs.length;
+            if (remainingNeeded <= 0) break;
+            
+            const batchSize = Math.min(BATCH_SIZE, remainingNeeded, filteredKeys.length - i);
+            const batch = filteredKeys.slice(i, i + batchSize);
+            const batchPromises = batch.map(key =>
+                db.get(key.name, { type: 'json' })
+            );
+            
+            const batchResults = await Promise.all(batchPromises);
+            logs.push(...batchResults.filter(value => value));
         }
 
         // Sort by timestamp descending (newest first)

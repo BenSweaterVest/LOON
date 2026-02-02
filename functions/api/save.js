@@ -148,7 +148,7 @@ async function commitToGitHub(env, path, content, message, existingSha) {
     
     const body = {
         message: message,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(content)))),
     };
     
     if (existingSha) {

@@ -23,7 +23,6 @@ jobs:
           required_files=(
             "index.html"
             "admin.html"
-            "admin-v2.html"
             "404.html"
             "_headers"
             "robots.txt"
@@ -117,10 +116,6 @@ jobs:
           # Verify admin pages are blocked
           if ! grep -q "admin.html" robots.txt; then
             echo "WARNING: admin.html not blocked in robots.txt"
-          fi
-          
-          if ! grep -q "admin-v2.html" robots.txt; then
-            echo "WARNING: admin-v2.html not blocked in robots.txt"
           fi
           
           if ! grep -q "/api/" robots.txt; then

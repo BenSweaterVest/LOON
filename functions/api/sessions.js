@@ -85,22 +85,30 @@ export async function onRequestGet(context) {
     try {
         // List all sessions
         const list = await db.list({ prefix: 'session:' });
-        const sessions = [];
-
-        for (const key of list.keys) {
-            const sessionRaw = await db.get(key.name, { type: 'json' });
-            if (sessionRaw) {
-                const tokenId = key.name.replace('session:', '');
-                sessions.push({
+        
+        // Parallel fetch all sessions to avoid N+1 query problem
+        const sessionDataPromises = list.keys.map(key =>
+            db.get(key.name, { type: 'json' }).then(sessionRaw => ({
+                key: key.name,
+                data: sessionRaw
+            }))
+        );
+        
+        const sessionDataResults = await Promise.all(sessionDataPromises);
+        
+        const sessions = sessionDataResults
+            .filter(result => result.data)
+            .map(result => {
+                const tokenId = result.key.replace('session:', '');
+                return {
                     tokenPreview: tokenId.substring(0, 8) + '...',
-                    username: sessionRaw.username,
-                    role: sessionRaw.role,
-                    created: sessionRaw.created ? new Date(sessionRaw.created).toISOString() : null,
-                    ip: sessionRaw.ip || 'unknown',
+                    username: result.data.username,
+                    role: result.data.role,
+                    created: result.data.created ? new Date(result.data.created).toISOString() : null,
+                    ip: result.data.ip || 'unknown',
                     isCurrent: tokenId === auth.token
-                });
-            }
-        }
+                };
+            });
 
         // Sort by creation time (newest first)
         sessions.sort((a, b) => {
@@ -168,13 +176,23 @@ export async function onRequestDelete(context) {
 
             const list = await db.list({ prefix: 'session:' });
 
-            for (const key of list.keys) {
-                const sessionRaw = await db.get(key.name, { type: 'json' });
-                if (sessionRaw && sessionRaw.username === targetUsername) {
-                    await db.delete(key.name);
-                    revokedCount++;
-                }
-            }
+            // Parallel fetch all sessions to avoid N+1 query problem
+            const sessionDataPromises = list.keys.map(key =>
+                db.get(key.name, { type: 'json' }).then(sessionRaw => ({
+                    key: key.name,
+                    data: sessionRaw
+                }))
+            );
+            
+            const sessionDataResults = await Promise.all(sessionDataPromises);
+            
+            // Parallel delete sessions belonging to target user
+            const deletePromises = sessionDataResults
+                .filter(result => result.data && result.data.username === targetUsername)
+                .map(result => db.delete(result.key));
+            
+            revokedCount = deletePromises.length;
+            await Promise.all(deletePromises);
         } else {
             return jsonResponse({ error: 'Provide either "token" or "username" with "all: true"' }, 400, env, request);
         }
@@ -212,5 +230,5 @@ function jsonResponse(data, status = 200, env = null, request = null) {
             'Access-Control-Allow-Headers': 'Content-Type, Authorization'
         };
 
-    return new Response(JSON.stringify(data, null, 2), { status, headers });
+    return new Response(JSON.stringify(data), { status, headers });
 }

@@ -204,7 +204,7 @@ curl -X DELETE https://your-site.pages.dev/api/auth-v2 \
 
 ### 9. Admin UI (Phase 2)
 
-1. Go to `https://your-site.pages.dev/admin-v2.html`
+1. Go to `https://your-site.pages.dev/admin.html`
 2. Enter Username: `testadmin`
 3. Enter Password: `TestPassword123`
 4. Click Login
@@ -355,12 +355,12 @@ curl -X DELETE https://your-site.pages.dev/api/content \
 - [ ] Contributor can create content
 - [ ] Contributor cannot edit others' content
 - [ ] Logout invalidates session
-- [ ] admin-v2.html login works
-- [ ] admin-v2.html shows role badge
-- [ ] admin-v2.html user management works
-- [ ] admin-v2.html page browser works
-- [ ] admin-v2.html sessions tab works (admin)
-- [ ] admin-v2.html password change works
+- [ ] admin.html login works
+- [ ] admin.html shows role badge
+- [ ] admin.html user management works
+- [ ] admin.html page browser works
+- [ ] admin.html sessions tab works (admin)
+- [ ] admin.html password change works
 - [ ] Password auto-upgrade works (bootstrap → hashed)
 - [ ] Page listing filters for contributors
 - [ ] Session revoke works
