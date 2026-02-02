@@ -175,5 +175,5 @@ function jsonResponse(data, status = 200, env = null, request = null) {
             'Access-Control-Allow-Headers': 'Content-Type'
         };
 
-    return new Response(JSON.stringify(data, null, 2), { status, headers });
+    return new Response(JSON.stringify(data), { status, headers });
 }

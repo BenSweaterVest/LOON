@@ -87,7 +87,14 @@ function checkRateLimit(ip) {
     }
     
     recent.push(now);
-    saveAttempts.set(ip, recent);
+    
+    // Clean up old entries to prevent memory leak
+    if (recent.length === 0) {
+        saveAttempts.delete(ip);
+    } else {
+        saveAttempts.set(ip, recent);
+    }
+    
     return true;
 }
 
@@ -148,7 +155,7 @@ async function commitToGitHub(env, path, content, message, existingSha) {
     
     const body = {
         message: message,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(content)))),
     };
     
     if (existingSha) {

@@ -149,7 +149,7 @@ export async function onRequestGet(context) {
   const headers = getCorsHeaders(env, request, CORS_OPTIONS);
 
   return new Response(
-    JSON.stringify(responseBody, null, 2),  // Pretty-print for readability
+    JSON.stringify(responseBody),
     {
       status: allHealthy ? 200 : 503,
       headers: headers

@@ -123,13 +123,15 @@ async function hashPassword(password, salt) {
  */
 function generatePassword() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    let password = '';
     const randomValues = new Uint8Array(16);
     crypto.getRandomValues(randomValues);
+    
+    // Use array instead of string concatenation to avoid creating intermediate strings
+    const passwordChars = [];
     for (const val of randomValues) {
-        password += chars[val % chars.length];
+        passwordChars.push(chars[val % chars.length]);
     }
-    return password;
+    return passwordChars.join('');
 }
 
 /**
@@ -137,20 +139,26 @@ function generatePassword() {
  */
 async function handleGet(db, session, env, request) {
     const list = await db.list({ prefix: 'user:' });
-    const users = [];
-
-    for (const key of list.keys) {
-        const userRaw = await db.get(key.name, { type: 'json' });
-        if (userRaw) {
-            users.push({
-                username: key.name.replace('user:', ''),
-                role: userRaw.role,
-                created: userRaw.created,
-                createdBy: userRaw.createdBy,
-                lastLogin: userRaw.lastLogin || null
-            });
-        }
-    }
+    
+    // Parallel fetch all users to avoid N+1 query problem
+    const userDataPromises = list.keys.map(key => 
+        db.get(key.name, { type: 'json' }).then(userRaw => ({
+            key: key.name,
+            data: userRaw
+        }))
+    );
+    
+    const userDataResults = await Promise.all(userDataPromises);
+    
+    const users = userDataResults
+        .filter(result => result.data)
+        .map(result => ({
+            username: result.key.replace('user:', ''),
+            role: result.data.role,
+            created: result.data.created,
+            createdBy: result.data.createdBy,
+            lastLogin: result.data.lastLogin || null
+        }));
 
     return jsonResponse({ users }, 200, env, request);
 }
@@ -246,13 +254,23 @@ async function handleDelete(db, session, body, env, request) {
     await db.delete(`user:${sanitizedUsername}`);
 
     // Also delete any active sessions for this user
+    // Parallel fetch all sessions to avoid N+1 query problem
     const sessions = await db.list({ prefix: 'session:' });
-    for (const key of sessions.keys) {
-        const sessionData = await db.get(key.name, { type: 'json' });
-        if (sessionData && sessionData.username === sanitizedUsername) {
-            await db.delete(key.name);
-        }
-    }
+    const sessionDataPromises = sessions.keys.map(key =>
+        db.get(key.name, { type: 'json' }).then(sessionData => ({
+            key: key.name,
+            data: sessionData
+        }))
+    );
+    
+    const sessionDataResults = await Promise.all(sessionDataPromises);
+    
+    // Parallel delete sessions belonging to this user
+    const deletePromises = sessionDataResults
+        .filter(result => result.data && result.data.username === sanitizedUsername)
+        .map(result => db.delete(result.key));
+    
+    await Promise.all(deletePromises);
 
     // Audit log
     await logAudit(db, 'user_delete', session.username, { deletedUser: sanitizedUsername });
