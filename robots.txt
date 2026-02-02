@@ -9,7 +9,6 @@ Allow: /index.html
 
 # Block admin and API
 Disallow: /admin.html
-Disallow: /admin-v2.html
 Disallow: /api/
 Disallow: /functions/
 
