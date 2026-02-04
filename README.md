@@ -31,27 +31,27 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 git clone https://github.com/YOUR_USERNAME/loon.git
 ```
 ### 2. Create Cloudflare Pages Project
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) ? Workers & Pages ? Create
-2. Connect to Git ? Select this repository
+1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) → Workers & Pages → Create
+2. Connect to Git → Select this repository
 3. Build settings:
    - **Framework preset**: None
    - **Build command**: *(leave empty)*
    - **Build output directory**: *(leave empty)*
 4. Deploy
 ### 3. Create Cloudflare KV Namespace
-1. In Cloudflare Dashboard ? Workers & Pages ? KV
+1. In Cloudflare Dashboard → Workers & Pages → KV
 2. Create namespace: `LOON_DB`
-3. Go to your Pages project ? Settings ? Functions ? KV namespace bindings
-4. Add binding: `LOON_DB` ? Select the namespace you created
+3. Go to your Pages project → Settings → Functions → KV namespace bindings
+4. Add binding: `LOON_DB` → Select the namespace you created
 ### 4. Create GitHub Personal Access Token
-1. Go to GitHub ? Settings ? Developer settings ? Personal access tokens ? **Fine-grained tokens**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens**
 2. Generate new token:
    - **Name**: `LOON CMS`
-   - **Repository access**: Only select repositories ? select this repo
-   - **Permissions**: Contents ? Read and write
+   - **Repository access**: Only select repositories → select this repo
+   - **Permissions**: Contents → Read and write
 3. Copy the token from GitHub
 ### 5. Add Environment Variables
-In Cloudflare Pages ? Settings ? Environment variables ? **Production**:
+In Cloudflare Pages → Settings → Environment variables → **Production**:
 | Variable | Value |
 |----------|-------|
 | `GITHUB_REPO` | `your-username/loon` |
@@ -64,14 +64,14 @@ Before you can log in, you need to create an admin account using the bootstrap s
 - You have access to Cloudflare Dashboard
 **Step 1: Get Your Cloudflare Account ID**
 1. Open [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. Right sidebar ? Copy your **Account ID** (looks like: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4`)
+2. Right sidebar → Copy your **Account ID** (looks like: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4`)
 **Step 2: Get Your KV Namespace ID**
-1. Cloudflare Dashboard ? Workers & Pages ? KV
+1. Cloudflare Dashboard → Workers & Pages → KV
 2. Click on the `LOON_DB` namespace you created
 3. Copy the **Namespace ID** from the top
 **Step 3: Get Your API Token**
-1. Cloudflare Dashboard ? My Profile ? API Tokens
-2. Click **"Create Token"** ? Select **"Create Custom Token"**
+1. Cloudflare Dashboard → My Profile → API Tokens
+2. Click **"Create Token"** → Select **"Create Custom Token"**
 3. Fill in:
    - **Token name**: `LOON Admin Bootstrap`
    - **Permissions**: Select **Account** → **Cloudflare KV** → check **Edit**
@@ -104,7 +104,7 @@ history -c  # macOS/Linux/Git Bash
 Clear-History  # Windows PowerShell
 ```
 ### 7. Redeploy
-Go to your Cloudflare Pages dashboard ? Deployments ? Latest ? ? ? Retry deployment
+Go to your Cloudflare Pages dashboard → Deployments → Latest → Retry deployment
 ### 8. Test the Setup
 1. Visit `https://your-project.pages.dev/admin.html`
 2. Login with username `admin` and the password you set in step 6
@@ -127,44 +127,43 @@ loon/
 +-- vitest.config.js        # Test configuration
 +-- .env.example            # Environment variable template
 +-- functions/
-�   +-- api/
-�       +-- _cors.js        # Shared CORS utility (configurable origin)
-�       +-- _audit.js       # Audit logging utility
-�       +-- auth.js         # /api/auth - session auth + password change
-�       +-- save.js         # /api/save - content save with RBAC + drafts
-�       +-- publish.js      # /api/publish - publish/unpublish workflow
-�       +-- upload.js       # /api/upload - image upload (Cloudflare Images)
-�       +-- users.js        # /api/users - user management (admin)
-�       +-- pages.js        # /api/pages - list and create pages
-�       +-- templates.js    # /api/templates - list schema templates
-�       +-- sessions.js     # /api/sessions - session management (admin)
-�       +-- content.js      # /api/content - content deletion
-�       +-- audit.js        # /api/audit - view audit logs (admin)
-�       +-- health.js       # /api/health - system status|       +-- _cors.js        # Shared CORS utility
-|       +-- _audit.js       # Shared audit logging
-|       +-- _response.js    # Shared response formatting + error handling
-|       +-- _webauthn.js    # WebAuthn crypto utilities
-|       +-- _passkeys-schema.js  # Passkey KV schema helpers�   +-- lib/
-�       +-- schema-validator.js # JSON Schema conversion + validation
+   +-- api/
+   |   +-- _cors.js        # Shared CORS utility (configurable origin)
+   |   +-- _audit.js       # Audit logging utility
+   |   +-- _response.js    # Shared response formatting + error handling
+   |   +-- _webauthn.js    # WebAuthn crypto utilities
+   |   +-- _passkeys-schema.js  # Passkey KV schema helpers
+   |   +-- auth.js         # /api/auth - session auth + password change
+   |   +-- save.js         # /api/save - content save with RBAC + drafts
+   |   +-- publish.js      # /api/publish - publish/unpublish workflow
+   |   +-- upload.js       # /api/upload - image upload (Cloudflare Images)
+   |   +-- users.js        # /api/users - user management (admin)
+   |   +-- pages.js        # /api/pages - list and create pages
+   |   +-- templates.js    # /api/templates - list schema templates
+   |   +-- sessions.js     # /api/sessions - session management (admin)
+   |   +-- content.js      # /api/content - content deletion
+   |   +-- audit.js        # /api/audit - view audit logs (admin)
+   |   +-- health.js       # /api/health - system status
+   +-- lib/
+      +-- schema-validator.js # JSON Schema conversion + validation
 +-- tests/
-�   +-- helpers.js          # Test utilities (mock request, env, KV)
-�   +-- auth.test.js        # Auth endpoint tests
-�   +-- save.test.js        # Save endpoint tests
-�   +-- pages.test.js       # Pages endpoint tests
-�   +-- health.test.js      # Health endpoint tests
-�   +-- schemas.test.js     # Schema validation tests
+   +-- helpers.js          # Test utilities (mock request, env, KV)
+   +-- auth.test.js        # Auth endpoint tests
+   +-- save.test.js        # Save endpoint tests
+   +-- pages.test.js       # Pages endpoint tests
+   +-- health.test.js      # Health endpoint tests
+   +-- schemas.test.js     # Schema validation tests
 +-- data/
-�   +-- demo/
-�       +-- schema.json     # Form field definitions
-�       +-- content.json    # Actual content (edited by users)
+   +-- demo/
+      +-- schema.json     # Form field definitions
+      +-- content.json    # Actual content (edited by users)
 +-- examples/               # 16 ready-to-use schemas
-�   +-- ...                 # (see examples/README.md)
+   +-- ...                 # (see examples/README.md)
 +-- scripts/
-│   +-- bootstrap-admin.js  # Create first admin user (Node.js)
-�   +-- validate-json.mjs   # JSON validation script
-+-- docs/
+   +-- bootstrap-admin.js  # Create first admin user (Node.js)
+   +-- validate-json.mjs   # JSON validation script
 �   +-- API.md              # API reference
-+-- ARCHITECTURE.md         # Technical design + features
+   +-- API.md              # API reference
 +-- CONTRIBUTING.md         # Development guidelines + testing
 +-- LICENSE                 # MIT License
 +-- OPERATIONS.md           # Admin operations + troubleshooting
