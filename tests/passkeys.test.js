@@ -198,7 +198,7 @@ describe('Passkey Schema', () => {
     describe('Credential ID Validation', () => {
         it('should validate valid credential IDs', () => {
             expect(isValidCredentialId('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij')).toBe(true);
-            expect(isValidCredentialId('a-_b-_c')).toBe(true);
+            expect(isValidCredentialId('a-_b-_c-123456789012')).toBe(true);
         });
         
         it('should reject invalid credential IDs', () => {
@@ -268,7 +268,7 @@ describe('Passkey Integration Scenarios', () => {
             expect(challengeB64).toBeTruthy();
             
             // 2. User creates passkey with challenge
-            const credentialId = 'new-cred-12345678';
+            const credentialId = 'new-cred-1234567890123';
             expect(isValidCredentialId(credentialId)).toBe(true);
             
             // 3. Backend stores credential

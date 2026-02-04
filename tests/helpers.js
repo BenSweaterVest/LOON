@@ -103,7 +103,14 @@ export async function parseResponse(response) {
  */
 export function createMockDB(overrides = {}) {
     const kv = createMockKV();
-    return { ...kv, ...overrides };
+    return {
+        ...kv,
+        put: async (key, value, options) => {
+            await kv.put(key, value, options);
+            return { success: true };
+        },
+        ...overrides
+    };
 }
 
 /**
