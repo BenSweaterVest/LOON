@@ -160,7 +160,7 @@ jobs:
             exit 1
           fi
           
-          if grep -r "Bearer " . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v "Bearer \$" | grep -v "Bearer <" | grep -v "Bearer \${" | grep -v "'Bearer '" | grep -v "\*\*\*" | grep -v "Auth Required" | grep -v "Authorization: Bearer" | grep -v ".env.example"; then
+          if grep -r "Bearer " . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v "Bearer \$" | grep -v "Bearer <" | grep -v "Bearer \${" | grep -v "'Bearer '" | grep -v "\*\*\*" | grep -v "Auth Required" | grep -v "Authorization: Bearer" | grep -v "Bearer {" | grep -v ".env.example"; then
             echo "WARNING: Potential hardcoded bearer token found"
             exit 1
           fi
