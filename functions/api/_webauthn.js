@@ -153,6 +153,13 @@ export async function validateAssertionResponse(
 }
 
 /**
+ * Validate recovery code format (8 alphanumeric uppercase characters)
+ */
+export function isValidRecoveryCode(code) {
+    return typeof code === 'string' && /^[A-Z0-9]{8}$/.test(code);
+}
+
+/**
  * Generate recovery codes (12x 8-character base36 strings)
  * Format: ABC12345, DEF67890, etc.
  */
@@ -266,6 +273,7 @@ if (typeof module !== 'undefined' && module.exports) {
         validateAttestationResponse,
         validateAssertionResponse,
         generateRecoveryCodes,
+        isValidRecoveryCode,
         hashRecoveryCode,
         verifyRecoveryCode,
         timingSafeEqual,

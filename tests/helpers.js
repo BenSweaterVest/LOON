@@ -97,3 +97,42 @@ export async function parseResponse(response) {
         return text;
     }
 }
+
+/**
+ * Create a mock database (alias for createMockKV)
+ */
+export function createMockDB(overrides = {}) {
+    const kv = createMockKV();
+    return { ...kv, ...overrides };
+}
+
+/**
+ * Create a mock session object
+ */
+export function createMockSession(username = 'testuser', role = 'contributor') {
+    return {
+        token: `token-${Date.now()}`,
+        username,
+        role,
+        created: Date.now(),
+        ip: '127.0.0.1',
+        expiresIn: 86400 // 24 hours in seconds
+    };
+}
+
+/**
+ * Create a mock response object
+ */
+export function createMockResponse(status = 200, data = {}, headers = {}) {
+    return new Response(
+        JSON.stringify(data),
+        {
+            status,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                ...headers
+            }
+        }
+    );
+}
