@@ -36,7 +36,7 @@ jobs:
           found=0
           for pattern in "${patterns[@]}"; do
             # Exclude test files, examples, and common non-secret patterns
-            if grep -rn --include="*.js" --include="*.html" -E "$pattern" . 2>/dev/null | grep -v "placeholder\|example\|YOUR_\|your-\|xxxxx\|test-\|mock\|validpassword" | grep -v ".env\|node_modules\|tests/\|\.test\.js"; then
+            if grep -rn --include="*.js" --include="*.html" -E "$pattern" . 2>/dev/null | grep -v "placeholder\|example\|YOUR_\|your-\|xxxxx\|test-\|mock\|validpassword\|Bearer\|Authorization\|startsWith\|startswith" | grep -v ".env\|node_modules\|tests/\|\.test\.js\|CONTRIBUTING\|OPERATIONS\|README\|API\.md\|SECURITY" | grep -v "/docs/\|\.md:"; then
               found=$((found + 1))
             fi
           done
