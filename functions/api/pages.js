@@ -62,11 +62,12 @@
  *   - Supports pagination to limit response size
  *
  * @module functions/api/pages
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -152,7 +153,7 @@ export async function onRequestGet(context) {
             Math.max(1, parseInt(url.searchParams.get('limit') || String(CONFIG.DEFAULT_PAGE_SIZE), 10))
         );
 
-        // Check for Phase 2 authentication (optional)
+        // Check for authentication (optional)
         let session = null;
         const db = env.LOON_DB;
         const authHeader = request.headers.get('Authorization');
@@ -197,8 +198,8 @@ export async function onRequestGet(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Pages API error:', err);
-        return jsonResponse({ error: 'Failed to list pages', details: err.message }, 500, env, request);
+        logError(err, 'Pages/List');
+        return jsonResponse({ error: 'Failed to list pages' }, 500, env, request);
     }
 }
 
@@ -351,8 +352,8 @@ export async function onRequestPost(context) {
         }, 201, env, request);
 
     } catch (err) {
-        console.error('Create page error:', err);
-        return jsonResponse({ error: 'Failed to create page', details: err.message }, 500, env, request);
+        logError(err, 'Pages/Create');
+        return jsonResponse({ error: 'Failed to create page' }, 500, env, request);
     }
 }
 
@@ -365,7 +366,7 @@ async function checkPageExists(env, pageId) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.1.0'
+            'User-Agent': 'LOON-CMS/1.0'
         }
     });
 
@@ -381,7 +382,7 @@ async function loadTemplate(env, templateName) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.1.0'
+            'User-Agent': 'LOON-CMS/1.0'
         }
     });
 
@@ -413,7 +414,7 @@ async function commitToGitHub(env, path, content, message, existingSha) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.1.0',
+            'User-Agent': 'LOON-CMS/1.0',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
@@ -450,7 +451,7 @@ async function fetchPagesFromGitHub(env, minimal = false) {
     const headers = {
         'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/3.1.0'
+        'User-Agent': 'LOON-CMS/1.0'
     };
 
     // Check cache for directory listing
@@ -529,8 +530,8 @@ async function fetchPagesFromGitHub(env, minimal = false) {
                 }
             }
         } catch (e) {
-            // Continue with partial data; log for debugging
-            console.error(`Error fetching details for ${pageId}:`, e);
+            // Continue with partial data; server-side logging available
+            logError(e, 'Pages/Details');
         }
 
         return page;

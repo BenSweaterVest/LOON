@@ -1,15 +1,15 @@
 #!/bin/bash
 # =============================================================================
-# LOON Phase 2: Bootstrap Admin Script (scripts/bootstrap-admin.sh)
+# LOON: Bootstrap Admin Script (scripts/bootstrap-admin.sh)
 # =============================================================================
 #
 # Creates the first admin user in Cloudflare KV. This is required before
-# you can log into the Phase 2 (Team Mode) admin interface.
+# you can log into the admin interface.
 #
 # WHY IS THIS NEEDED?
-#   Phase 2 stores users in Cloudflare KV. Since the database starts empty,
+#   LOON stores users in Cloudflare KV. Since the database starts empty,
 #   you can't log in to create users via the UI. This script creates the
-#   initial "God Mode" admin account directly in KV.
+#   initial admin account directly in KV.
 #
 # WHAT HAPPENS:
 #   1. Script creates a user record in KV with bootstrap=true flag

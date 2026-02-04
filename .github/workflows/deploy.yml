@@ -42,13 +42,9 @@ jobs:
       - name: Check deployment readiness
         run: |
           echo "Checking deployment readiness..."
-          
-          # Verify environment variables will be available
-          if [ -z "${{ secrets.GITHUB_TOKEN }}" ] && [ -z "${{ env.GITHUB_TOKEN }}" ]; then
-            echo "⚠️  Warning: GITHUB_TOKEN may not be configured in Cloudflare"
-          fi
-          
-          echo "✓ Ready for deployment"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Ready for deployment"
 
   # Deploy to Cloudflare Pages (automatic on main branch)
   deploy:
@@ -64,7 +60,7 @@ jobs:
       
       - name: Deploy notification
         run: |
-          echo "🚀 Deploying LOON v3.1.0 to Cloudflare Pages"
+          echo "Deploying LOON to Cloudflare Pages"
           echo ""
           echo "Deployment details:"
           echo "  Branch: main"
@@ -78,9 +74,9 @@ jobs:
         run: |
           # Cloudflare Pages auto-deploys on push to main
           # This step validates the build completed successfully
-          echo "url=https://loon-cms.pages.dev" >> $GITHUB_OUTPUT
+          echo "url=https://your-loon-domain.pages.dev" >> $GITHUB_OUTPUT
           echo ""
-          echo "✓ Deployment triggered successfully"
+          echo "Deployment triggered successfully"
           echo "Deployment will be completed by Cloudflare Pages"
           echo ""
           echo "Check deployment status at:"
@@ -90,12 +86,11 @@ jobs:
         run: |
           echo ""
           echo "=========================================="
-          echo "✓ Deployment Complete"
+          echo "Deployment Complete"
           echo "=========================================="
           echo ""
-          echo "Version: 3.1.0"
           echo "Environment: Production"
-          echo "URL: https://loon-cms.pages.dev"
+          echo "URL: https://your-loon-domain.pages.dev"
           echo ""
           echo "Deployed successfully!"
           echo ""

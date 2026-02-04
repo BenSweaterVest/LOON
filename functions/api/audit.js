@@ -32,11 +32,12 @@
  *   Admin role required
  *
  * @module functions/api/audit
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { getAuditLogs } from './_audit.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -95,8 +96,8 @@ export async function onRequestGet(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Audit API error:', err);
-        return jsonResponse({ error: 'Failed to retrieve audit logs', details: err.message }, 500, env, request);
+        logError(err, 'Audit/List');
+        return jsonResponse({ error: 'Failed to retrieve audit logs' }, 500, env, request);
     }
 }
 

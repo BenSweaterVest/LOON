@@ -27,10 +27,11 @@
  *   None required - templates are public
  *
  * @module functions/api/templates
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -90,8 +91,8 @@ export async function onRequestGet(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Templates API error:', err);
-        return jsonResponse({ error: 'Failed to list templates', details: err.message }, 500, env, request);
+        logError(err, 'Templates/List');
+        return jsonResponse({ error: 'Failed to list templates' }, 500, env, request);
     }
 }
 
@@ -102,7 +103,7 @@ async function fetchTemplates(env) {
     const headers = {
         'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/3.1.0'
+        'User-Agent': 'LOON-CMS/1.0'
     };
 
     // List examples/ directory
@@ -142,8 +143,8 @@ async function fetchTemplates(env) {
                 if (schema.fields) template.fieldCount = schema.fields.length;
             }
         } catch (e) {
-            // Continue with defaults
-            console.error(`Error loading template ${templateId}:`, e);
+            // Continue with defaults; server-side logging available
+            logError(e, 'Templates/Load');
         }
 
         return template;

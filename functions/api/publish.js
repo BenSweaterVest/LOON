@@ -32,11 +32,12 @@
  *   - Contributor: Cannot publish (must request approval)
  *
  * @module functions/api/publish
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
+import { logError } from './_response.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
@@ -79,7 +80,7 @@ async function getContentFromGitHub(env, pageId) {
         headers: {
             'Authorization': `token ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.1.0'
+            'User-Agent': 'LOON-CMS/1.0'
         }
     });
     
@@ -117,7 +118,7 @@ async function saveToGitHub(env, pageId, content, message, existingSha) {
             'Authorization': `token ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json',
-            'User-Agent': 'LOON-CMS/3.1.0'
+            'User-Agent': 'LOON-CMS/1.0'
         },
         body: JSON.stringify(payload)
     });
@@ -280,10 +281,9 @@ export async function onRequestPost(context) {
         }
         
     } catch (error) {
-        console.error('Publish error:', error);
+        logError(error, 'Publish');
         return jsonResponse({ 
-            error: 'Publish failed',
-            details: error.message
+            error: 'Publish failed'
         }, 500, env, request);
     }
 }

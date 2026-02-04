@@ -35,8 +35,10 @@
  *   Audit logs are automatically deleted after 30 days (configurable).
  *
  * @module functions/api/_audit
- * @version 3.1.0
+
  */
+
+import { logError } from './_response.js';
 
 /**
  * Log an audit event to KV storage.
@@ -50,7 +52,7 @@
  */
 export async function logAudit(db, action, username, details = {}, ttlDays = 30) {
     if (!db) {
-        console.warn('Audit logging skipped: KV not available');
+        // KV not available - audit logging skipped silently
         return;
     }
 
@@ -71,7 +73,7 @@ export async function logAudit(db, action, username, details = {}, ttlDays = 30)
 
     } catch (err) {
         // Don't fail the main operation if audit logging fails
-        console.error('Audit logging error:', err);
+        logError(err, 'Audit/Log');
     }
 }
 
@@ -129,7 +131,7 @@ export async function getAuditLogs(db, options = {}) {
         return logs.slice(0, limit);
 
     } catch (err) {
-        console.error('Error retrieving audit logs:', err);
+        logError(err, 'Audit/Retrieve');
         return [];
     }
 }

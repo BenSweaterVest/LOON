@@ -23,11 +23,12 @@
  * delete the folder via Git.
  *
  * @module functions/api/content
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -66,7 +67,7 @@ async function deleteFromGitHub(env, path, message) {
     const headers = {
         'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/3.1.0',
+        'User-Agent': 'LOON-CMS/1.0',
         'Content-Type': 'application/json'
     };
     
@@ -160,8 +161,8 @@ export async function onRequestDelete(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Content delete error:', err);
-        return jsonResponse({ error: 'Delete failed', details: err.message }, 500, env, request);
+        logError(err, 'Content/Delete');
+        return jsonResponse({ error: 'Delete failed' }, 500, env, request);
     }
 }
 

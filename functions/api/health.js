@@ -15,7 +15,6 @@
  * RESPONSE:
  *   {
  *     "status": "ok" | "degraded",
- *     "version": "3.1.0",
  *     "timestamp": "2026-01-30T12:00:00.000Z",
  *     "checks": {
  *       "github_repo": true,
@@ -38,7 +37,7 @@
  *   - Safe to expose publicly (no sensitive data in response)
  *
  * @module functions/api/health
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
@@ -47,16 +46,6 @@ import { getCorsHeaders, handleCorsOptions } from './_cors.js';
  * CORS options for this endpoint.
  */
 const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
-
-// ============================================================================
-// VERSION
-// ============================================================================
-
-/**
- * Current version of the LOON system.
- * Update this when releasing new versions.
- */
-const VERSION = '3.1.0';
 
 // ============================================================================
 // REQUEST HANDLERS
@@ -117,7 +106,7 @@ export async function onRequestGet(context) {
   // DETERMINE OVERALL STATUS
   // ========================================================================
   // System is "ok" if all required variables are configured
-  // KV is now required (v3.0.0 consolidated to KV-only)
+  // KV is required for user and session storage
   const requiredChecks = [checks.github_repo, checks.github_token, checks.kv_database];
   const allHealthy = requiredChecks.every(v => v);
   
@@ -131,12 +120,6 @@ export async function onRequestGet(context) {
      * "degraded" = missing configuration, will not function correctly
      */
     status: allHealthy ? 'ok' : 'degraded',
-    
-    /**
-     * LOON version number
-     */
-    version: VERSION,
-    
     
     /**
      * Current server timestamp (useful for debugging timezone issues)

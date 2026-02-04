@@ -1,7 +1,7 @@
 /**
  * Tests for Auth Endpoint
  * functions/api/auth.js
- * @version 3.1.0
+
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

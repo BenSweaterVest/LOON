@@ -1,6 +1,6 @@
 # API Reference
 
-Detailed documentation for LOON's API endpoints (v3.1.0).
+Complete documentation for LOON's API endpoints.
 
 ---
 
@@ -10,7 +10,15 @@ LOON exposes the following API endpoints via Cloudflare Functions:
 
 | Endpoint | Methods | Purpose |
 |----------|---------|---------|
-| `/api/auth` | GET, POST, PATCH, DELETE | Authentication & sessions |
+| `/api/auth` | GET, POST, PATCH, DELETE | Password authentication & sessions |
+| `/api/passkeys/register/challenge` | GET | Get challenge for passkey registration |
+| `/api/passkeys/register/verify` | POST | Verify passkey registration attestation |
+| `/api/passkeys/auth/challenge` | GET | Get challenge for passkey authentication |
+| `/api/passkeys/auth/verify` | POST | Verify passkey authentication assertion |
+| `/api/passkeys` | GET | List user's passkeys |
+| `/api/passkeys/:credentialId` | PATCH, DELETE | Update or delete passkey |
+| `/api/passkeys/recovery/verify` | POST | Verify recovery code |
+| `/api/passkeys/recovery/disable` | POST | Disable all passkeys |
 | `/api/save` | POST | Save content to GitHub |
 | `/api/pages` | GET, POST | List and create pages |
 | `/api/publish` | POST | Publish/unpublish content |
@@ -27,8 +35,103 @@ All endpoints:
 - Include CORS headers for cross-origin requests
 - Are rate limited per IP address
 
----
+### Client Examples
 
+The following examples show how to interact with LOON API from different clients:
+
+#### JavaScript (Fetch)
+
+```javascript
+// Login
+const loginResponse = await fetch('/api/auth', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ username: 'admin', password: 'password123' })
+});
+const { token } = await loginResponse.json();
+
+// Verify session
+const authResponse = await fetch('/api/auth', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const { valid, role } = await authResponse.json();
+
+// Save content
+const saveResponse = await fetch('/api/save', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    pageId: 'my-page',
+    content: { title: 'Hello', body: 'World' }
+  })
+});
+const { success, metadata } = await saveResponse.json();
+```
+
+#### Python
+
+```python
+import requests
+import json
+
+BASE_URL = "https://your-domain.com"
+
+# Login
+response = requests.post(f'{BASE_URL}/api/auth', json={
+    'username': 'admin',
+    'password': 'password123'
+})
+token = response.json()['token']
+
+# Verify session
+response = requests.get(
+    f'{BASE_URL}/api/auth',
+    headers={'Authorization': f'Bearer {token}'}
+)
+user = response.json()
+
+# Save content
+response = requests.post(
+    f'{BASE_URL}/api/save',
+    headers={'Authorization': f'Bearer {token}'},
+    json={
+        'pageId': 'my-page',
+        'content': {'title': 'Hello', 'body': 'World'}
+    }
+)
+result = response.json()
+```
+
+#### cURL
+
+```bash
+# Login
+TOKEN=$(curl -s -X POST https://your-domain.com/api/auth \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password123"}' \
+  | jq -r '.token')
+
+# Verify session
+curl https://your-domain.com/api/auth \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+# Save content
+curl -X POST https://your-domain.com/api/save \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pageId": "my-page",
+    "content": {"title": "Hello", "body": "World"}
+  }' | jq .
+
+# Check health
+curl https://your-domain.com/api/health | jq .
+```
+
+---
 ## Authentication
 
 ### POST /api/auth
@@ -142,6 +245,283 @@ Authorization: Bearer <session-token>
 {
   "success": true,
   "message": "Logged out"
+}
+```
+
+---
+
+## Passkey Authentication (WebAuthn/FIDO2)
+
+### GET /api/passkeys/register/challenge
+
+Get a challenge for registering a new passkey.
+
+**Auth Required:** Yes (Bearer token)
+
+#### Request
+
+```http
+GET /api/passkeys/register/challenge
+Authorization: Bearer <session-token>
+```
+
+#### Response (200)
+
+```json
+{
+  "challenge": "base64url-encoded-challenge",
+  "userId": "base64url(sha256(username))",
+  "username": "admin",
+  "rpId": "example.com",
+  "rpName": "LOON CMS",
+  "attestation": "direct",
+  "timeout": 60000,
+  "authenticatorSelection": {
+    "authenticatorAttachment": "platform",
+    "userVerification": "preferred",
+    "residentKey": "discouraged"
+  },
+  "pubKeyCredParams": [
+    { "alg": -7, "type": "public-key" }
+  ]
+}
+```
+
+### POST /api/passkeys/register/verify
+
+Verify passkey registration and generate recovery codes.
+
+**Auth Required:** Yes (Bearer token)
+
+#### Request
+
+```http
+POST /api/passkeys/register/verify
+Authorization: Bearer <session-token>
+Content-Type: application/json
+
+{
+  "attestationResponse": { /* WebAuthn attestationResponse object */ },
+  "deviceName": "iPhone 15"
+}
+```
+
+#### Response (201)
+
+```json
+{
+  "success": true,
+  "recoveryCodes": ["ABC12345", "DEF67890", "...12 total codes..."],
+  "message": "Passkey registered successfully. Save your recovery codes!"
+}
+```
+
+#### Errors
+
+| Status | Error |
+|--------|-------|
+| 400 | Invalid attestation response |
+| 401 | Unauthorized |
+
+### GET /api/passkeys/auth/challenge
+
+Get a challenge for passkey authentication (public endpoint, no auth required).
+
+#### Request
+
+```http
+GET /api/passkeys/auth/challenge?usernamehint=admin
+```
+
+#### Response (200)
+
+```json
+{
+  "challenge": "base64url-encoded-challenge",
+  "rpId": "example.com",
+  "allowCredentials": [
+    {
+      "id": "base64url-encoded-credential-id",
+      "type": "public-key",
+      "transports": ["internal"]
+    }
+  ],
+  "timeout": 60000,
+  "userVerification": "preferred"
+}
+```
+
+### POST /api/passkeys/auth/verify
+
+Verify passkey authentication and return session token.
+
+#### Request
+
+```http
+POST /api/passkeys/auth/verify
+Content-Type: application/json
+
+{
+  "assertionResponse": { /* WebAuthn assertionResponse object */ }
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "token": "session-token-here",
+  "username": "admin",
+  "role": "admin",
+  "expiresIn": 86400
+}
+```
+
+#### Errors
+
+| Status | Error |
+|--------|-------|
+| 400 | Invalid assertion response |
+| 401 | Authentication failed |
+
+### GET /api/passkeys
+
+List all passkeys registered for the current user.
+
+**Auth Required:** Yes (Bearer token)
+
+#### Request
+
+```http
+GET /api/passkeys
+Authorization: Bearer <session-token>
+```
+
+#### Response (200)
+
+```json
+{
+  "passkeys": [
+    {
+      "id": "credential-id-base64",
+      "name": "iPhone 15",
+      "created": 1706913600000,
+      "lastUsed": 1706913615000,
+      "transports": ["internal"]
+    }
+  ]
+}
+```
+
+### PATCH /api/passkeys/:credentialId
+
+Update passkey name/display label.
+
+**Auth Required:** Yes (Bearer token)
+
+#### Request
+
+```http
+PATCH /api/passkeys/credential-id-base64
+Authorization: Bearer <session-token>
+Content-Type: application/json
+
+{
+  "name": "My New Device Name"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true
+}
+```
+
+### DELETE /api/passkeys/:credentialId
+
+Delete/unregister a passkey.
+
+**Auth Required:** Yes (Bearer token)
+
+#### Request
+
+```http
+DELETE /api/passkeys/credential-id-base64
+Authorization: Bearer <session-token>
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true
+}
+```
+
+### POST /api/passkeys/recovery/verify
+
+Verify recovery code and get temporary authentication token for account recovery.
+
+**Auth Required:** No (public endpoint)
+
+#### Request
+
+```http
+POST /api/passkeys/recovery/verify
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "recoveryCode": "ABC12345"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "tempToken": "recovery-token-base64",
+  "expiresIn": 900,
+  "message": "Recovery code verified. Use this token to authenticate."
+}
+```
+
+#### Errors
+
+| Status | Error |
+|--------|-------|
+| 400 | Invalid recovery code format |
+| 401 | Invalid or already used recovery code |
+| 404 | No recovery codes found |
+
+### POST /api/passkeys/recovery/disable
+
+Disable all passkeys and recovery codes (emergency account recovery).
+
+**Auth Required:** Yes (Bearer token)
+
+#### Request
+
+```http
+POST /api/passkeys/recovery/disable
+Authorization: Bearer <session-token>
+Content-Type: application/json
+
+{
+  "action": "disable"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "All passkeys and recovery codes disabled. Use password login."
 }
 ```
 
@@ -574,14 +954,24 @@ View audit logs.
 
 ### GET /api/health
 
-System status and configuration check.
+System status and configuration check. Use this endpoint for monitoring and debugging deployment issues.
+
+#### Usage
+
+Monitor your LOON deployment's health:
+```bash
+# Basic health check
+curl https://your-domain.com/api/health
+
+# With pretty output
+curl -s https://your-domain.com/api/health | jq .
+```
 
 #### Response (200)
 
 ```json
 {
   "status": "ok",
-  "version": "3.1.0",
   "timestamp": "2026-01-30T12:00:00Z",
   "checks": {
     "github_repo": true,
@@ -593,13 +983,56 @@ System status and configuration check.
 
 #### Status Values
 
-- `ok` - All checks pass
-- `degraded` - One or more checks failed
+- `ok` - All required checks pass; system operational
+- `degraded` - One or more required checks failed; see `checks` object
+
+#### Check Details
+
+| Check | Requirement | Failure Cause |
+|-------|-------------|---------------|
+| `github_repo` | `GITHUB_REPO` env var set | Missing or empty variable |
+| `github_token` | `GITHUB_TOKEN` env var set | Missing token or invalid format |
+| `kv_database` | KV namespace bound and accessible | KV binding misconfigured or no access |
+
+#### Troubleshooting Failed Checks
+
+**If `github_repo` is false**:
+- Set `GITHUB_REPO` environment variable in Cloudflare Pages settings
+- Format: `your-username/your-repo`
+- Example: https://dash.cloudflare.com/your-account/pages/view/your-project/settings/environment-variables
+
+**If `github_token` is false**:
+- Generate a new token at https://github.com/settings/tokens
+- Set as `GITHUB_TOKEN` environment variable (mark as Secret)
+- Ensure token has `repo` scope
+
+**If `kv_database` is false**:
+- Verify KV namespace exists: Cloudflare > Workers & Pages > KV
+- Verify binding: Your project > Settings > Functions > KV namespace bindings
+- Binding variable name must be exactly `LOON_DB`
 
 #### HTTP Status
 
-- 200 - Healthy
-- 503 - Degraded
+- 200 - Healthy (`status: "ok"`)
+- 503 - Degraded (`status: "degraded"`; see checks for details)
+
+#### Monitoring Use Cases
+
+**Uptime Monitoring**:
+```bash
+# Use in monitoring service (UptimeRobot, PagerDuty, etc.)
+# Alert if endpoint returns 503 or doesn't respond within 30 seconds
+```
+
+**CI/CD Integration**:
+```bash
+#!/bin/bash
+# Deploy wait script - don't proceed until health is "ok"
+while [ "$(curl -s https://your-domain.com/api/health | jq -r .status)" != "ok" ]; do
+  sleep 5
+done
+echo "System healthy - proceeding with tests"
+```
 
 ---
 

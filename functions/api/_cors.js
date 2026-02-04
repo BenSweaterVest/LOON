@@ -34,7 +34,7 @@
  *   });
  *
  * @module functions/api/_cors
- * @version 3.1.0
+
  */
 
 /**

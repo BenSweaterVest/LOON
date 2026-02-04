@@ -37,8 +37,6 @@ API ENDPOINTS USED:
 PREREQUISITES:
 - Cloudflare KV namespace "LOON_DB" configured
 - At least one admin user created via bootstrap-admin.sh
-
-VERSION: 3.1.0
 ================================================================================
 -->
 <html lang="en">
@@ -241,6 +239,12 @@ VERSION: 3.1.0
                 
                 <button onclick="login()" style="width: 100%;">Login</button>
                 
+                <div style="text-align: center; margin: 1rem 0; color: var(--muted-color);">or</div>
+                
+                <button onclick="loginWithPasskey()" style="width: 100%;" class="secondary">
+                    Login with Passkey
+                </button>
+                
                 <div id="login-error" class="status-message status-error hidden"></div>
             </div>
         </div>
@@ -272,6 +276,37 @@ VERSION: 3.1.0
                     <input type="text" id="pageId" placeholder="Enter Page ID (e.g., demo, blog-post)">
                     <button onclick="loadEditor()" class="secondary">Load Page</button>
                     <button onclick="loadPageList()" class="outline" style="margin-left: 0.5rem;">Browse Pages</button>
+                    <button onclick="showNewPageDialog()" class="contrast" style="margin-left: 0.5rem;">+ New Page</button>
+                </div>
+                
+                <!-- New Page Dialog -->
+                <div id="new-page-dialog" class="hidden" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--muted-border-color); border-radius: 4px;">
+                    <h4>Create New Page</h4>
+                    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-field">
+                            <label for="new-page-id">Page ID *</label>
+                            <input type="text" id="new-page-id" placeholder="e.g., my-page (lowercase, hyphens ok)" pattern="^[a-z0-9-]+$">
+                            <small style="color: var(--muted-color);">lowercase letters, numbers, hyphens only</small>
+                        </div>
+                        <div class="form-field">
+                            <label for="new-page-title">Page Title</label>
+                            <input type="text" id="new-page-title" placeholder="e.g., My Page">
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="new-page-template">Template (optional)</label>
+                        <select id="new-page-template">
+                            <option value="">Blank Page</option>
+                            <option value="blog-post">Blog Post</option>
+                            <option value="directory-entry">Directory Entry</option>
+                            <option value="faq">FAQ</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="createNewPage()" class="contrast">Create Page</button>
+                        <button onclick="cancelNewPage()" class="outline">Cancel</button>
+                    </div>
+                    <div id="new-page-status"></div>
                 </div>
                 
                 <!-- Page Browser -->
@@ -410,6 +445,45 @@ VERSION: 3.1.0
                     
                     <div id="password-change-status"></div>
                 </div>
+                
+                <!-- Passkeys Section -->
+                <div class="passkeys-section" style="margin-top: 3rem;">
+                    <h4>Passkeys</h4>
+                    <p style="color: var(--muted-color); margin-bottom: 1rem;">
+                        Passkeys are more secure than passwords and protect against phishing. 
+                        <a href="/docs/PASSKEYS_GUIDE.md" target="_blank">Learn more</a>
+                    </p>
+                    
+                    <div id="passkey-browser-check" class="hidden" style="padding: 1rem; background: var(--warning); color: black; border-radius: 8px; margin-bottom: 1rem;">
+                        <strong>Passkeys not supported</strong> - Your browser doesn't support WebAuthn. Please use Chrome, Edge, Safari, or Firefox.
+                    </div>
+                    
+                    <div id="passkeys-list" style="margin-bottom: 1.5rem;">
+                        <h5 style="margin-bottom: 0.5rem;">Your Passkeys</h5>
+                        <div id="passkeys-list-container"></div>
+                    </div>
+                    
+                    <button onclick="registerPasskey()" class="secondary">+ Register New Passkey</button>
+                    
+                    <div id="passkey-status" style="margin-top: 1rem;"></div>
+                    
+                    <!-- Recovery Codes Modal -->
+                    <div id="recovery-codes-modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+                        <div style="background: var(--background-color); padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
+                            <h4>Save Your Recovery Codes</h4>
+                            <p style="color: var(--muted-color);">
+                                If you lose access to all your passkeys, these codes can help you recover your account. 
+                                <strong>Store them securely</strong> - each code can only be used once.
+                            </p>
+                            <div id="recovery-codes-display" style="background: var(--code-background-color); padding: 1rem; border-radius: 4px; font-family: monospace; margin: 1rem 0; line-height: 1.8;"></div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="downloadRecoveryCodes()" class="secondary">Download</button>
+                                <button onclick="copyRecoveryCodes()" class="outline">Copy</button>
+                                <button onclick="closeRecoveryCodesModal()" style="margin-left: auto;">I've Saved Them</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Audit Log Tab (Admin only) -->
@@ -443,7 +517,7 @@ VERSION: 3.1.0
     </main>
 
     <footer class="container" style="text-align: center; margin-top: 3rem; color: var(--muted-color);">
-        <small>LOON v3.1.0</small>
+        <small>LOON Admin Panel</small>
     </footer>
 
     <script>
@@ -658,13 +732,6 @@ VERSION: 3.1.0
         // =================================================================
         // ACCOUNT MANAGEMENT
         // =================================================================
-        function loadAccountInfo() {
-            if (SESSION) {
-                document.getElementById('account-username').textContent = SESSION.username;
-                document.getElementById('account-role').textContent = SESSION.role;
-            }
-        }
-
         async function changePassword() {
             const currentPassword = document.getElementById('current-password').value;
             const newPassword = document.getElementById('new-password-self').value;
@@ -720,6 +787,436 @@ VERSION: 3.1.0
             } catch (e) {
                 showStatus('password-change-status', e.message, 'error');
             }
+        }
+
+        // =================================================================
+        // PASSKEY MANAGEMENT
+        // =================================================================
+        
+        /**
+         * Check if browser supports WebAuthn
+         */
+        function checkPasskeySupport() {
+            const supported = window.PublicKeyCredential !== undefined && 
+                             navigator.credentials !== undefined;
+            
+            if (!supported) {
+                document.getElementById('passkey-browser-check').classList.remove('hidden');
+            }
+            
+            return supported;
+        }
+        
+        /**
+         * Load account info and passkeys
+         */
+        async function loadAccountInfo() {
+            if (SESSION) {
+                document.getElementById('account-username').textContent = SESSION.username;
+                document.getElementById('account-role').textContent = SESSION.role;
+                
+                // Check passkey support
+                checkPasskeySupport();
+                
+                // Load passkeys
+                await loadPasskeys();
+            }
+        }
+        
+        /**
+         * Load user's passkeys
+         */
+        async function loadPasskeys() {
+            if (!checkPasskeySupport()) return;
+            
+            try {
+                const res = await fetch('/api/passkeys', {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                
+                if (!res.ok) {
+                    if (res.status === 401 && handleSessionError(new Error('Unauthorized'))) {
+                        return;
+                    }
+                    throw new Error('Failed to load passkeys');
+                }
+                
+                const data = await res.json();
+                displayPasskeys(data.passkeys || []);
+                
+            } catch (e) {
+                console.error('Failed to load passkeys:', e);
+            }
+        }
+        
+        /**
+         * Display passkeys list
+         */
+        function displayPasskeys(passkeys) {
+            const container = document.getElementById('passkeys-list-container');
+            
+            if (passkeys.length === 0) {
+                container.innerHTML = '<p style="color: var(--muted-color); font-style: italic;">No passkeys registered</p>';
+                return;
+            }
+            
+            container.innerHTML = passkeys.map(pk => `
+                <div style="padding: 1rem; background: var(--code-background-color); border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: between; align-items: center;">
+                    <div style="flex: 1;">
+                        <strong>${escapeHtml(pk.name || 'Unnamed Passkey')}</strong><br>
+                        <small style="color: var(--muted-color);">
+                            Created: ${new Date(pk.created).toLocaleDateString()} | 
+                            Last used: ${pk.lastUsed ? new Date(pk.lastUsed).toLocaleDateString() : 'Never'}
+                        </small>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="renamePasskey('${pk.id}')" class="outline" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">Rename</button>
+                        <button onclick="deletePasskey('${pk.id}')" class="secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        /**
+         * Login with passkey
+         */
+        async function loginWithPasskey() {
+            if (!checkPasskeySupport()) {
+                showError('login-error', 'Passkeys not supported in this browser');
+                return;
+            }
+            
+            hideError('login-error');
+            
+            try {
+                // Step 1: Get authentication challenge
+                const challengeRes = await fetch('/api/passkeys/auth/challenge');
+                
+                if (!challengeRes.ok) {
+                    throw new Error('Failed to get authentication challenge');
+                }
+                
+                const challengeData = await challengeRes.json();
+                
+                // Step 2: Get assertion from authenticator
+                const credential = await navigator.credentials.get({
+                    publicKey: {
+                        challenge: base64urlToBuffer(challengeData.challenge),
+                        timeout: challengeData.timeout || 60000,
+                        rpId: challengeData.rpId || window.location.hostname,
+                        userVerification: challengeData.userVerification || 'preferred'
+                    }
+                });
+                
+                if (!credential) {
+                    throw new Error('No credential returned');
+                }
+                
+                // Step 3: Verify assertion
+                const verifyRes = await fetch('/api/passkeys/auth/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        credentialId: bufferToBase64url(credential.rawId),
+                        authenticatorData: bufferToBase64url(credential.response.authenticatorData),
+                        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                        signature: bufferToBase64url(credential.response.signature),
+                        userHandle: credential.response.userHandle ? 
+                            bufferToBase64url(credential.response.userHandle) : undefined
+                    })
+                });
+                
+                const verifyData = await verifyRes.json();
+                
+                if (!verifyRes.ok) {
+                    throw new Error(verifyData.error || 'Authentication failed');
+                }
+                
+                // Step 4: Save session
+                SESSION = {
+                    token: verifyData.token,
+                    username: verifyData.username,
+                    role: verifyData.role,
+                    expiresAt: Date.now() + (verifyData.expiresIn * 1000)
+                };
+                
+                const remember = document.getElementById('remember-me').checked;
+                if (remember) {
+                    localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(SESSION));
+                } else {
+                    sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(SESSION));
+                }
+                
+                showApp();
+                
+            } catch (e) {
+                console.error('Passkey login failed:', e);
+                showError('login-error', e.message || 'Passkey login failed');
+            }
+        }
+        
+        /**
+         * Register new passkey
+         */
+        async function registerPasskey() {
+            if (!checkPasskeySupport()) {
+                showStatus('passkey-status', 'Passkeys not supported in this browser', 'error');
+                return;
+            }
+            
+            showStatus('passkey-status', 'Starting passkey registration...', 'info');
+            
+            try {
+                // Step 1: Get registration challenge
+                const challengeRes = await fetch('/api/passkeys/register/challenge', {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                
+                if (!challengeRes.ok) {
+                    if (challengeRes.status === 401 && handleSessionError(new Error('Unauthorized'))) {
+                        return;
+                    }
+                    throw new Error('Failed to get registration challenge');
+                }
+                
+                const challengeData = await challengeRes.json();
+                
+                // Step 2: Create credential
+                showStatus('passkey-status', 'Please follow your device\'s instructions...', 'info');
+                
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: base64urlToBuffer(challengeData.challenge),
+                        rp: {
+                            name: challengeData.rpName || 'LOON CMS',
+                            id: challengeData.rpId || window.location.hostname
+                        },
+                        user: {
+                            id: base64urlToBuffer(challengeData.userId),
+                            name: challengeData.username,
+                            displayName: challengeData.username
+                        },
+                        pubKeyCredParams: challengeData.pubKeyCredParams || [
+                            { alg: -7, type: 'public-key' }  // ES256
+                        ],
+                        timeout: challengeData.timeout || 60000,
+                        attestation: challengeData.attestation || 'direct',
+                        authenticatorSelection: challengeData.authenticatorSelection || {
+                            authenticatorAttachment: 'platform',
+                            userVerification: 'preferred',
+                            residentKey: 'discouraged'
+                        }
+                    }
+                });
+                
+                if (!credential) {
+                    throw new Error('No credential created');
+                }
+                
+                // Step 3: Verify registration
+                showStatus('passkey-status', 'Verifying passkey...', 'info');
+                
+                const verifyRes = await fetch('/api/passkeys/register/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        credentialId: bufferToBase64url(credential.rawId),
+                        attestationObject: bufferToBase64url(credential.response.attestationObject),
+                        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                        transports: credential.response.getTransports ? 
+                            credential.response.getTransports() : ['internal']
+                    })
+                });
+                
+                const verifyData = await verifyRes.json();
+                
+                if (!verifyRes.ok) {
+                    if (verifyRes.status === 401 && handleSessionError(new Error('Unauthorized'))) {
+                        return;
+                    }
+                    throw new Error(verifyData.error || 'Registration verification failed');
+                }
+                
+                // Step 4: Show recovery codes
+                if (verifyData.recoveryCodes && verifyData.recoveryCodes.length > 0) {
+                    showRecoveryCodes(verifyData.recoveryCodes);
+                }
+                
+                showStatus('passkey-status', 'Passkey registered successfully!', 'success');
+                
+                // Reload passkeys list
+                await loadPasskeys();
+                
+            } catch (e) {
+                console.error('Passkey registration failed:', e);
+                showStatus('passkey-status', e.message || 'Passkey registration failed', 'error');
+            }
+        }
+        
+        /**
+         * Rename passkey
+         */
+        async function renamePasskey(credentialId) {
+            const newName = prompt('Enter new name for this passkey:');
+            
+            if (!newName || !newName.trim()) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/passkeys/${credentialId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ name: newName.trim() })
+                });
+                
+                if (!res.ok) {
+                    if (res.status === 401 && handleSessionError(new Error('Unauthorized'))) {
+                        return;
+                    }
+                    throw new Error('Failed to rename passkey');
+                }
+                
+                showStatus('passkey-status', 'Passkey renamed successfully', 'success');
+                await loadPasskeys();
+                
+            } catch (e) {
+                console.error('Failed to rename passkey:', e);
+                showStatus('passkey-status', e.message, 'error');
+            }
+        }
+        
+        /**
+         * Delete passkey
+         */
+        async function deletePasskey(credentialId) {
+            if (!confirm('Are you sure you want to delete this passkey?')) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/passkeys/${credentialId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                
+                if (!res.ok) {
+                    if (res.status === 401 && handleSessionError(new Error('Unauthorized'))) {
+                        return;
+                    }
+                    throw new Error('Failed to delete passkey');
+                }
+                
+                showStatus('passkey-status', 'Passkey deleted successfully', 'success');
+                await loadPasskeys();
+                
+            } catch (e) {
+                console.error('Failed to delete passkey:', e);
+                showStatus('passkey-status', e.message, 'error');
+            }
+        }
+        
+        /**
+         * Show recovery codes modal
+         */
+        function showRecoveryCodes(codes) {
+            const display = document.getElementById('recovery-codes-display');
+            display.innerHTML = codes.map((code, i) => 
+                `${i + 1}. <strong>${code}</strong>`
+            ).join('<br>');
+            
+            document.getElementById('recovery-codes-modal').classList.remove('hidden');
+            
+            // Store codes temporarily for download/copy
+            window.tempRecoveryCodes = codes;
+        }
+        
+        /**
+         * Close recovery codes modal
+         */
+        function closeRecoveryCodesModal() {
+            document.getElementById('recovery-codes-modal').classList.add('hidden');
+            window.tempRecoveryCodes = null;
+        }
+        
+        /**
+         * Download recovery codes
+         */
+        function downloadRecoveryCodes() {
+            if (!window.tempRecoveryCodes) return;
+            
+            const content = window.tempRecoveryCodes.map((code, i) => 
+                `${i + 1}. ${code}`
+            ).join('\n');
+            
+            const blob = new Blob([
+                `LOON Recovery Codes\n`,
+                `Username: ${SESSION.username}\n`,
+                `Generated: ${new Date().toISOString()}\n\n`,
+                `Save these codes securely. Each can only be used once.\n\n`,
+                content
+            ], { type: 'text/plain' });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `loon-recovery-codes-${SESSION.username}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        /**
+         * Copy recovery codes to clipboard
+         */
+        async function copyRecoveryCodes() {
+            if (!window.tempRecoveryCodes) return;
+            
+            const content = window.tempRecoveryCodes.map((code, i) => 
+                `${i + 1}. ${code}`
+            ).join('\n');
+            
+            try {
+                await navigator.clipboard.writeText(content);
+                alert('Recovery codes copied to clipboard');
+            } catch (e) {
+                console.error('Failed to copy:', e);
+                alert('Failed to copy to clipboard');
+            }
+        }
+        
+        /**
+         * Base64url to ArrayBuffer
+         */
+        function base64urlToBuffer(base64url) {
+            const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+            const padLen = (4 - (base64.length % 4)) % 4;
+            const padded = base64 + '='.repeat(padLen);
+            const binary = atob(padded);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+        
+        /**
+         * ArrayBuffer to base64url
+         */
+        function bufferToBase64url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         }
 
         // =================================================================
@@ -874,6 +1371,76 @@ VERSION: 3.1.0
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // =================================================================
+        // NEW PAGE CREATION
+        // =================================================================
+        function showNewPageDialog() {
+            document.getElementById('new-page-dialog').classList.remove('hidden');
+            document.getElementById('page-browser').classList.add('hidden');
+            document.getElementById('new-page-id').focus();
+        }
+        
+        function cancelNewPage() {
+            document.getElementById('new-page-dialog').classList.add('hidden');
+            document.getElementById('new-page-id').value = '';
+            document.getElementById('new-page-title').value = '';
+            document.getElementById('new-page-template').value = '';
+            document.getElementById('new-page-status').innerHTML = '';
+        }
+        
+        async function createNewPage() {
+            const pageId = document.getElementById('new-page-id').value.trim().toLowerCase();
+            const title = document.getElementById('new-page-title').value.trim() || pageId;
+            const template = document.getElementById('new-page-template').value.trim() || null;
+            const statusDiv = document.getElementById('new-page-status');
+            
+            // Validation
+            if (!pageId) {
+                statusDiv.innerHTML = '<p style="color: var(--error);">Page ID is required</p>';
+                return;
+            }
+            
+            if (!/^[a-z0-9-]+$/.test(pageId)) {
+                statusDiv.innerHTML = '<p style="color: var(--error);">Page ID must contain only lowercase letters, numbers, and hyphens</p>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<p>Creating page...</p>';
+            
+            try {
+                const response = await fetch('/api/pages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        pageId: pageId,
+                        title: title,
+                        template: template
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create page');
+                }
+                
+                // Success! Load the new page
+                statusDiv.innerHTML = '<p style="color: var(--success);">Page created! Loading editor...</p>';
+                
+                setTimeout(() => {
+                    document.getElementById('pageId').value = pageId;
+                    cancelNewPage();
+                    loadEditor();
+                }, 1000);
+                
+            } catch (e) {
+                statusDiv.innerHTML = `<p style="color: var(--error);">Error: ${escapeHtml(e.message)}</p>`;
+            }
         }
 
         // =================================================================
@@ -1272,7 +1839,7 @@ VERSION: 3.1.0
 
                 CURRENT_CONTENT = content;
                 document.getElementById('last-saved').textContent = `Saved as draft just now`;
-                showStatus('editor-status', '📝 Saved as draft (not yet published)', 'success');
+                showStatus('editor-status', 'Saved as draft (not yet published)', 'success');
 
                 // Update status display
                 updateContentStatus('draft', data.modifiedBy);
@@ -1323,7 +1890,7 @@ VERSION: 3.1.0
                     throw new Error(data.error || 'Publish failed');
                 }
 
-                showStatus('editor-status', '✅ Content published successfully!', 'success');
+                showStatus('editor-status', 'Content published successfully!', 'success');
                 updateContentStatus('published', data.publishedBy);
 
                 setTimeout(() => hideStatus('editor-status'), 3000);
@@ -1343,11 +1910,11 @@ VERSION: 3.1.0
             if (status === 'draft') {
                 statusDiv.style.background = '#fff3cd';
                 statusDiv.style.borderLeftColor = '#ffc107';
-                statusText.innerHTML = `<span style="color: #856404;">📝 This is a draft (not yet published)</span>`;
+                statusText.innerHTML = `<span style="color: #856404;">[DRAFT] This is a draft (not yet published)</span>`;
             } else if (status === 'published') {
                 statusDiv.style.background = '#d4edda';
                 statusDiv.style.borderLeftColor = '#28a745';
-                statusText.innerHTML = `<span style="color: #155724;">✅ This content is published and live</span>`;
+                statusText.innerHTML = `<span style="color: #155724;">[PUBLISHED] This content is published and live</span>`;
             }
         }
 
@@ -1406,7 +1973,7 @@ VERSION: 3.1.0
                         CURRENT_CONTENT[fieldId.replace('field_', '')] = data.url;
                     }
 
-                    showStatus('editor-status', `✅ Image uploaded: ${data.id}`, 'success');
+                    showStatus('editor-status', `Image uploaded: ${data.id}`, 'success');
                     setTimeout(() => hideStatus('editor-status'), 3000);
 
                 } catch (e) {

@@ -1,7 +1,7 @@
 /**
  * Tests for Publish Endpoint
  * functions/api/publish.js
- * @version 3.1.0
+
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';

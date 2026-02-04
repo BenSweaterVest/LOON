@@ -7,7 +7,6 @@
  * schemas to JSON Schema format.
  *
  * @module lib/schema-validator
- * @version 3.1.0
  */
 
 /**

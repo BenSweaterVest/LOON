@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# LOON Phase 2: Bulk User Creation Script (scripts/bulk-users.sh)
+# LOON: Bulk User Creation Script (scripts/bulk-users.sh)
 # =============================================================================
 #
 # Creates multiple users from a CSV file. Useful for onboarding teams.

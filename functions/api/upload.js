@@ -40,11 +40,12 @@
  *   - Free tier: 100,000 images
  *
  * @module functions/api/upload
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
+import { logError } from './_response.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -157,10 +158,10 @@ export async function onRequestPost(context) {
         
         if (!uploadRes.ok) {
             const error = await uploadRes.text();
-            console.error('Cloudflare Images upload failed:', error);
+            logError(new Error(error), 'Upload/Images');
             return jsonResponse({ 
-                error: 'Upload failed',
-                details: `Cloudflare Images API error: ${uploadRes.status}`
+                error: 'Image upload failed',
+                details: `Upload service error (${uploadRes.status})`
             }, 500, env, request);
         }
         
@@ -214,10 +215,9 @@ export async function onRequestPost(context) {
         }, 200, env, request);
         
     } catch (error) {
-        console.error('Upload error:', error);
+        logError(error, 'Upload');
         return jsonResponse({ 
-            error: 'Upload failed',
-            details: error.message
+            error: 'Upload failed'
         }, 500, env, request);
     }
 }

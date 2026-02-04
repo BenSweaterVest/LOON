@@ -109,11 +109,69 @@ jobs:
           done
           echo "Functions structure check complete"
 
+  # Validate environment variable configuration
+  validate-env:
+    name: Validate Environment Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check .env.example exists
+        run: |
+          if [ ! -f .env.example ]; then
+            echo "ERROR: .env.example not found"
+            exit 1
+          fi
+          echo "PASS: .env.example exists"
+      
+      - name: Check required environment variables in documentation
+        run: |
+          echo "Checking for required environment variables documentation..."
+          if grep -q "GITHUB_REPO" CONTRIBUTING.md OPERATIONS.md; then
+            echo "PASS: GITHUB_REPO documented"
+          else
+            echo "WARNING: GITHUB_REPO not documented in CONTRIBUTING.md or OPERATIONS.md"
+          fi
+          
+          if grep -q "GITHUB_TOKEN" CONTRIBUTING.md OPERATIONS.md; then
+            echo "PASS: GITHUB_TOKEN documented"
+          else
+            echo "WARNING: GITHUB_TOKEN not documented"
+          fi
+      
+      - name: Validate wrangler.toml configuration
+        run: |
+          if [ ! -f wrangler.toml ]; then
+            echo "ERROR: wrangler.toml not found"
+            exit 1
+          fi
+          
+          if grep -q 'name = "loon"' wrangler.toml; then
+            echo "PASS: wrangler.toml project name correct"
+          else
+            echo "WARNING: wrangler.toml project name may need verification"
+          fi
+      
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Scanning for hardcoded secrets..."
+          if grep -r "github_pat_" . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v ".env.example" | grep -v "github_pat_xxx"; then
+            echo "WARNING: Potential hardcoded GitHub token found"
+            exit 1
+          fi
+          
+          if grep -r "Bearer " . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v "Bearer \$" | grep -v "Bearer <" | grep -v ".env.example"; then
+            echo "WARNING: Potential hardcoded bearer token found"
+            exit 1
+          fi
+          
+          echo "PASS: No obvious hardcoded secrets detected"
+
   # Run tests (when available)
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    needs: [validate-json, validate-js, validate-html, security-check, validate-functions]
+    needs: [validate-json, validate-js, validate-html, security-check, validate-functions, validate-env]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

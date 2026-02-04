@@ -59,11 +59,12 @@
  *   - RBAC enforcement on every save
  *
  * @module functions/api/save
- * @version 3.1.0 
+ 
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -103,7 +104,7 @@ async function checkRateLimit(db, ip) {
         
         return true;
     } catch (err) {
-        console.error('Rate limit check error:', err);
+        logError(err, 'Save/RateLimit');
         // Fail open on KV errors (don't block requests)
         return true;
     }
@@ -137,7 +138,7 @@ async function fetchGitHubFile(env, path) {
         headers: {
             'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/3.1.0', 
+            'User-Agent': 'LOON-CMS/1.0', 
         }
     });
     
@@ -184,7 +185,7 @@ async function commitToGitHub(env, path, content, message, existingSha, retries 
                 headers: {
                     'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
                     'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'LOON-CMS/3.1.0', 
+                    'User-Agent': 'LOON-CMS/1.0', 
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(body)
@@ -270,7 +271,7 @@ export async function onRequestPost(context) {
 
     // Check bindings
     if (!db) {
-        return jsonResponse({ error: 'KV not configured. See Phase 2 setup.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
@@ -406,8 +407,8 @@ export async function onRequestPost(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Save error:', err);
-        return jsonResponse({ error: 'Save failed', details: err.message }, 500, env, request);
+        logError(err, 'Save');
+        return jsonResponse({ error: 'Save failed' }, 500, env, request);
     }
 }
 

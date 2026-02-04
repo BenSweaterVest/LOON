@@ -56,11 +56,12 @@
  *   - Deleting user also invalidates their sessions
  * 
  * @module functions/api/users
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -370,7 +371,7 @@ export async function onRequest(context) {
 
     // Check KV binding
     if (!db) {
-        return jsonResponse({ error: 'KV not configured. See Phase 2 setup.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     // Validate admin session
@@ -402,8 +403,8 @@ export async function onRequest(context) {
                 return jsonResponse({ error: 'Method not allowed' }, 405, env, request);
         }
     } catch (err) {
-        console.error('Users API error:', err);
-        return jsonResponse({ error: 'Request failed', details: err.message }, 500, env, request);
+        logError(err, 'Users/Request');
+        return jsonResponse({ error: 'Request failed' }, 500, env, request);
     }
 }
 

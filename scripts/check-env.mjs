@@ -30,7 +30,7 @@ function checkFile(filePath, description) {
             };
         }
     } catch (err) {
-        console.warn(`⚠️  Could not read ${description}: ${err.message}`);
+        console.warn(`Warning: Could not read ${description}: ${err.message}`);
     }
     return { exists: false };
 }
@@ -50,14 +50,14 @@ function parseEnvFile(content) {
     return vars;
 }
 
-console.log('\n📋 LOON Environment Variable Check\n');
+console.log('\nLOON Environment Variable Check\n');
 console.log('=====================================\n');
 
 // Detect if running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 if (isCI) {
-    console.log('ℹ️  Running in CI environment (GitHub Actions)');
+    console.log('??  Running in CI environment (GitHub Actions)');
     console.log('   Environment variables configured via GitHub Secrets');
     console.log('   Skipping local .env file check\n');
     
@@ -66,11 +66,11 @@ if (isCI) {
     const hasGithubToken = 'GITHUB_TOKEN' in process.env;
     
     if (hasGithubRepo && hasGithubToken) {
-        console.log('✓ GitHub secrets are configured in CI');
+        console.log('[OK] GitHub secrets are configured in CI');
         console.log('   Deployment will proceed\n');
         process.exit(0);
     } else {
-        console.log('⚠️  GitHub secrets not detected in CI');
+        console.log('Warning: GitHub secrets not detected in CI');
         console.log('   Configure GITHUB_REPO and GITHUB_TOKEN in GitHub Secrets');
         console.log('   See https://github.com/settings/secrets\n');
         process.exit(0); // Don't fail - CI admin needs to configure this
@@ -93,12 +93,12 @@ for (const file of envFiles) {
         const vars = parseEnvFile(result.content);
         foundVars = { ...foundVars, ...vars };
         foundFile = file.desc;
-        console.log(`✓ Found ${file.desc}`);
+        console.log(`[OK] Found ${file.desc}`);
     }
 }
 
 if (!foundFile) {
-    console.log('⚠️  No local .env files found');
+    console.log('Warning: No local .env files found');
     console.log('   This is OK for production (use Cloudflare dashboard)');
     console.log('   For local dev, create .env or .env.local');
 }
@@ -111,7 +111,7 @@ let allGood = true;
 console.log('Required Variables:\n');
 REQUIRED_VARS.forEach(varName => {
     const hasVar = varName in process.env || varName in foundVars;
-    const status = hasVar ? '✓' : '✗';
+    const status = hasVar ? '[OK]' : '[MISSING]';
     console.log(`  ${status} ${varName}`);
     
     if (!hasVar) {
@@ -122,7 +122,7 @@ REQUIRED_VARS.forEach(varName => {
 console.log('\nOptional Variables:\n');
 OPTIONAL_VARS.forEach(varName => {
     const hasVar = varName in process.env || varName in foundVars;
-    const status = hasVar ? '✓' : '○';
+    const status = hasVar ? '[OK]' : '[NOT SET]';
     console.log(`  ${status} ${varName}`);
 });
 
@@ -130,10 +130,10 @@ console.log('\n=====================================\n');
 
 // Validation results
 if (allGood) {
-    console.log('✓ All required variables are set!\n');
+    console.log('[OK] All required variables are set!\n');
     process.exit(0);
 } else {
-    console.log('✗ Missing required variables!\n');
+    console.log('[MISSING] Missing required variables!\n');
     console.log('Setup instructions:');
     console.log('  1. Copy .env.example to .env.local');
     console.log('  2. Fill in GITHUB_REPO and GITHUB_TOKEN');

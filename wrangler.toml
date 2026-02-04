@@ -1,7 +1,7 @@
 # Wrangler configuration for local development
 # Documentation: https://developers.cloudflare.com/workers/wrangler/configuration/
 
-name = "loon-skeleton"
+name = "loon"
 compatibility_date = "2026-01-01"
 
 # Cloudflare Pages configuration
@@ -16,18 +16,34 @@ local_protocol = "http"
 # Copy .env.example to .env.local and fill in your values
 # Wrangler will automatically load .env.local
 
-# To run locally (Phase 1 - no KV):
-#   npx wrangler pages dev .
+# Development commands:
+#   Local development (no KV):
+#     npm run dev
 #
-# To run locally (Phase 2 - with KV):
-#   npx wrangler pages dev . --kv LOON_DB
+#   Local development (with KV testing):
+#     npm run dev:kv
 #
-# This starts a local server at http://localhost:8788
-# The functions in /functions will be available at /api/*
+#   This starts a server at http://localhost:8788
+#   API endpoints available at http://localhost:8788/api/*
 
-# KV Namespace binding for Phase 2 (Team Mode)
-# Uncomment and configure for local development with KV
+# KV Namespace Configuration
+# 
+# For LOCAL development (optional):
+# Uncomment the section below to test with KV locally
+# 
 # [[kv_namespaces]]
 # binding = "LOON_DB"
-# id = "your-kv-namespace-id"
-# preview_id = "your-preview-kv-namespace-id"
+# id = "your-kv-namespace-id"           # Get from Cloudflare dashboard
+# preview_id = "your-preview-id"       # Optional: separate preview namespace
+#
+# Then run: npm run dev:kv
+#
+# For PRODUCTION:
+# Configure in Cloudflare Pages dashboard:
+#   Settings > Functions > KV Namespace Bindings
+#   Binding Name: LOON_DB
+#   KV Namespace: Select your production namespace
+#
+# For more details, see:
+#   - OPERATIONS.md (Environment Setup section)
+#   - CONTRIBUTING.md (Local Development with KV section)

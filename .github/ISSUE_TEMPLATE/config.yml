@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Documentation
-    url: https://github.com/BenSweaterVest/loon-skeleton#readme
+    url: https://github.com/your-username/loon#readme
     about: Check the documentation before opening an issue
   - name: Discussions
-    url: https://github.com/BenSweaterVest/loon-skeleton/discussions
+    url: https://github.com/your-username/loon/discussions
     about: Ask questions and discuss ideas

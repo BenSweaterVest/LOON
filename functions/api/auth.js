@@ -46,11 +46,12 @@
  *   session:{token}    -> { username, role, created, ip } [TTL: 24h]
  *
  * @module functions/api/auth
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -90,7 +91,7 @@ async function checkRateLimit(db, ip) {
         
         return true;
     } catch (err) {
-        console.error('Rate limit check error:', err);
+        logError(err, 'Auth/RateLimit');
         // Fail open on KV errors (don't block requests)
         return true;
     }
@@ -155,7 +156,7 @@ export async function onRequestPost(context) {
 
     // Check KV binding exists
     if (!db) {
-        return jsonResponse({ error: 'KV not configured. See Phase 2 setup.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     // Rate limit check
@@ -244,7 +245,7 @@ export async function onRequestPost(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Auth error:', err);
+        logError(err, 'Auth/Login');
         return jsonResponse({ error: 'Authentication failed' }, 500, env, request);
     }
 }
@@ -432,7 +433,7 @@ export async function onRequestPatch(context) {
         return jsonResponse({ success: true, message: 'Password changed successfully' }, 200, env, request);
 
     } catch (err) {
-        console.error('Password change error:', err);
+        logError(err, 'Auth/PasswordChange');
         return jsonResponse({ error: 'Password change failed' }, 500, env, request);
     }
 }

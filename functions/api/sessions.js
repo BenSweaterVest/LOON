@@ -29,10 +29,11 @@
  *   - Revoke all sessions during a security incident
  *
  * @module functions/api/sessions
- * @version 3.1.0
+
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { logError } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -71,7 +72,7 @@ export async function onRequestGet(context) {
     const db = env.LOON_DB;
 
     if (!db) {
-        return jsonResponse({ error: 'KV not configured. Phase 2 only.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     // Validate admin session
@@ -124,7 +125,7 @@ export async function onRequestGet(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Sessions API error:', err);
+        logError(err, 'Sessions/List');
         return jsonResponse({ error: 'Failed to list sessions' }, 500, env, request);
     }
 }
@@ -137,7 +138,7 @@ export async function onRequestDelete(context) {
     const db = env.LOON_DB;
 
     if (!db) {
-        return jsonResponse({ error: 'KV not configured. Phase 2 only.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     // Validate admin session
@@ -205,7 +206,7 @@ export async function onRequestDelete(context) {
         }, 200, env, request);
 
     } catch (err) {
-        console.error('Sessions revoke error:', err);
+        logError(err, 'Sessions/Revoke');
         return jsonResponse({ error: 'Failed to revoke sessions' }, 500, env, request);
     }
 }

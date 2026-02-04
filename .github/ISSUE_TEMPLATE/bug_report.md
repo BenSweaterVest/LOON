@@ -27,7 +27,7 @@ What actually happened.
 
 ## Environment
 
-- **LOON Version:** (e.g., 3.1.0)
+- **LOON Version:** (e.g., 1.0.0 or latest)
 - **Authentication:** KV-based (unified)
 - **Browser:** (e.g., Chrome 120, Safari 17)
 - **OS:** (e.g., Windows 11, macOS 14)

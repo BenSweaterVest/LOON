@@ -1,7 +1,7 @@
 /**
  * Tests for Upload Endpoint
  * functions/api/upload.js
- * @version 3.1.0
+
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

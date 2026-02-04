@@ -1,7 +1,7 @@
 /**
  * Tests for Health Endpoint
  * functions/api/health.js
- * @version 3.1.0
+
  */
 
 import { describe, it, expect } from 'vitest';
@@ -74,7 +74,6 @@ describe('Health Endpoint', () => {
         it('should include all required fields', () => {
             const response = {
                 status: 'ok',
-                version: '3.1.0',
                 timestamp: new Date().toISOString(),
                 checks: {
                     github_repo: true,
@@ -85,7 +84,6 @@ describe('Health Endpoint', () => {
             };
 
             expect(response.status).toBeDefined();
-            expect(response.version).toBe('3.1.0');
             expect(response.timestamp).toBeDefined();
             expect(response.checks).toBeDefined();
             expect(response.checks.kv_database).toBe(true);
