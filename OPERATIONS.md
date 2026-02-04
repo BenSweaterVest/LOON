@@ -22,7 +22,7 @@ All production environment variables should be configured in **Cloudflare Pages 
 | Variable | Purpose | Example |
 |----------|---------|---------|
 | `GITHUB_REPO` | Your repository for content storage | `your-username/loon` |
-| `GITHUB_TOKEN` | API token for Git operations | `github_pat_xxx...` |
+| `GITHUB_TOKEN` | API token for Git operations | Personal Access Token from GitHub |
 | `ENVIRONMENT` | Set to "production" for minimal logging | `production` |
 
 **Optional Variables** (for advanced features):
@@ -38,7 +38,7 @@ All production environment variables should be configured in **Cloudflare Pages 
 
 1. Create a personal access token at https://github.com/settings/tokens?type=beta
 2. Grant **Contents** permission (read + write) on your LOON repository only
-3. Copy the token (starts with `github_pat_`)
+3. Copy the token from GitHub
 4. In Cloudflare Pages settings, add as environment variable `GITHUB_TOKEN` with **Secret** flag enabled
 5. To rotate: Generate a new token, update in Cloudflare, then delete the old token on GitHub
 
@@ -397,7 +397,7 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
    - Confirm token has "Contents: Read and write" permission
 2. Verify token in Cloudflare:
    - Pages ? Settings ? Environment Variables
-   - Check `GITHUB_TOKEN` value starts with `github_pat_`
+   - Confirm `GITHUB_TOKEN` is set to your PAT token
 3. Test token manually:
    ```bash
    curl -H "Authorization: token YOUR_TOKEN" \
@@ -528,7 +528,7 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
 - Create `.env.local` with:
   ```
   GITHUB_REPO=username/repo-name
-  GITHUB_TOKEN=github_pat_xxxxx
+  GITHUB_TOKEN=your-personal-access-token
   ```
 
 **Port already in use**:

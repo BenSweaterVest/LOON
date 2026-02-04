@@ -49,13 +49,13 @@ git clone https://github.com/YOUR_USERNAME/loon.git
    - **Name**: `LOON CMS`
    - **Repository access**: Only select repositories ? select this repo
    - **Permissions**: Contents ? Read and write
-3. Copy the token (starts with `github_pat_`)
+3. Copy the token from GitHub
 ### 5. Add Environment Variables
 In Cloudflare Pages ? Settings ? Environment variables ? **Production**:
 | Variable | Value |
 |----------|-------|
 | `GITHUB_REPO` | `your-username/loon` |
-| `GITHUB_TOKEN` | `github_pat_xxxxx` (mark as Secret) |
+| `GITHUB_TOKEN` | Your personal access token (mark as Secret) |
 ### 6. Create Your First Admin User
 Before you can log in, you need to create an admin account using the bootstrap script. This is a one-time setup step.
 **Prerequisites Checklist:**
