@@ -102,7 +102,6 @@ export async function onRequestGet(context) {
             .map(result => {
                 const tokenId = result.key.replace('session:', '');
                 return {
-                    tokenId: tokenId,
                     tokenPreview: tokenId.substring(0, 8) + '...',
                     username: result.data.username,
                     role: result.data.role,

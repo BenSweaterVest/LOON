@@ -167,7 +167,7 @@ export async function onRequestGet(context) {
         }
 
         // Determine permissions
-        const canEditAll = !session || session.role === 'admin' || session.role === 'editor';
+        const canEditAll = !!session && (session.role === 'admin' || session.role === 'editor');
 
         // Fetch page list from GitHub
         const allPages = await fetchPagesFromGitHub(env, minimal);

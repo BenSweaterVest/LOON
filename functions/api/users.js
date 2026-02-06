@@ -136,6 +136,22 @@ function generatePassword() {
 }
 
 /**
+ * Normalize and validate username
+ */
+function normalizeUsername(username) {
+    if (!username || typeof username !== 'string') {
+        return null;
+    }
+
+    const sanitized = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    if (sanitized.length < 3 || sanitized.length > 32) {
+        return null;
+    }
+
+    return sanitized;
+}
+
+/**
  * GET: List all users
  */
 async function handleGet(db, session, env, request) {
@@ -182,8 +198,8 @@ async function handlePost(db, session, body, env, request) {
     }
 
     // Sanitize username
-    const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    if (sanitizedUsername.length < 3 || sanitizedUsername.length > 32) {
+    const sanitizedUsername = normalizeUsername(username);
+    if (!sanitizedUsername) {
         return jsonResponse({ error: 'Username must be 3-32 characters (letters, numbers, _ -)' }, 400, env, request);
     }
 
@@ -238,7 +254,10 @@ async function handleDelete(db, session, body, env, request) {
         return jsonResponse({ error: 'username required' }, 400, env, request);
     }
 
-    const sanitizedUsername = username.toLowerCase();
+    const sanitizedUsername = normalizeUsername(username);
+    if (!sanitizedUsername) {
+        return jsonResponse({ error: 'Username must be 3-32 characters (letters, numbers, _ -)' }, 400, env, request);
+    }
 
     // Prevent self-deletion
     if (sanitizedUsername === session.username) {
@@ -292,7 +311,10 @@ async function handlePatch(db, session, body, env, request) {
         return jsonResponse({ error: 'username required' }, 400, env, request);
     }
 
-    const sanitizedUsername = username.toLowerCase();
+    const sanitizedUsername = normalizeUsername(username);
+    if (!sanitizedUsername) {
+        return jsonResponse({ error: 'Username must be 3-32 characters (letters, numbers, _ -)' }, 400, env, request);
+    }
 
     // Fetch existing user
     const userRaw = await db.get(`user:${sanitizedUsername}`, { type: 'json' });

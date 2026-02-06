@@ -147,6 +147,10 @@ export async function onRequestPost(context) {
     if (!db) {
         return jsonResponse({ error: 'Database not configured' }, 500, env, request);
     }
+
+    if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
+        return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
+    }
     
     // Validate session
     const authHeader = request.headers.get('Authorization');
