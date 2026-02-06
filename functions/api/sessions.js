@@ -178,8 +178,6 @@ export async function onRequestDelete(context) {
             revokedCount = deletePromises.length;
             await Promise.all(deletePromises);
         } else {
-            return jsonResponse({ error: 'Provide either "token" or "username" with "all: true"' }, 400, env, request);
-        } else {
             return jsonResponse({ error: 'username and all=true required' }, 400, env, request);
         }
 
