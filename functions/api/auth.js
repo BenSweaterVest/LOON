@@ -126,6 +126,26 @@ async function hashPassword(password, salt) {
 }
 
 /**
+ * Timing-safe comparison to prevent timing attacks
+ */
+function timingSafeEqual(a, b) {
+    if (!(a instanceof Uint8Array) || !(b instanceof Uint8Array)) {
+        return false;
+    }
+
+    if (a.length !== b.length) {
+        return false;
+    }
+
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+        result |= a[i] ^ b[i];
+    }
+
+    return result === 0;
+}
+
+/**
  * Verify password against stored hash
  */
 async function verifyPassword(password, storedHash, salt) {
@@ -136,12 +156,7 @@ async function verifyPassword(password, storedHash, salt) {
     const a = encoder.encode(computedHash);
     const b = encoder.encode(storedHash);
     
-    if (a.length !== b.length) return false;
-    let result = 0;
-    for (let i = 0; i < a.length; i++) {
-        result |= a[i] ^ b[i];
-    }
-    return result === 0;
+    return timingSafeEqual(a, b);
 }
 
 /**
