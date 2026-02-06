@@ -8,8 +8,7 @@
  *
  * ENDPOINTS:
  *   GET    /api/sessions          - List all active sessions
- *   DELETE /api/sessions          - Revoke a specific session
- *   DELETE /api/sessions?all=true - Revoke all sessions for a user
+ *   DELETE /api/sessions          - Revoke all sessions for a user
  *
  * AUTHENTICATION:
  *   Requires admin session token in Authorization header.
@@ -18,8 +17,6 @@
  *   Response: { "sessions": [{ username, role, created, ip }, ...] }
  *
  * DELETE /api/sessions
- *   Request: { "token": "session-to-revoke" }
- *   - OR -
  *   Request: { "username": "user", "all": true }  // Revoke all user sessions
  *   Response: { "success": true, "revoked": 1 }
  *
@@ -152,21 +149,7 @@ export async function onRequestDelete(context) {
         const body = await request.json();
         let revokedCount = 0;
 
-        if (body.token) {
-            // Revoke specific session by token
-            const key = `session:${body.token}`;
-            const exists = await db.get(key);
-
-            if (exists) {
-                // Prevent revoking own session
-                if (body.token === auth.token) {
-                    return jsonResponse({ error: 'Cannot revoke your own session' }, 400, env, request);
-                }
-
-                await db.delete(key);
-                revokedCount = 1;
-            }
-        } else if (body.username && body.all) {
+        if (body.username && body.all) {
             // Revoke all sessions for a user
             const targetUsername = body.username.toLowerCase();
 
@@ -196,6 +179,8 @@ export async function onRequestDelete(context) {
             await Promise.all(deletePromises);
         } else {
             return jsonResponse({ error: 'Provide either "token" or "username" with "all: true"' }, 400, env, request);
+        } else {
+            return jsonResponse({ error: 'username and all=true required' }, 400, env, request);
         }
 
         return jsonResponse({

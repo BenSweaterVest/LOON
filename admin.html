@@ -557,6 +557,8 @@ PREREQUISITES:
                     }
                 } catch (e) {
                     localStorage.removeItem(STORAGE_KEYS.SESSION);
+                    sessionStorage.removeItem(STORAGE_KEYS.SESSION);
+                    SESSION = null;
                 }
             }
 
@@ -1371,9 +1373,8 @@ PREREQUISITES:
                     </div>
                 `).join('');
                 
-                if (!data.canEditAll) {
-                    showStatus('page-browser-status', `Showing ${data.total} page(s) you can edit`, 'info');
-                }
+                const pageVerb = data.canEditAll ? 'edit' : 'view';
+                showStatus('page-browser-status', `Showing ${data.total} page(s) you can ${pageVerb}`, 'info');
                 
             } catch (e) {
                 list.innerHTML = `<p style="color: var(--error);">${escapeHtml(e.message)}</p>`;
@@ -1495,7 +1496,7 @@ PREREQUISITES:
                         <td><code style="font-size: 0.8rem;">${escapeHtml(s.ip)}</code></td>
                         <td class="actions">
                             ${s.isCurrent ? '<span style="color: var(--muted-color);">Current</span>' : 
-                              (s.tokenId ? `<button onclick="revokeSession('${s.tokenId}')" class="outline" style="padding: 0.25rem 0.5rem; color: var(--error);">Revoke</button>` : '<span style="color: var(--muted-color);">Use Revoke All</span>')}
+                              '<span style="color: var(--muted-color);">Use Revoke All</span>'}
                         </td>
                     </tr>
                 `).join('');
@@ -1504,33 +1505,6 @@ PREREQUISITES:
                 
             } catch (e) {
                 list.innerHTML = `<tr><td colspan="5" style="color: var(--error);">${escapeHtml(e.message)}</td></tr>`;
-            }
-        }
-        
-        async function revokeSession(tokenId) {
-            if (!confirm('Revoke this session? The user will be logged out immediately.')) return;
-            
-            try {
-                const res = await fetch('/api/sessions', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SESSION.token}`
-                    },
-                    body: JSON.stringify({ token: tokenId })
-                });
-                
-                const data = await res.json();
-                
-                if (!res.ok) {
-                    throw new Error(data.error || 'Failed to revoke session');
-                }
-                
-                showStatus('sessions-status', 'Session revoked', 'success');
-                loadSessions();
-                
-            } catch (e) {
-                showStatus('sessions-status', e.message, 'error');
             }
         }
         
