@@ -41,6 +41,41 @@ import { logError, jsonResponse } from './_response.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
+// Rate limiting constants
+const RATE_LIMIT = { maxRequests: 20, windowMs: 60000 };
+
+/**
+ * Check rate limit using KV (persists across worker restarts)
+ * Key format: ratelimit:publish:{ip}
+ * Value: JSON array of timestamps within window
+ */
+async function checkRateLimit(db, ip, env) {
+    const now = Date.now();
+    const key = `ratelimit:publish:${ip}`;
+
+    try {
+        const stored = await db.get(key);
+        let attempts = stored ? JSON.parse(stored) : [];
+
+        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+
+        if (recent.length >= RATE_LIMIT.maxRequests) {
+            return false;
+        }
+
+        recent.push(now);
+
+        await db.put(key, JSON.stringify(recent), {
+            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
+        });
+
+        return true;
+    } catch (err) {
+        logError(err, 'Publish/RateLimit', env);
+        return true;
+    }
+}
+
 /**
  * Validate session and check permissions
  */
@@ -137,12 +172,7 @@ async function saveToGitHub(env, pageId, content, message, existingSha) {
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
-    
-    // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
-        return handleCorsOptions(env, request, CORS_OPTIONS);
-    }
-    
+
     const db = env.LOON_DB;
     if (!db) {
         return jsonResponse({ error: 'Database not configured' }, 500, env, request);
@@ -150,6 +180,12 @@ export async function onRequestPost(context) {
 
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
         return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
+    }
+
+    // Rate limit (KV-backed)
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!(await checkRateLimit(db, ip, env))) {
+        return jsonResponse({ error: 'Rate limit exceeded (20 requests/minute). Try again later.' }, 429, env, request);
     }
     
     // Validate session
@@ -275,9 +311,16 @@ export async function onRequestPost(context) {
         }
         
     } catch (error) {
-        logError(error, 'Publish');
+        logError(error, 'Publish', env);
         return jsonResponse({ 
             error: 'Publish failed'
         }, 500, env, request);
     }
+}
+
+/**
+ * Handle OPTIONS (CORS preflight)
+ */
+export async function onRequestOptions(context) {
+    return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }

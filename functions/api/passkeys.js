@@ -131,6 +131,16 @@ async function importPublicKeyFromCBOR(cbor) {
 // IMPORTANT: These must match your actual domain when deployed
 // Set RP_ID and RP_ORIGIN in Cloudflare Pages environment variables
 function getRPConfig(env) {
+    const isProduction = env.ENVIRONMENT === 'production' || env.ENVIRONMENT === 'prod';
+
+    if (isProduction && (!env.RP_ID || !env.RP_ORIGIN)) {
+        throw new Error('RP_ID and RP_ORIGIN must be set in production');
+    }
+
+    if (!isProduction && (!env.RP_ID || !env.RP_ORIGIN)) {
+        console.warn('Passkeys: RP_ID/RP_ORIGIN not set, defaulting to localhost for development');
+    }
+
     return {
         RP_ID: env.RP_ID || 'localhost',
         RP_NAME: env.RP_NAME || 'LOON CMS',
@@ -233,7 +243,7 @@ async function handleRegistrationChallenge(request, env) {
                 username: user.username,
                 rpId: rpConfig.RP_ID,
                 rpName: rpConfig.RP_NAME,
-                attestation: 'direct',
+                attestation: 'none',
                 authenticatorSelection: {
                     authenticatorAttachment: 'platform',
                     userVerification: 'preferred',
@@ -247,7 +257,7 @@ async function handleRegistrationChallenge(request, env) {
             { status: 200, headers: { ...getCorsHeaders(env, request), 'Content-Type': 'application/json' } }
         );
     } catch (err) {
-        logError(err, 'Passkeys/Registration');
+        logError(err, 'Passkeys/Registration', env);
         return new Response(
             JSON.stringify({ error: 'Failed to generate challenge' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -375,6 +385,56 @@ async function handleRegistrationVerify(request, env) {
                     { status: 400, headers: getCorsHeaders(env, request) }
                 );
             }
+
+            // Validate rpIdHash and flags in authenticator data
+            const attestationBuffer = base64UrlToArrayBuffer(attestationResponse.response.attestationObject);
+            const attestationObject = decode(new Uint8Array(attestationBuffer));
+
+            if (!attestationObject.authData) {
+                return new Response(
+                    JSON.stringify({ error: 'Missing authenticator data' }),
+                    { status: 400, headers: getCorsHeaders(env, request) }
+                );
+            }
+
+            const authData = new Uint8Array(attestationObject.authData);
+            const rpIdHash = authData.slice(0, 32);
+            const expectedRpIdHash = new Uint8Array(
+                await sha256(new TextEncoder().encode(rpConfig.RP_ID))
+            );
+
+            let rpIdMatch = true;
+            for (let i = 0; i < 32; i++) {
+                if (rpIdHash[i] !== expectedRpIdHash[i]) {
+                    rpIdMatch = false;
+                    break;
+                }
+            }
+
+            if (!rpIdMatch) {
+                return new Response(
+                    JSON.stringify({ error: 'RP ID hash mismatch in registration' }),
+                    { status: 400, headers: getCorsHeaders(env, request) }
+                );
+            }
+
+            const flags = authData[32];
+            const userPresent = !!(flags & 0x01);
+            const attestedCredentialDataIncluded = !!(flags & 0x40);
+
+            if (!userPresent) {
+                return new Response(
+                    JSON.stringify({ error: 'User not present during registration' }),
+                    { status: 400, headers: getCorsHeaders(env, request) }
+                );
+            }
+
+            if (!attestedCredentialDataIncluded) {
+                return new Response(
+                    JSON.stringify({ error: 'Missing attested credential data' }),
+                    { status: 400, headers: getCorsHeaders(env, request) }
+                );
+            }
         } catch (err) {
             return new Response(
                 JSON.stringify({ error: `Invalid attestation response: ${err.message}` }),
@@ -446,7 +506,7 @@ async function handleRegistrationVerify(request, env) {
             { status: 201, headers: { ...getCorsHeaders(env, request), 'Content-Type': 'application/json' } }
         );
     } catch (err) {
-        logError(err, 'Passkeys/RegisterVerify');
+        logError(err, 'Passkeys/RegisterVerify', env);
         return new Response(
             JSON.stringify({ error: 'Registration verification failed' }),
             { status: 400, headers: getCorsHeaders(env, request) }
@@ -514,7 +574,7 @@ async function handleAuthChallenge(request, env) {
             { status: 200, headers: { ...getCorsHeaders(env, request), 'Content-Type': 'application/json' } }
         );
     } catch (err) {
-        logError(err, 'Passkeys/AuthChallenge');
+        logError(err, 'Passkeys/AuthChallenge', env);
         return new Response(
             JSON.stringify({ error: 'Failed to generate auth challenge' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -741,7 +801,7 @@ async function handleAuthVerify(request, env) {
                 );
             }
         } catch (err) {
-            logError(err, 'Passkeys/SignatureVerification');
+            logError(err, 'Passkeys/SignatureVerification', env);
             return new Response(
                 JSON.stringify({ error: 'Signature verification failed' }),
                 { status: 400, headers: getCorsHeaders(env, request) }
@@ -802,7 +862,7 @@ async function handleAuthVerify(request, env) {
             { status: 200, headers: { ...getCorsHeaders(env, request), 'Content-Type': 'application/json' } }
         );
     } catch (err) {
-        logError(err, 'Passkeys/AuthVerify');
+        logError(err, 'Passkeys/AuthVerify', env);
         return new Response(
             JSON.stringify({ error: `Authentication failed: ${err.message}` }),
             { status: 401, headers: getCorsHeaders(env, request) }
@@ -853,7 +913,7 @@ async function handleListPasskeys(request, env) {
             { status: 200, headers: { ...getCorsHeaders(env, request), 'Content-Type': 'application/json' } }
         );
     } catch (err) {
-        logError(err, 'Passkeys/List');
+        logError(err, 'Passkeys/List', env);
         return new Response(
             JSON.stringify({ error: 'Failed to list passkeys' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -917,7 +977,7 @@ async function handleUpdatePasskey(request, env, credentialId) {
             { status: 200, headers: getCorsHeaders(env, request) }
         );
     } catch (err) {
-        logError(err, 'Passkeys/Update');
+        logError(err, 'Passkeys/Update', env);
         return new Response(
             JSON.stringify({ error: 'Failed to update passkey' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -975,7 +1035,7 @@ async function handleDeletePasskey(request, env, credentialId) {
             { status: 200, headers: getCorsHeaders(env, request) }
         );
     } catch (err) {
-        logError(err, 'Passkeys/Delete');
+        logError(err, 'Passkeys/Delete', env);
         return new Response(
             JSON.stringify({ error: 'Failed to delete passkey' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -1077,14 +1137,14 @@ async function handleRecoveryVerify(request, env) {
                 { status: 401, headers: getCorsHeaders(env, request) }
             );
         } catch (err) {
-            logError(err, 'Passkeys/RecoveryVerify');
+            logError(err, 'Passkeys/RecoveryVerify', env);
             return new Response(
                 JSON.stringify({ error: 'Recovery code verification failed' }),
                 { status: 500, headers: getCorsHeaders(env, request) }
             );
         }
     } catch (err) {
-        logError(err, 'Passkeys/Recovery');
+        logError(err, 'Passkeys/Recovery', env);
         return new Response(
             JSON.stringify({ error: 'Recovery verification failed' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -1125,7 +1185,7 @@ async function handleRecoveryDisable(request, env) {
             { status: 200, headers: getCorsHeaders(env, request) }
         );
     } catch (err) {
-        logError(err, 'Passkeys/Disable');
+        logError(err, 'Passkeys/Disable', env);
         return new Response(
             JSON.stringify({ error: 'Failed to disable passkeys' }),
             { status: 500, headers: getCorsHeaders(env, request) }

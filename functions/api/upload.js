@@ -50,6 +50,41 @@ import { logError, jsonResponse } from './_response.js';
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Rate limiting constants
+const RATE_LIMIT = { maxRequests: 20, windowMs: 60000 };
+
+/**
+ * Check rate limit using KV (persists across worker restarts)
+ * Key format: ratelimit:upload:{ip}
+ * Value: JSON array of timestamps within window
+ */
+async function checkRateLimit(db, ip, env) {
+    const now = Date.now();
+    const key = `ratelimit:upload:${ip}`;
+
+    try {
+        const stored = await db.get(key);
+        let attempts = stored ? JSON.parse(stored) : [];
+
+        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+
+        if (recent.length >= RATE_LIMIT.maxRequests) {
+            return false;
+        }
+
+        recent.push(now);
+
+        await db.put(key, JSON.stringify(recent), {
+            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
+        });
+
+        return true;
+    } catch (err) {
+        logError(err, 'Upload/RateLimit', env);
+        return true;
+    }
+}
+
 /**
  * Validate session
  */
@@ -75,12 +110,7 @@ async function validateSession(db, authHeader) {
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
-    
-    // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
-        return handleCorsOptions(env, request, CORS_OPTIONS);
-    }
-    
+
     const db = env.LOON_DB;
     if (!db) {
         return jsonResponse({ error: 'Database not configured' }, 500, env, request);
@@ -92,6 +122,12 @@ export async function onRequestPost(context) {
             error: 'Image uploads not configured',
             details: 'CF_ACCOUNT_ID and CF_IMAGES_TOKEN environment variables required'
         }, 503, env, request);
+    }
+
+    // Rate limit (KV-backed)
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!(await checkRateLimit(db, ip, env))) {
+        return jsonResponse({ error: 'Rate limit exceeded (20 requests/minute). Try again later.' }, 429, env, request);
     }
     
     // Validate session
@@ -148,7 +184,7 @@ export async function onRequestPost(context) {
         
         if (!uploadRes.ok) {
             const error = await uploadRes.text();
-            logError(new Error(error), 'Upload/Images');
+            logError(new Error(error), 'Upload/Images', env);
             return jsonResponse({ 
                 error: 'Image upload failed',
                 details: `Upload service error (${uploadRes.status})`
@@ -205,9 +241,16 @@ export async function onRequestPost(context) {
         }, 200, env, request);
         
     } catch (error) {
-        logError(error, 'Upload');
+        logError(error, 'Upload', env);
         return jsonResponse({ 
             error: 'Upload failed'
         }, 500, env, request);
     }
+}
+
+/**
+ * Handle OPTIONS (CORS preflight)
+ */
+export async function onRequestOptions(context) {
+    return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }

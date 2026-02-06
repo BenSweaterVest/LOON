@@ -31,7 +31,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/loon.git"
+    "url": "git+https://github.com/YOUR_GITHUB_ORG/LOON.git"
   },
   "keywords": [
     "cms",
@@ -44,7 +44,7 @@
   "author": "Project LOON Contributors",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/your-username/loon/issues"
+    "url": "https://github.com/YOUR_GITHUB_ORG/LOON/issues"
   },
-  "homepage": "https://github.com/your-username/loon#readme"
+  "homepage": "https://github.com/YOUR_GITHUB_ORG/LOON#readme"
 }

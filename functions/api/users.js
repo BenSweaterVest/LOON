@@ -68,6 +68,41 @@ import { logError, jsonResponse } from './_response.js';
  */
 const CORS_OPTIONS = { methods: 'GET, POST, DELETE, PATCH, OPTIONS' };
 
+// Rate limiting constants
+const RATE_LIMIT = { maxRequests: 30, windowMs: 60000 };
+
+/**
+ * Check rate limit using KV (persists across worker restarts)
+ * Key format: ratelimit:users:{ip}
+ * Value: JSON array of timestamps within window
+ */
+async function checkRateLimit(db, ip, env) {
+    const now = Date.now();
+    const key = `ratelimit:users:${ip}`;
+
+    try {
+        const stored = await db.get(key);
+        let attempts = stored ? JSON.parse(stored) : [];
+
+        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+
+        if (recent.length >= RATE_LIMIT.maxRequests) {
+            return false;
+        }
+
+        recent.push(now);
+
+        await db.put(key, JSON.stringify(recent), {
+            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
+        });
+
+        return true;
+    } catch (err) {
+        logError(err, 'Users/RateLimit', env);
+        return true;
+    }
+}
+
 /**
  * Validate admin session
  */
@@ -386,14 +421,15 @@ export async function onRequest(context) {
     const { request, env } = context;
     const db = env.LOON_DB;
 
-    // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
-        return handleCorsOptions(env, request, CORS_OPTIONS);
-    }
-
     // Check KV binding
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
+    }
+
+    // Rate limit (KV-backed)
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!(await checkRateLimit(db, ip, env))) {
+        return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     // Validate admin session
@@ -425,7 +461,14 @@ export async function onRequest(context) {
                 return jsonResponse({ error: 'Method not allowed' }, 405, env, request);
         }
     } catch (err) {
-        logError(err, 'Users/Request');
+        logError(err, 'Users/Request', env);
         return jsonResponse({ error: 'Request failed' }, 500, env, request);
     }
+}
+
+/**
+ * Handle OPTIONS (CORS preflight)
+ */
+export async function onRequestOptions(context) {
+    return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }

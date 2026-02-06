@@ -244,12 +244,12 @@ describe('WebAuthn Implementation Status', () => {
             credentialStorage: true,
             recoveryCodes: true,
             auditLogging: true,
-            sessionManagement: false, // TODO
-            attestationVerification: false, // Partially - needs full CBOR parsing
-            assertionVerification: false, // TODO - signature verification
-            originValidation: false, // TODO
-            rpIdHashValidation: false, // TODO
-            counterValidation: false // TODO - basic check only
+            sessionManagement: true,
+            attestationVerification: false, // Attestation chain not verified
+            assertionVerification: true,
+            originValidation: true,
+            rpIdHashValidation: true,
+            counterValidation: true // Basic check only
         };
         
         const todo = Object.entries(implemented)

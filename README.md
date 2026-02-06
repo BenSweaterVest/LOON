@@ -28,7 +28,7 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 ## Quick Start
 ### 1. Fork/Clone This Repo
 ```bash
-git clone https://github.com/YOUR_USERNAME/loon.git
+git clone https://github.com/YOUR_GITHUB_ORG/LOON.git
 ```
 ### 2. Create Cloudflare Pages Project
 1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) → Workers & Pages → Create
@@ -54,7 +54,7 @@ git clone https://github.com/YOUR_USERNAME/loon.git
 In Cloudflare Pages → Settings → Environment variables → **Production**:
 | Variable | Value |
 |----------|-------|
-| `GITHUB_REPO` | `your-username/loon` |
+| `GITHUB_REPO` | `YOUR_GITHUB_ORG/LOON` |
 | `GITHUB_TOKEN` | Your personal access token (mark as Secret) |
 ### 6. Create Your First Admin User
 Before you can log in, you need to create an admin account using the bootstrap script. This is a one-time setup step.
@@ -106,13 +106,13 @@ Clear-History  # Windows PowerShell
 ### 7. Redeploy
 Go to your Cloudflare Pages dashboard → Deployments → Latest → Retry deployment
 ### 8. Test the Setup
-1. Visit `https://your-project.pages.dev/admin.html`
+1. Visit `https://YOUR_PROJECT.pages.dev/admin.html`
 2. Login with username `admin` and the password you set in step 6
 3. Click **"+ New Page"** to create your first page
 4. Add content and click **Save**
 5. Check GitHub to verify the commit was created
-6. Visit `https://your-project.pages.dev/` to see public page
-7. Verify health: `https://your-project.pages.dev/api/health`
+6. Visit `https://YOUR_PROJECT.pages.dev/` to see public page
+7. Verify health: `https://YOUR_PROJECT.pages.dev/api/health`
 ---
 ## Production Checklist
 Before going live, confirm these are set and working:
@@ -318,7 +318,7 @@ Before deploying to production, review the [Pre-Deployment Checklist in CONTRIBU
 
 **Monitor your deployment** with the health check endpoint:
 ```bash
-curl https://your-loon-domain.pages.dev/api/health
+curl https://YOUR_LOON_DOMAIN.pages.dev/api/health
 ```
 Returns system status, version, and configuration validation. See [health check documentation](docs/API.md#get-apihealth) for troubleshooting failed checks.
 

@@ -21,7 +21,7 @@ All production environment variables should be configured in **Cloudflare Pages 
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `GITHUB_REPO` | Your repository for content storage | `your-username/loon` |
+| `GITHUB_REPO` | Your repository for content storage | `YOUR_GITHUB_ORG/LOON` |
 | `GITHUB_TOKEN` | API token for Git operations | Personal Access Token from GitHub |
 | `ENVIRONMENT` | Set to "production" for minimal logging | `production` |
 
@@ -32,7 +32,7 @@ All production environment variables should be configured in **Cloudflare Pages 
 | `CF_ACCOUNT_ID` | Cloudflare account ID (for Images API) | `abc123def456` |
 | `CF_IMAGES_TOKEN` | Token for image uploads | `v1.abc123...` |
 
-**Important**: Never commit `.env` or `.env.production` files with actual tokens. Use Cloudflare's "Secret" flag when setting `GITHUB_TOKEN` and `CF_IMAGES_TOKEN`.
+**Important**: Never commit `.env` or `.env.production` files with actual tokens. Use [.env.production.example](.env.production.example) as a template and use Cloudflare's "Secret" flag when setting `GITHUB_TOKEN` and `CF_IMAGES_TOKEN`.
 
 ### GitHub Token Setup
 
@@ -81,7 +81,7 @@ Before going live, confirm:
 Verify system status daily:
 ```bash
 # Check health endpoint
-curl https://your-loon-domain.com/api/health
+curl https://YOUR_LOON_DOMAIN.com/api/health
 ```
 **Expected response** (HTTP 200):
 ```json
@@ -103,12 +103,12 @@ curl https://your-loon-domain.com/api/health
 Monitor active sessions (admin only):
 ```bash
 # Login and get token
-TOKEN=$(curl -s -X POST https://your-loon-domain.com/api/auth \
+TOKEN=$(curl -s -X POST https://YOUR_LOON_DOMAIN.com/api/auth \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"YOUR_PASSWORD"}' \
   | jq -r '.token')
 # View active sessions
-curl https://your-loon-domain.com/api/sessions \
+curl https://YOUR_LOON_DOMAIN.com/api/sessions \
   -H "Authorization: Bearer $TOKEN"
 ```
 Check for:
@@ -119,7 +119,7 @@ Check for:
 Review audit logs daily for suspicious activity:
 ```bash
 # View audit logs (admin only)
-curl https://your-loon-domain.com/api/audit \
+curl https://YOUR_LOON_DOMAIN.com/api/audit \
   -H "Authorization: Bearer $TOKEN"
 ```
 Monitor for:

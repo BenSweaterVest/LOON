@@ -37,6 +37,41 @@ import { logError, jsonResponse } from './_response.js';
  */
 const CORS_OPTIONS = { methods: 'GET, DELETE, OPTIONS' };
 
+// Rate limiting constants
+const RATE_LIMIT = { maxRequests: 30, windowMs: 60000 };
+
+/**
+ * Check rate limit using KV (persists across worker restarts)
+ * Key format: ratelimit:sessions:{ip}
+ * Value: JSON array of timestamps within window
+ */
+async function checkRateLimit(db, ip, env) {
+    const now = Date.now();
+    const key = `ratelimit:sessions:${ip}`;
+
+    try {
+        const stored = await db.get(key);
+        let attempts = stored ? JSON.parse(stored) : [];
+
+        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
+
+        if (recent.length >= RATE_LIMIT.maxRequests) {
+            return false;
+        }
+
+        recent.push(now);
+
+        await db.put(key, JSON.stringify(recent), {
+            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
+        });
+
+        return true;
+    } catch (err) {
+        logError(err, 'Sessions/RateLimit', env);
+        return true;
+    }
+}
+
 /**
  * Validate admin session
  */
@@ -70,6 +105,12 @@ export async function onRequestGet(context) {
 
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
+    }
+
+    // Rate limit (KV-backed)
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!(await checkRateLimit(db, ip, env))) {
+        return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     // Validate admin session
@@ -121,7 +162,7 @@ export async function onRequestGet(context) {
         }, 200, env, request);
 
     } catch (err) {
-        logError(err, 'Sessions/List');
+        logError(err, 'Sessions/List', env);
         return jsonResponse({ error: 'Failed to list sessions' }, 500, env, request);
     }
 }
@@ -135,6 +176,12 @@ export async function onRequestDelete(context) {
 
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
+    }
+
+    // Rate limit (KV-backed)
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!(await checkRateLimit(db, ip, env))) {
+        return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     // Validate admin session
@@ -188,7 +235,7 @@ export async function onRequestDelete(context) {
         }, 200, env, request);
 
     } catch (err) {
-        logError(err, 'Sessions/Revoke');
+        logError(err, 'Sessions/Revoke', env);
         return jsonResponse({ error: 'Failed to revoke sessions' }, 500, env, request);
     }
 }
