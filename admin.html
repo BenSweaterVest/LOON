@@ -538,8 +538,8 @@ PREREQUISITES:
         // INITIALIZATION
         // =================================================================
         document.addEventListener('DOMContentLoaded', () => {
-            // Check for saved session
-            const saved = localStorage.getItem(STORAGE_KEYS.SESSION);
+            // Check for saved session (localStorage or sessionStorage)
+            const saved = localStorage.getItem(STORAGE_KEYS.SESSION) || sessionStorage.getItem(STORAGE_KEYS.SESSION);
             if (saved) {
                 try {
                     SESSION = JSON.parse(saved);
@@ -548,6 +548,7 @@ PREREQUISITES:
                     if (SESSION.expiresAt && Date.now() > SESSION.expiresAt) {
                         console.log('Session expired client-side');
                         localStorage.removeItem(STORAGE_KEYS.SESSION);
+                        sessionStorage.removeItem(STORAGE_KEYS.SESSION);
                         SESSION = null;
                     } else {
                         showApp();
@@ -897,6 +898,11 @@ PREREQUISITES:
                 }
                 
                 const challengeData = await challengeRes.json();
+                const allowCredentials = (challengeData.allowCredentials || []).map(cred => ({
+                    id: base64urlToBuffer(cred.id),
+                    type: 'public-key',
+                    transports: cred.transports
+                }));
                 
                 // Step 2: Get assertion from authenticator
                 const credential = await navigator.credentials.get({
@@ -904,7 +910,8 @@ PREREQUISITES:
                         challenge: base64urlToBuffer(challengeData.challenge),
                         timeout: challengeData.timeout || 60000,
                         rpId: challengeData.rpId || window.location.hostname,
-                        userVerification: challengeData.userVerification || 'preferred'
+                        userVerification: challengeData.userVerification || 'preferred',
+                        ...(allowCredentials.length > 0 ? { allowCredentials } : {})
                     }
                 });
                 
@@ -917,12 +924,17 @@ PREREQUISITES:
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        credentialId: bufferToBase64url(credential.rawId),
-                        authenticatorData: bufferToBase64url(credential.response.authenticatorData),
-                        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-                        signature: bufferToBase64url(credential.response.signature),
-                        userHandle: credential.response.userHandle ? 
-                            bufferToBase64url(credential.response.userHandle) : undefined
+                        assertionResponse: {
+                            id: bufferToBase64url(credential.rawId),
+                            response: {
+                                authenticatorData: bufferToBase64url(credential.response.authenticatorData),
+                                clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                                signature: bufferToBase64url(credential.response.signature),
+                                userHandle: credential.response.userHandle ? 
+                                    bufferToBase64url(credential.response.userHandle) : undefined
+                            }
+                        },
+                        challengeToken: challengeData.challengeToken
                     })
                 });
                 
@@ -1023,11 +1035,16 @@ PREREQUISITES:
                         'Authorization': `Bearer ${SESSION.token}`
                     },
                     body: JSON.stringify({
-                        credentialId: bufferToBase64url(credential.rawId),
-                        attestationObject: bufferToBase64url(credential.response.attestationObject),
-                        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-                        transports: credential.response.getTransports ? 
-                            credential.response.getTransports() : ['internal']
+                        attestationResponse: {
+                            id: bufferToBase64url(credential.rawId),
+                            response: {
+                                attestationObject: bufferToBase64url(credential.response.attestationObject),
+                                clientDataJSON: bufferToBase64url(credential.response.clientDataJSON)
+                            },
+                            transports: credential.response.getTransports ? 
+                                credential.response.getTransports() : ['internal']
+                        },
+                        challengeToken: challengeData.challengeToken
                     })
                 });
                 
@@ -1342,6 +1359,7 @@ PREREQUISITES:
                     return;
                 }
                 
+                const actionLabel = data.canEditAll ? 'Edit' : 'Open';
                 list.innerHTML = data.pages.map(page => `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--muted-border-color); border-radius: 4px;">
                         <div>
@@ -1349,7 +1367,7 @@ PREREQUISITES:
                             <span style="color: var(--muted-color); font-size: 0.85rem; margin-left: 0.5rem;">${escapeHtml(page.pageId)}</span>
                             ${page.createdBy ? `<br><small style="color: var(--muted-color);">By ${escapeHtml(page.createdBy)}</small>` : ''}
                         </div>
-                        <button onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem;">Edit</button>
+                        <button onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem;">${actionLabel}</button>
                     </div>
                 `).join('');
                 
@@ -1477,7 +1495,7 @@ PREREQUISITES:
                         <td><code style="font-size: 0.8rem;">${escapeHtml(s.ip)}</code></td>
                         <td class="actions">
                             ${s.isCurrent ? '<span style="color: var(--muted-color);">Current</span>' : 
-                              `<button onclick="revokeSession('${s.tokenId}')" class="outline" style="padding: 0.25rem 0.5rem; color: var(--error);">Revoke</button>`}
+                              (s.tokenId ? `<button onclick="revokeSession('${s.tokenId}')" class="outline" style="padding: 0.25rem 0.5rem; color: var(--error);">Revoke</button>` : '<span style="color: var(--muted-color);">Use Revoke All</span>')}
                         </td>
                     </tr>
                 `).join('');

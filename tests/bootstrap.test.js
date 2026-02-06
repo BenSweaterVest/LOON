@@ -262,7 +262,7 @@ describe('Bootstrap Flow', () => {
         it('should generate base64 hashes (not hex)', () => {
             // Test that base64 format is used (a-zA-Z0-9+/=)
             // not hex format (0-9a-f)
-            const base64Regex = /^[A-Za-z0-9+/]+=*$/;
+            const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
             const hexRegex = /^[0-9a-f]+$/;
             
             const base64Example = 'SGVsbG8gV29ybGQ=';

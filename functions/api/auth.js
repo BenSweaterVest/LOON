@@ -137,7 +137,11 @@ async function verifyPassword(password, storedHash, salt) {
     const b = encoder.encode(storedHash);
     
     if (a.length !== b.length) return false;
-    return crypto.subtle.timingSafeEqual(a, b);
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+        result |= a[i] ^ b[i];
+    }
+    return result === 0;
 }
 
 /**
@@ -203,10 +207,10 @@ export async function onRequestPost(context) {
                     ...userRecord,
                     hash: hash,
                     salt: salt,
-                    bootstrap: false,
                     upgraded: new Date().toISOString()
                 };
                 delete upgradedUser.password; // Remove plain password
+                delete upgradedUser.bootstrap; // Remove bootstrap flag
 
                 await db.put(`user:${sanitizedUsername}`, JSON.stringify(upgradedUser));
             }
