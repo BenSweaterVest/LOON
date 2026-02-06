@@ -252,12 +252,11 @@ describe('WebAuthn Implementation Status', () => {
             counterValidation: true // Basic check only
         };
         
-        const todo = Object.entries(implemented)
+        const pending = Object.entries(implemented)
             .filter(([key, value]) => !value)
             .map(([key]) => key);
-        
-        console.log('WebAuthn TODO items:', todo);
-        expect(todo.length).toBeGreaterThan(0); // Document remaining work
+
+        expect(pending.length).toBeGreaterThan(0); // Document remaining work
     });
     
     it('should define WebAuthn verification requirements', () => {
