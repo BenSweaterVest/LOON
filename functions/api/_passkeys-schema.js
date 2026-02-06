@@ -295,10 +295,14 @@ export async function disableAllPasskeys(db, username) {
     const indexKey = `user:${username}:passkey:index`;
     const keys = await listUserPasskeys(db, username);
     
-    // Delete all credential entries
+    // Delete all credential entries and their reverse index mappings
     for (const key of keys) {
         const credentialKey = getPasskeyKey(username, key.id);
         await db.delete(credentialKey);
+        
+        // Clean up reverse credential ID index
+        const reverseKey = `credential:${key.id}:username`;
+        await db.delete(reverseKey);
     }
     
     // Delete index
@@ -309,6 +313,44 @@ export async function disableAllPasskeys(db, username) {
     await db.delete(recoveryKey);
     
     return { success: true };
+}
+
+/**
+ * Delete reverse credential ID mapping (cleanup when passkey is deleted)
+ */
+export async function deleteCredentialIdMapping(db, credentialId) {
+    if (!credentialId) {
+        throw new Error('Credential ID required');
+    }
+    
+    const key = `credential:${credentialId}:username`;
+    await db.delete(key);
+}
+
+/**
+ * Add to global credential ID index (for usernamehint-free lookups if needed)
+ * Maps: credentialId -> username for quick reverse lookup
+ */
+export async function addCredentialIdToIndex(db, credentialId, username) {
+    if (!credentialId || !username) {
+        throw new Error('Credential ID and username required');
+    }
+    
+    const key = `credential:${credentialId}:username`;
+    await db.put(key, username);
+}
+
+/**
+ * Look up username from credential ID (for authentication without usernamehint)
+ * Use with caution - requires secure transport
+ */
+export async function getUsernameFromCredentialId(db, credentialId) {
+    if (!credentialId) {
+        return null;
+    }
+    
+    const key = `credential:${credentialId}:username`;
+    return await db.get(key);
 }
 
 /**
@@ -332,5 +374,8 @@ export default {
     getUnusedRecoveryCodeCount,
     userHasPasskeys,
     userHasRecoveryCodes,
-    disableAllPasskeys
+    disableAllPasskeys,
+    addCredentialIdToIndex,
+    getUsernameFromCredentialId,
+    deleteCredentialIdMapping
 };

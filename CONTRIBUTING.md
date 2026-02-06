@@ -86,6 +86,12 @@ Since LOON uses Cloudflare Functions, full testing requires deployment. However,
    wrangler pages dev .
    ```
 4. **Deploy to a test project**: Create a separate Cloudflare Pages project for testing
+
+### Response Helpers and CORS
+To keep CORS behavior consistent across endpoints:
+- Use `jsonResponse` and `errorResponse` from `functions/api/_response.js`
+- Avoid ad-hoc `new Response(JSON.stringify(...))` where possible
+- Always pass `env` and `request` into response helpers so `CORS_ORIGIN` is honored
 ### CI/CD Pipeline
 All pull requests automatically run:
 - **JSON validation**: All `.json` files are checked for syntax errors

@@ -18,6 +18,9 @@
     "validate": "npm run lint && npm run test && npm run check:env",
     "release": "npm run validate && echo 'Ready for release'"
   },
+  "dependencies": {
+    "cbor-x": "^1.5.5"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
     "vitest": "^1.2.0",

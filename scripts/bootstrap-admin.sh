@@ -13,7 +13,7 @@
 #
 # WHAT HAPPENS:
 #   1. Script creates a user record in KV with bootstrap=true flag
-#   2. On first login, auth-v2.js detects the bootstrap flag
+#   2. On first login, auth.js detects the bootstrap flag
 #   3. Password is re-hashed with PBKDF2 and stored securely
 #   4. Bootstrap flag is removed, plain password is deleted
 #

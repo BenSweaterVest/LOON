@@ -30,8 +30,11 @@ import {
     isValidCredentialId,
     getPasskeyKey,
     getRecoveryCodesKey,
-    getUnusedRecoveryCodeCount
+    getUnusedRecoveryCodeCount,
+    getRegistrationChallengeKey
 } from '../functions/api/_passkeys-schema.js';
+import passkeysHandler from '../functions/api/passkeys.js';
+import { createMockEnv, createMockKV, parseResponse } from './helpers.js';
 
 describe('WebAuthn Utilities', () => {
     describe('Base64URL Encoding', () => {
@@ -330,6 +333,49 @@ describe('Passkey Integration Scenarios', () => {
     });
 });
 
+describe('Passkey Endpoint Integration', () => {
+    it('should return challengeToken for registration challenge', async () => {
+        const mockKV = createMockKV();
+        const env = createMockEnv({ LOON_DB: mockKV });
+
+        const sessionToken = 'test-session-token';
+        await mockKV.put(
+            `session:${sessionToken}`,
+            JSON.stringify({ username: 'alice', role: 'admin', created: Date.now() })
+        );
+
+        const request = new Request('http://localhost/api/passkeys/register/challenge', {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${sessionToken}`
+            }
+        });
+
+        const response = await passkeysHandler.fetch(request, env);
+        const data = await parseResponse(response);
+
+        expect(response.status).toBe(200);
+        expect(data.challenge).toBeTruthy();
+        expect(data.challengeToken).toBeTruthy();
+    });
+
+    it('should return challengeToken for auth challenge', async () => {
+        const mockKV = createMockKV();
+        const env = createMockEnv({ LOON_DB: mockKV });
+
+        const request = new Request('http://localhost/api/passkeys/auth/challenge', {
+            method: 'GET'
+        });
+
+        const response = await passkeysHandler.fetch(request, env);
+        const data = await parseResponse(response);
+
+        expect(response.status).toBe(200);
+        expect(data.challenge).toBeTruthy();
+        expect(data.challengeToken).toBeTruthy();
+    });
+});
+
 describe('Edge Cases and Error Handling', () => {
     it('should handle empty recovery codes list', () => {
         const unused = getUnusedRecoveryCodeCount(null);
@@ -353,6 +399,70 @@ describe('Edge Cases and Error Handling', () => {
         // Just over max
         const overMax = 'a'.repeat(351);
         expect(isValidCredentialId(overMax)).toBe(false);
+    });
+
+    it('should return 400 for missing attestation response data', async () => {
+        const mockKV = createMockKV();
+        const env = createMockEnv({ LOON_DB: mockKV });
+
+        const sessionToken = 'test-session-token';
+        await mockKV.put(
+            `session:${sessionToken}`,
+            JSON.stringify({ username: 'alice', role: 'admin', created: Date.now() })
+        );
+
+        const challengeToken = 'challenge-token-123';
+        const challengeKey = getRegistrationChallengeKey(challengeToken);
+        await mockKV.put(
+            challengeKey,
+            JSON.stringify({ challenge: 'challenge-b64', username: 'alice', created: Date.now() })
+        );
+
+        const request = new Request('http://localhost/api/passkeys/register/verify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({
+                attestationResponse: {
+                    id: 'abcdefghijklmnopqrstuv',
+                    response: null
+                },
+                challengeToken
+            })
+        });
+
+        const response = await passkeysHandler.fetch(request, env);
+        const data = await parseResponse(response);
+
+        expect(response.status).toBe(400);
+        expect(data.error).toBe('Missing attestation response data');
+    });
+
+    it('should return 400 for missing assertion response data', async () => {
+        const mockKV = createMockKV();
+        const env = createMockEnv({ LOON_DB: mockKV });
+
+        const request = new Request('http://localhost/api/passkeys/auth/verify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                assertionResponse: {
+                    id: 'abcdefghijklmnopqrstuv',
+                    response: null
+                },
+                challengeToken: 'challenge-token-123'
+            })
+        });
+
+        const response = await passkeysHandler.fetch(request, env);
+        const data = await parseResponse(response);
+
+        expect(response.status).toBe(400);
+        expect(data.error).toBe('Missing assertion response data');
     });
 });
 

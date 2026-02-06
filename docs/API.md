@@ -39,6 +39,12 @@ All endpoints:
 
 The following examples show how to interact with LOON API from different clients:
 
+**Configuration**: WebAuthn relying party ID is determined by:
+1. `RP_ID` environment variable (if set)
+2. Otherwise extracted from request URL hostname
+
+For local development, set `RP_ID=localhost` and `RP_ORIGIN=http://localhost:8788` in `.env.local`.
+
 #### JavaScript (Fetch)
 
 ```javascript
@@ -270,6 +276,7 @@ Authorization: Bearer <session-token>
 ```json
 {
   "challenge": "base64url-encoded-challenge",
+  "challengeToken": "base64url-token-to-pass-to-verify",
   "userId": "base64url(sha256(username))",
   "username": "admin",
   "rpId": "example.com",
@@ -287,6 +294,8 @@ Authorization: Bearer <session-token>
 }
 ```
 
+**Passkeys readiness note**: Registration validates `clientData` fields and COSE key structure, but does not verify attestation certificate chains or trust anchors.
+
 ### POST /api/passkeys/register/verify
 
 Verify passkey registration and generate recovery codes.
@@ -302,7 +311,8 @@ Content-Type: application/json
 
 {
   "attestationResponse": { /* WebAuthn attestationResponse object */ },
-  "deviceName": "iPhone 15"
+  "deviceName": "iPhone 15",
+  "challengeToken": "base64url-token-from-challenge"
 }
 ```
 
@@ -338,6 +348,7 @@ GET /api/passkeys/auth/challenge?usernamehint=admin
 ```json
 {
   "challenge": "base64url-encoded-challenge",
+  "challengeToken": "base64url-token-to-pass-to-verify",
   "rpId": "example.com",
   "allowCredentials": [
     {

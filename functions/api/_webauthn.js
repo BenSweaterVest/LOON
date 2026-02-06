@@ -12,6 +12,8 @@
 
  */
 
+import { decode } from 'cbor-x';
+
 /**
  * Convert ArrayBuffer to base64url (no padding)
  */
@@ -53,23 +55,126 @@ export async function sha256(data) {
 }
 
 /**
- * Parse CBOR-encoded public key (simplified, ES256 only)
- * CBOR map structure for ES256:
- * {
- *   1: 2,              // kty: EC
- *   3: -7,             // alg: ES256
- *   -1: 1,             // crv: P-256
- *   -2: x-coordinate,  // x (32 bytes)
- *   -3: y-coordinate   // y (32 bytes)
- * }
+ * Extract public key (COSE CBOR) from attestation object
+ * Attestation object structure: { fmt, attStmt, authData }
+ * authData structure: [rpIdHash(32) | flags(1) | signCount(4) | attested credential data]
+ * Attested credential data: [aaguid(16) | credentialIdLength(2) | credentialId | credentialPublicKey(CBOR)]
  */
-export function parseCBORPublicKey(cbor) {
-    // This is a simplified parser - in production, use a full CBOR library
-    // For now, just validate it's a valid buffer and return raw CBOR
-    if (!(cbor instanceof ArrayBuffer) && !(cbor instanceof Uint8Array)) {
-        throw new Error('Invalid CBOR data');
+export async function extractPublicKeyFromAttestation(attestationObjectB64) {
+    try {
+        // Decode attestation object
+        const attestationBuffer = base64UrlToArrayBuffer(attestationObjectB64);
+        const attestationObject = decode(new Uint8Array(attestationBuffer));
+        
+        if (!attestationObject.authData) {
+            throw new Error('Missing authData in attestation object');
+        }
+        
+        // authData is a Uint8Array
+        const authData = new Uint8Array(attestationObject.authData);
+        
+        // Parse authData structure
+        // Bytes 0-31: RP ID hash
+        // Byte 32: Flags (bit 6 = attested credential data included, bit 2 = user present, bit 0 = user verified)
+        // Bytes 33-36: Sign count
+        // If flags bit 6 is set, attested credential data follows
+        
+        const flags = authData[32];
+        const attestedCredentialDataIncluded = (flags & 0x40) !== 0;
+        
+        if (!attestedCredentialDataIncluded) {
+            throw new Error('No attested credential data in authData');
+        }
+        
+        let offset = 37; // After RP ID hash, flags, and sign count
+        
+        // Skip AAGUID (16 bytes)
+        const aaguid = authData.slice(offset, offset + 16);
+        offset += 16;
+        
+        // Get credential ID length (2 bytes, big-endian)
+        const credIdLength = (authData[offset] << 8) | authData[offset + 1];
+        offset += 2;
+        
+        // Skip credential ID
+        const credentialId = authData.slice(offset, offset + credIdLength);
+        offset += credIdLength;
+        
+        // Remaining bytes are the credential public key (CBOR encoded COSE key)
+        const publicKeyBytes = authData.slice(offset);
+        
+        // Decode COSE public key
+        const publicKey = decode(publicKeyBytes);
+        
+        // Validate it's an ES256 key
+        if (publicKey[1] !== 2) { // kty must be 2 (EC)
+            throw new Error('Invalid key type: only ES256 (EC) keys supported');
+        }
+        
+        if (publicKey[3] !== -7) { // alg must be -7 (ES256)
+            throw new Error('Invalid algorithm: only ES256 (-7) supported');
+        }
+        
+        if (publicKey[-1] !== 1) { // crv must be 1 (P-256)
+            throw new Error('Invalid curve: only P-256 supported');
+        }
+        
+        // Validate coordinate sizes (must be 32 bytes for P-256)
+        const xCoord = publicKey[-2];
+        const yCoord = publicKey[-3];
+        
+        if (!(xCoord instanceof Uint8Array) || xCoord.length !== 32) {
+            throw new Error('Invalid x-coordinate: must be 32 bytes');
+        }
+        
+        if (!(yCoord instanceof Uint8Array) || yCoord.length !== 32) {
+            throw new Error('Invalid y-coordinate: must be 32 bytes');
+        }
+        
+        // Return structured public key (not raw attestation blob)
+        // Encode all binary data as base64url for JSON round-trip through KV
+        return {
+            format: 'cose',
+            publicKey: arrayBufferToBase64Url(publicKeyBytes), // Base64url CBOR COSE key for storage
+            x: arrayBufferToBase64Url(xCoord),
+            y: arrayBufferToBase64Url(yCoord),
+            credentialId: arrayBufferToBase64Url(credentialId) // Also encode credential ID as base64url
+        };
+        
+    } catch (err) {
+        throw new Error(`Failed to extract public key from attestation: ${err.message}`);
     }
-    return cbor; // Return as-is for storage and verification
+}
+
+/**
+ * Parse CBOR-encoded public key (used during assertion verification)
+ * Decodes and validates COSE structure for ES256
+ */
+export async function parseCBORPublicKey(cborBytes) {
+    try {
+        if (!(cborBytes instanceof Uint8Array) && !(cborBytes instanceof ArrayBuffer)) {
+            throw new Error('Invalid CBOR data: must be Uint8Array or ArrayBuffer');
+        }
+        
+        const publicKey = decode(new Uint8Array(cborBytes));
+        
+        // Validate ES256 structure
+        if (publicKey[1] !== 2) {
+            throw new Error('Invalid kty: expected 2 (EC)');
+        }
+        
+        if (publicKey[3] !== -7) {
+            throw new Error('Invalid alg: expected -7 (ES256)');
+        }
+        
+        if (publicKey[-1] !== 1) {
+            throw new Error('Invalid crv: expected 1 (P-256)');
+        }
+        
+        return publicKey;
+    } catch (err) {
+        throw new Error(`CBOR parsing failed: ${err.message}`);
+    }
 }
 
 /**

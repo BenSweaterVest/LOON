@@ -67,6 +67,15 @@ To enable image uploads:
    - `CF_IMAGES_TOKEN` = The API token (as Secret)
 
 ---
+## Production Checklist
+Before going live, confirm:
+- KV binding `LOON_DB` is set in Pages Functions and points to the correct namespace
+- `GITHUB_REPO` and `GITHUB_TOKEN` are set in Pages environment variables
+- `CORS_ORIGIN` is set to your production domain (if you want to restrict origins)
+- `RP_ID` and `RP_ORIGIN` are set to your production domain for passkeys
+- `/api/health` returns `kv_database: true`
+
+---
 ## Daily Operations
 ### Health Check
 Verify system status daily:
@@ -122,27 +131,47 @@ Monitor for:
 ## User Management
 
 ### First-Time Admin Setup
-When deploying LOON for the first time, use the automated bootstrap script to create your first admin user:
+When deploying LOON for the first time, use the automated bootstrap script to create your first admin user.
 
+Both scripts (`.js` and `.sh`) use bootstrap mode: they store the password temporarily in plaintext, then auth.js hashes it securely (PBKDF2, 100k iterations) on first login.
+
+**Option 1: Node.js script** (cross-platform, requires Node.js):
 ```bash
-# Run bootstrap script to create first admin
-node scripts/bootstrap-admin.js --username admin --password YourSecurePassword123 --namespace-id loon_db --account-id your_cf_account_id
+node scripts/bootstrap-admin.js \
+  --username admin \
+  --password YourSecurePassword123 \
+  --namespace-id YOUR_KV_NAMESPACE_ID
 
-# The script will output a wrangler KV command to execute:
-# wrangler kv:key put --binding LOON_DB "user:admin" ...
-# Copy and run this command to create the user in KV
+# The script outputs a wrangler KV command:
+wrangler kv:key put --namespace-id YOUR_KV_NAMESPACE_ID \
+  'user:admin' '{"username":"admin","role":"admin","password":"...","bootstrap":true,...}'
+```
+
+**Option 2: Bash script** (Linux/Mac, requires curl + CF API token):
+```bash
+export CF_ACCOUNT_ID="your-account-id"
+export CF_API_TOKEN="your-api-token"
+export KV_NAMESPACE_ID="your-kv-namespace-id"
+
+./scripts/bootstrap-admin.sh admin YourSecurePassword123
+# Automatically writes to KV via Cloudflare API
 ```
 
 **Security Notes**:
-- Use a strong password (minimum 8 characters, letters + numbers)
-- Consider MFA/passkeys after initial setup (FIDO2 support available)
+- Use a strong password (minimum 8 characters)
+- Password is stored in plaintext temporarily (bootstrap mode only)
+- On first login, auth.js re-hashes the password securely and removes plaintext
 - Never commit passwords to version control
-- The script uses PBKDF2 hashing (100k iterations) - compatible with auth.js
+- Clear shell history after running: `history -c`
 
-**Windows Users**: Use Git Bash, WSL, or the admin UI to create the initial user:
-1. Deploy LOON first
-2. Go to login page, there's a setup wizard if no users exist
-3. Create admin user via the UI
+**Windows Users**: Use Git Bash, WSL, or PowerShell to run the bootstrap script:
+
+```powershell
+# PowerShell example
+node scripts/bootstrap-admin.js --username admin --password YourSecurePassword123 --namespace-id YOUR_KV_ID
+```
+
+Note: There is no web-based setup wizard. You must use the bootstrap script to create the first admin.
 
 ### Create a New User
 After your first admin is set up:
@@ -353,7 +382,7 @@ curl -H "Authorization: token YOUR_GITHUB_TOKEN" \
 ### Cloudflare Worker Invocations
 View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
 **Typical invocations per day**:
-- 50 users � 2-5 requests/user = 100-250 invocations
+- 50 users - 2-5 requests/user = 100-250 invocations
 - All requests to `/api/*` count as function invocations
 **Free tier limit**: 100,000 invocations/day (very generous)
 ---
@@ -450,7 +479,7 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
 - Wait 1-2 minutes for Cloudflare to redeploy
 
 **Rate limit exceeded (login)**:
-- Limit: 10 attempts per 60 seconds
+- Limit: 5 attempts per 60 seconds
 - Wait 60 seconds and retry
 
 ### Save Problems

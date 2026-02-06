@@ -37,7 +37,7 @@
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError } from './_response.js';
+import { logError, jsonResponse } from './_response.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
@@ -130,16 +130,6 @@ async function saveToGitHub(env, pageId, content, message, existingSha) {
     
     const result = await res.json();
     return result.commit.sha;
-}
-
-/**
- * JSON response helper
- */
-function jsonResponse(data, status, env, request) {
-    return new Response(JSON.stringify(data), {
-        status,
-        headers: getCorsHeaders(env, request, CORS_OPTIONS)
-    });
 }
 
 /**

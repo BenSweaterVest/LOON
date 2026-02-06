@@ -22,7 +22,7 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 - **Mobile-Friendly**: Works on phones and tablets
 - **Dark Mode**: Respects system preference automatically
 - **Audit Logging**: Track all actions in the system
-- **Secure**: PBKDF2 hashing, timing-safe auth, WebAuthn passkeys, rate limiting
+- **Secure**: PBKDF2 hashing, timing-safe auth, WebAuthn/FIDO2 passkeys (ES256 signatures verified; attestation chain not verified), rate limiting
 - **Auditable**: Full Git history of all changes
 ---
 ## Quick Start
@@ -114,6 +114,15 @@ Go to your Cloudflare Pages dashboard → Deployments → Latest → Retry deplo
 6. Visit `https://your-project.pages.dev/` to see public page
 7. Verify health: `https://your-project.pages.dev/api/health`
 ---
+## Production Checklist
+Before going live, confirm these are set and working:
+- KV binding: `LOON_DB` bound in Pages Functions settings
+- Environment: `GITHUB_REPO` and `GITHUB_TOKEN` configured (secret)
+- CORS: `CORS_ORIGIN` set to your production domain (if restricting)
+- Passkeys: `RP_ID` and `RP_ORIGIN` set to your production domain
+- Health check: `/api/health` returns `kv_database: true`
+
+---
 ## File Structure
 ```
 loon/
@@ -162,7 +171,7 @@ loon/
 +-- scripts/
    +-- bootstrap-admin.js  # Create first admin user (Node.js)
    +-- validate-json.mjs   # JSON validation script
-�   +-- API.md              # API reference
+   +-- API.md              # API reference
    +-- API.md              # API reference
 +-- CONTRIBUTING.md         # Development guidelines + testing
 +-- LICENSE                 # MIT License

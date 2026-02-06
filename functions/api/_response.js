@@ -30,7 +30,7 @@ export function jsonResponse(data, status = 200, env, request) {
         {
             status,
             headers: {
-                ...getCorsHeaders(),
+                ...getCorsHeaders(env, request),
                 'Content-Type': 'application/json'
             }
         }
@@ -120,7 +120,7 @@ export function rateLimitResponse(retriesRemaining, resetSeconds, env, request) 
         {
             status: 429,
             headers: {
-                ...getCorsHeaders(),
+                ...getCorsHeaders(env, request),
                 'Content-Type': 'application/json',
                 'Retry-After': String(resetSeconds)
             }

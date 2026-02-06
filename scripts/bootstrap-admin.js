@@ -17,8 +17,8 @@
  *     --namespace-id abc123 --account-id def456
  *
  * This script:
- *   1. Generates a secure password hash (PBKDF2 with 100k iterations)
- *   2. Creates initial admin user in KV
+ *   1. Creates an initial admin user in KV (bootstrap mode)
+ *   2. On first login, auth.js hashes the password securely (PBKDF2)
  *   3. Verifies the user was created successfully
  *   4. Outputs next steps for production deployment
  */
@@ -29,35 +29,21 @@ import { promisify } from 'util';
 const pbkdf2 = promisify(crypto.pbkdf2);
 
 /**
- * Generate PBKDF2 password hash compatible with LOON auth.js
- *
- * @param {string} password - Plain text password
- * @returns {Promise<Object>} - { hash, salt }
- */
-async function hashPassword(password) {
-    const salt = crypto.randomBytes(32).toString('hex');
-    const hash = await pbkdf2(password, salt, 100000, 32, 'sha256');
-    return {
-        hash: hash.toString('hex'),
-        salt
-    };
-}
-
-/**
  * Create admin user entry for KV storage
+ * Uses bootstrap mode for compatibility with auth.js
  *
  * @param {string} username - Admin username
- * @param {string} password - Plain text password (will be hashed)
+ * @param {string} password - Plain text password (will be hashed on first login)
  * @returns {Promise<Object>} - User object ready for KV
  */
 async function createAdminUser(username, password) {
-    const { hash, salt } = await hashPassword(password);
-    
+    // Use bootstrap mode instead of pre-hashing
+    // auth.js will hash the password on first login
     return {
         username,
         role: 'admin',
-        hash,
-        salt,
+        password,
+        bootstrap: true,
         created: new Date().toISOString(),
         lastLogin: null,
         mfaEnabled: false,

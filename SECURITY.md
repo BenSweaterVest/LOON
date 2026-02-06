@@ -68,13 +68,15 @@ You can expect a response within 48 hours. We will work with you to understand a
    - Content size limited to 1MB
    - JSON validation before commit
 ### Threats NOT Addressed (Out of Scope)
-1. **Compromised Cloudflare account**
+1. **WebAuthn attestation trust chain validation**
+   - LOON validates clientData/authData and COSE key structure, but does not verify attestation certificates or trust anchors.
+2. **Compromised Cloudflare account**
    - If an attacker gains access to your Cloudflare dashboard, they can read secrets
-2. **Compromised GitHub token**
+3. **Compromised GitHub token**
    - Use fine-grained tokens with minimal permissions (single repo, contents only)
-3. **Social engineering**
+4. **Social engineering**
    - Admin must securely distribute passwords to users
-4. **Denial of service**
+5. **Denial of service**
    - Cloudflare provides some DDoS protection on free tier
    - GitHub API rate limits provide natural throttling
 ---
@@ -288,10 +290,11 @@ If you suspect a security incident:
 - Debug information kept in logs only
 
 ### Content Security Policy
-[REVIEW] **Not configured**: Consider adding CSP headers
-- Recommended: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'`
-- Current setup uses inline styles (needed for dark mode toggle)
-- CSP would restrict injection attacks
+[GOOD]: CSP headers configured in _headers file
+- Current policy: `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' https://api.github.com; font-src 'self'; frame-ancestors 'none'`
+- Allows inline scripts/styles (needed for admin UI and dark mode)
+- Restricts external resources to trusted CDNs (Pico CSS, GitHub API)
+- Prevents clickjacking with frame-ancestors 'none'
 
 ### Security Checklist for Operations
 

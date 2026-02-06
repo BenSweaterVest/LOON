@@ -117,31 +117,5 @@ export function handleCorsOptions(env, request, options = {}) {
     });
 }
 
-/**
- * Create a JSON response with CORS headers.
- *
- * Utility function to simplify creating JSON API responses with proper
- * CORS headers and content type.
- *
- * @param {Object} data - Response data to serialize as JSON
- * @param {number} status - HTTP status code (default: 200)
- * @param {Object} env - Environment variables from Cloudflare
- * @param {Request} request - The incoming request
- * @param {Object} corsOptions - Options for CORS headers
- * @returns {Response} HTTP Response with JSON body and CORS headers
- */
-export function jsonResponse(data, status = 200, env = null, request = null, corsOptions = {}) {
-    const headers = env && request
-        ? getCorsHeaders(env, request, corsOptions)
-        : {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Content-Type': 'application/json'
-        };
-
-    return new Response(JSON.stringify(data), {
-        status,
-        headers
-    });
-}
+// NOTE: jsonResponse moved to _response.js for consistency
+// Import from there: import { jsonResponse } from './_response.js';

@@ -45,7 +45,7 @@
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError } from './_response.js';
+import { logError, jsonResponse } from './_response.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -68,16 +68,6 @@ async function validateSession(db, authHeader) {
     
     const session = JSON.parse(sessionRaw);
     return { valid: true, session };
-}
-
-/**
- * JSON response helper
- */
-function jsonResponse(data, status, env, request) {
-    return new Response(JSON.stringify(data), {
-        status,
-        headers: getCorsHeaders(env, request, CORS_OPTIONS)
-    });
 }
 
 /**

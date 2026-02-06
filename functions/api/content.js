@@ -28,7 +28,7 @@
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError } from './_response.js';
+import { logError, jsonResponse } from './_response.js';
 
 /**
  * CORS options for this endpoint.
@@ -172,20 +172,4 @@ export async function onRequestDelete(context) {
  */
 export async function onRequestOptions(context) {
     return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
-}
-
-/**
- * JSON response helper with configurable CORS.
- */
-function jsonResponse(data, status = 200, env = null, request = null) {
-    const headers = env && request
-        ? getCorsHeaders(env, request, CORS_OPTIONS)
-        : {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        };
-
-    return new Response(JSON.stringify(data), { status, headers });
 }
