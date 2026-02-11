@@ -113,11 +113,11 @@ async function adminExists(db) {
 
 export async function onRequestGet(context) {
     const { env, request } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     if (!db) {
         return jsonResponse(
-            { setupRequired: false, setupTokenConfigured: false, error: 'KV not configured' },
+            { setupRequired: false, setupTokenConfigured: false, error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' },
             500,
             env,
             request
@@ -148,10 +148,10 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
     const { env, request } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     if (!db) {
-        return jsonResponse({ error: 'KV database not configured' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     if (!env.SETUP_TOKEN) {

@@ -1070,7 +1070,7 @@ curl -s https://your-domain.com/api/health | jq .
 **If `kv_database` is false**:
 - Verify KV namespace exists: Cloudflare > Workers & Pages > KV
 - Verify binding: Your project > Settings > Functions > KV namespace bindings
-- Binding variable name must be exactly `LOON_DB`
+- Binding variable name should be `LOON_DB` (preferred); `KV` is also accepted as a compatibility fallback
 
 #### HTTP Status
 

@@ -3,9 +3,10 @@
 A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No traditional database, no servers, $0/month.
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-available-brightgreen.svg)](docs/)
-[![Tests](https://img.shields.io/badge/tests-102%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#testing)
 
-**New to LOON?** Start with [CONTRIBUTING.md](CONTRIBUTING.md) for 5-minute developer setup.
+**New to LOON?** Start with [Install (Recommended)](#install-recommended).  
+**Working on LOON itself?** Use [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Core Features**: Password and passkey authentication, Git-based content, schema validation. For a quick overview of recent updates, see [CHANGELOG.md](CHANGELOG.md).
 
@@ -25,89 +26,112 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 - **Secure**: PBKDF2 hashing, timing-safe auth, WebAuthn/FIDO2 passkeys (ES256 signatures verified; attestation chain not verified), rate limiting
 - **Auditable**: Full Git history of all changes
 ---
-## Fastest Onboarding (No Local CLI)
-Use this path if you want to deploy directly from GitHub template and start from the admin page:
+## Install (Recommended)
+Use this path for the simplest successful setup with the fewest manual decisions.
 
-1. Use this repo as a template in GitHub
-2. Create a Cloudflare Pages project from that repo
-3. In Cloudflare dashboard, configure:
-   - KV binding `LOON_DB` (or add `kv_namespaces` in `wrangler.toml` if dashboard binding UI is disabled)
-   - Environment secrets: `GITHUB_REPO`, `GITHUB_TOKEN`, `SETUP_TOKEN`
-4. Deploy
-5. Open `/admin.html` and complete Initial Setup
-6. Remove/rotate `SETUP_TOKEN`
+Browser-only requirement:
+- Every required setup step below can be completed from:
+  - GitHub web UI
+  - Cloudflare dashboard
+  - LOON admin UI
+- No terminal/CLI is required for production setup.
 
-No PowerShell/Bash/local script execution is required for this path.
----
-## Quick Start
-### 1. Fork/Clone This Repo
-```bash
-git clone https://github.com/YOUR_GITHUB_ORG/LOON.git
-```
-### 2. Create Cloudflare Pages Project
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) → Workers & Pages → Create
-2. Connect to Git → Select this repository
+### 1. Create Repo + Pages Project
+1. Use this repo as a GitHub template.
+2. In Cloudflare Dashboard, create a Pages project from that repo.
 3. Build settings:
-   - **Framework preset**: None
-   - **Build command**: *(leave empty)*
-   - **Build output directory**: *(leave empty)*
-4. Deploy
-### 3. Configure Cloudflare KV (No Local Scripts Required)
-Preferred (dashboard-only):
-1. Cloudflare Dashboard → Workers & Pages → KV → Create namespace `LOON_DB`
-2. Pages project → Settings → Functions → KV namespace bindings
-3. Add binding:
+   - Framework preset: None
+   - Build command: *(leave empty)*
+   - Build output directory: *(leave empty)*
+
+### 2. Configure KV Binding
+1. Create KV namespace `LOON_DB` in Cloudflare.
+2. In Pages project settings, add KV binding:
    - Variable: `LOON_DB`
    - Namespace: `LOON_DB`
 
-If "Add binding" is disabled because bindings are managed by `wrangler.toml`:
-1. Create namespace `LOON_DB` in Dashboard and copy its Namespace ID
-2. Edit `wrangler.toml` in GitHub and add:
-```toml
-[[kv_namespaces]]
-binding = "LOON_DB"
-id = "YOUR_NAMESPACE_ID"
-```
-3. Commit and redeploy
-### 4. Create GitHub Personal Access Token
-1. Go to GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens**
-2. Generate new token:
-   - **Name**: `LOON CMS`
-   - **Repository access**: Only select repositories → select this repo
-   - **Permissions**: Contents → Read and write
-3. Copy the token from GitHub
-### 5. Add Environment Variables
-In Cloudflare Pages → Settings → Environment variables → **Production**:
+Notes:
+- Preferred binding name is `LOON_DB`.
+- Runtime compatibility fallback: `KV` is also accepted.
+
+### 3. Configure Environment Variables (Production)
+In Cloudflare Pages > Settings > Environment variables:
+
 | Variable | Value |
 |----------|-------|
 | `GITHUB_REPO` | `YOUR_GITHUB_ORG/LOON` |
-| `GITHUB_TOKEN` | Your personal access token (mark as Secret) |
-| `SETUP_TOKEN` | One-time setup secret (high-entropy, mark as Secret) |
-### 6. Create Your First Admin User
-1. Open `https://YOUR_PROJECT.pages.dev/admin.html`
-2. You will be redirected to the **Initial Setup** form automatically if no admin exists
-3. Enter:
-   - Setup Token: value of `SETUP_TOKEN` from Cloudflare env vars
-   - Admin Username
-   - Admin Password
-4. Submit to create the first admin and sign in
+| `GITHUB_TOKEN` | Fine-grained token with repo Contents read/write (Secret) |
+| `SETUP_TOKEN` | High-entropy one-time setup token (Secret) |
+
+Important:
+- `GITHUB_REPO` must be explicitly set (not reliably auto-detected at runtime).
+- `SETUP_TOKEN` is only for first-admin setup.
+
+### 4. Deploy and Run Initial Setup
+1. Deploy (or redeploy after adding env vars and KV binding).
+2. Open `https://YOUR_PROJECT.pages.dev/admin.html`.
+3. Complete the Initial Setup form:
+   - Setup Token = `SETUP_TOKEN`
+   - Admin Username + Admin Password = your real login credentials
 
 Security note:
-- After successful setup, rotate or remove `SETUP_TOKEN` from Cloudflare env vars.
-### 7. Redeploy
-Go to your Cloudflare Pages dashboard → Deployments → Latest → Retry deployment
-### 8. Test the Setup
-1. Visit `https://YOUR_PROJECT.pages.dev/admin.html`
-2. Login with username `admin` and the password you set in step 6
-3. Click **"+ New Page"** to create your first page
-4. Add content and click **Save**
-5. Check GitHub to verify the commit was created
-6. Visit `https://YOUR_PROJECT.pages.dev/` to see public page
-7. Verify health: `https://YOUR_PROJECT.pages.dev/api/health`
+- Admin password is hashed before storage.
+- Rotate or remove `SETUP_TOKEN` after first admin is created.
+
+### 5. Verify
+1. Check health: `https://YOUR_PROJECT.pages.dev/api/health` and confirm `kv_database: true`.
+2. Log in to `/admin.html`.
+3. Create a page and save once to confirm GitHub commits are working.
+
+### Guided Browser-Only Implementation Checklist
+Use this if you want an exact click path with no CLI.
+
+1. GitHub (template + repo)
+   - Click **Use this template** on the LOON repository.
+   - Create your new repository and confirm files appear on the main branch.
+2. Cloudflare Pages (project + deploy)
+   - Go to **Workers & Pages -> Create -> Pages -> Connect to Git**.
+   - Select your LOON repo and deploy with default LOON settings (no build command).
+3. Cloudflare KV binding
+   - Go to **Workers & Pages -> KV** and create namespace `LOON_DB`.
+   - Go to your Pages project -> **Settings -> Functions -> KV namespace bindings**.
+   - Add binding name `LOON_DB` to namespace `LOON_DB`.
+4. Cloudflare environment variables
+   - Go to Pages project -> **Settings -> Environment variables -> Production**.
+   - Add:
+     - `GITHUB_REPO=owner/repo`
+     - `GITHUB_TOKEN=<fine-grained token>` as Secret
+     - `SETUP_TOKEN=<high-entropy value>` as Secret
+   - Redeploy from **Deployments -> Retry deployment**.
+5. LOON guided setup page
+   - Open `/admin.html`.
+   - Review the **Guided Setup Assistant** status card.
+   - If checks are not ready, fix Cloudflare settings and click **Refresh Checks**.
+   - Click **Run Full Readiness Check** to validate setup/login/content-read path.
+   - When ready, complete **Initial Setup** with Setup Token + admin credentials.
+   - After login, use **Start First Page Wizard** to create and save your first page.
+   - Optional diagnostics-only screen: `/admin/setup-check` (browser-only readiness view).
+6. Finalize security
+   - After successful first admin creation, rotate/remove `SETUP_TOKEN` in Cloudflare.
+   - Confirm `/api/health` returns all required checks as `true`.
+
+### Optional: Local CLI Automation (Developer Convenience Only)
+This is optional and not required for browser-only setup:
+
+```bash
+# Create/update KV bindings in wrangler.toml (LOON_DB + KV alias)
+npm run setup:kv
+
+# Validate env/config locally
+npm run check:env
+
+# Do both in one command
+npm run setup:local
+```
 ---
 ## Production Checklist
 Before going live, confirm these are set and working:
-- KV binding: `LOON_DB` is configured (in Dashboard or `wrangler.toml`)
+- KV binding: `LOON_DB` is configured (`KV` also works as compatibility fallback)
 - Environment: `GITHUB_REPO` and `GITHUB_TOKEN` configured (secret)
 - CORS: `CORS_ORIGIN` set to your production domain (if restricting)
 - Passkeys: `RP_ID` and `RP_ORIGIN` set to your production domain
@@ -119,6 +143,9 @@ Before going live, confirm these are set and working:
 loon/
 +-- index.html              # Public page (renders JSON content)
 +-- admin.html              # Admin panel (login, edit, manage users)
++-- admin/
+   +-- setup-check/
+      +-- index.html       # Browser-only setup diagnostics entry point
 +-- 404.html                # Custom error page
 +-- robots.txt              # Search engine directives
 +-- _headers                # Cloudflare Pages security headers
@@ -163,10 +190,9 @@ loon/
 +-- scripts/
    +-- bootstrap-admin.js  # Legacy admin bootstrap helper
    +-- setup-kv.mjs        # Optional KV automation (Wrangler)
+   +-- check-env.mjs       # Local environment/config validation
    +-- setup-admin.mjs     # Optional CLI admin bootstrap (Wrangler)
    +-- validate-json.mjs   # JSON validation script
-   +-- API.md              # API reference
-   +-- API.md              # API reference
 +-- CONTRIBUTING.md         # Development guidelines + testing
 +-- LICENSE                 # MIT License
 +-- OPERATIONS.md           # Admin operations + troubleshooting
@@ -189,7 +215,7 @@ loon/
 4. Select a **Template** or start with a blank schema
 5. Click **Create Page**
 6. The new page appears in your admin panel and is ready to edit
-### Option B: Programmatic (API)
+### Option B: Programmatic (API, Optional for Developers)
 Use `POST /api/pages` to create pages programmatically:
 ```bash
 curl -X POST https://your-site.pages.dev/api/pages \
@@ -221,7 +247,7 @@ Users are managed through the admin panel:
 # Then use the web UI to create more users (Users tab)
 ```
 
-Or manage entirely via web UI: Login as admin → Users → Add/Edit/Delete
+Or manage entirely via web UI: Login as admin -> Users -> Add/Edit/Delete
 ---
 ## API Endpoints
 | Endpoint | Method | Description |
@@ -251,6 +277,8 @@ npm install -g wrangler
 # Copy environment template
 cp .env.example .env.local
 # Edit .env.local with your GitHub token and repo
+# Optional: auto-create KV namespaces + validate env
+npm run setup:local
 # Start local server
 npx wrangler pages dev .
 ```
@@ -292,6 +320,7 @@ npm run validate
 
 | Document | Purpose |
 |----------|---------|
+| [docs/README.md](docs/README.md) | Documentation index (start here for docs navigation) |
 | [README.md](README.md) | Quick start (this file) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Technical design + features |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development + testing |
@@ -309,20 +338,22 @@ Having issues? See the [comprehensive troubleshooting guide in OPERATIONS.md](OP
 Before deploying to production, review the [Pre-Deployment Checklist in CONTRIBUTING.md](CONTRIBUTING.md#pre-deployment-checklist).
 
 **Monitor your deployment** with the health check endpoint:
-```bash
-curl https://YOUR_LOON_DOMAIN.pages.dev/api/health
-```
+- Open `https://YOUR_LOON_DOMAIN.pages.dev/api/health` in your browser.
 Returns system status, version, and configuration validation. See [health check documentation](docs/API.md#get-apihealth) for troubleshooting failed checks.
 
 **Quick Fixes:**
 - **Can't create first admin?** Open `/admin.html`, complete Initial Setup, and verify `SETUP_TOKEN` is configured.
 - **Can't complete initial setup?** Verify `SETUP_TOKEN` is set in Cloudflare Pages env vars and redeploy.
+- **Need a guided diagnostics view?** Open `/admin/setup-check` and run **Run Full Readiness Check**.
+- **Need help creating first content?** Log in as admin and click **Start First Page Wizard**.
+- **`KV database not configured` error?** Verify a KV binding exists (`LOON_DB` preferred, `KV` also supported) in `wrangler.toml`/`wrangler.jsonc`.
 - **Health check degraded?** Check `/api/health` response to see which check failed (GitHub token, KV binding, etc.)
 - **Login fails?** Wait 10 seconds for KV sync, clear browser cache
-- **Content not saving?** Check GitHub token permissions and expiration (see [OPERATIONS.md - Environment Setup](OPERATIONS.md#github-token-setup))
+- **Content not saving?** Check GitHub token permissions and expiration (see [OPERATIONS.md - GitHub Token Setup](OPERATIONS.md#github-token-setup))
 
 ---
 
 ## License
 
 MIT License - Use freely, modify freely, no warranty. See [LICENSE](LICENSE).
+

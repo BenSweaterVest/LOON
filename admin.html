@@ -129,10 +129,82 @@ PREREQUISITES:
             padding: 0.75rem 1rem;
             border-radius: 4px;
             margin: 1rem 0;
+            white-space: pre-line;
         }
         .status-success { background: #dcfce7; color: #166534; }
         .status-error { background: #fee2e2; color: #991b1b; }
         .status-info { background: #dbeafe; color: #1e40af; }
+        .onboarding-card {
+            max-width: 640px;
+            margin: 1rem auto 2rem auto;
+            padding: 1.25rem;
+            border: 1px solid var(--muted-border-color);
+            border-radius: 8px;
+            background: var(--card-background-color);
+        }
+        .onboarding-card h3 {
+            margin: 0 0 0.75rem 0;
+            font-size: 1.1rem;
+        }
+        .onboarding-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            margin: 0.75rem 0 1rem 0;
+        }
+        .onboarding-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.6rem;
+            border: 1px solid var(--muted-border-color);
+            border-radius: 6px;
+            background: var(--background-color);
+        }
+        .onboarding-item small {
+            display: block;
+            color: var(--muted-color);
+        }
+        .check-chip {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-radius: 999px;
+            padding: 0.25rem 0.55rem;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+        .check-pass { background: #dcfce7; color: #166534; }
+        .check-warn { background: #fef3c7; color: #92400e; }
+        .check-fail { background: #fee2e2; color: #991b1b; }
+        .check-pending { background: #dbeafe; color: #1e40af; }
+        .onboarding-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .onboarding-help {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border: 1px dashed var(--muted-border-color);
+            border-radius: 6px;
+            background: var(--background-color);
+        }
+        .onboarding-help .grid {
+            margin-bottom: 0.5rem;
+        }
+        .setup-check-shell {
+            max-width: 760px;
+            margin: 2rem auto;
+            padding: 1rem;
+        }
+        .setup-check-shell h1 {
+            margin-bottom: 0.5rem;
+        }
+        .step-list {
+            margin: 0.25rem 0 0.25rem 1rem;
+        }
         
         .user-table { width: 100%; }
         .user-table th { text-align: left; }
@@ -212,6 +284,59 @@ PREREQUISITES:
 </head>
 <body>
     <main class="container">
+        <div id="onboarding-guide" class="onboarding-card hidden">
+            <h3>Guided Setup Assistant</h3>
+            <p style="margin: 0.25rem 0 0.5rem 0; color: var(--muted-color);">
+                Complete setup entirely in your browser using Cloudflare, GitHub, and this LOON page.
+            </p>
+            <div id="onboarding-summary" class="status-message status-info" style="margin-top: 0.5rem;">Checking system status...</div>
+            <small id="onboarding-last-verified" style="display:block; color: var(--muted-color); margin-top: -0.35rem;"></small>
+            <div class="onboarding-grid" id="onboarding-checks"></div>
+            <div id="onboarding-next" class="status-message status-info hidden"></div>
+            <h4 style="margin: 0.75rem 0 0.4rem 0;">Next Steps</h4>
+            <ol id="onboarding-steps" class="step-list"></ol>
+            <div class="onboarding-actions">
+                <button type="button" onclick="refreshOnboardingStatus()">Refresh Checks</button>
+                <button type="button" class="contrast" onclick="runFullReadinessCheck()">Run Full Readiness Check</button>
+                <button type="button" class="secondary" onclick="openCloudflareSetupHelp()">Cloudflare Setup Help</button>
+                <button type="button" class="secondary" onclick="openSetupCheckView()">Open Diagnostics View</button>
+            </div>
+            <div id="full-readiness-result" class="status-message status-info hidden"></div>
+
+            <div class="onboarding-help">
+                <h4 style="margin: 0 0 0.4rem 0;">Quick Helpers</h4>
+                <div class="grid">
+                    <div>
+                        <label for="repo-owner-input">GitHub Owner (suggested)</label>
+                        <input id="repo-owner-input" type="text" placeholder="your-org-or-username">
+                    </div>
+                    <div>
+                        <label for="repo-name-input">Repository Name (suggested)</label>
+                        <input id="repo-name-input" type="text" placeholder="your-loon-repo">
+                    </div>
+                </div>
+                <div class="onboarding-actions" style="margin-bottom: 0.5rem;">
+                    <button type="button" onclick="copyGithubRepoSuggestion()">Copy GITHUB_REPO Suggestion</button>
+                    <button type="button" onclick="generateAndCopySetupToken()">Generate SETUP_TOKEN</button>
+                    <button type="button" onclick="copyEnvTemplate()">Copy Env Template</button>
+                </div>
+                <small style="color: var(--muted-color);">
+                    `GITHUB_REPO` must be exactly `owner/repo`. `SETUP_TOKEN` is only for first-admin setup and should be rotated after setup.
+                </small>
+            </div>
+        </div>
+
+        <div id="setup-check-view" class="setup-check-shell hidden">
+            <h1>LOON Setup Diagnostics</h1>
+            <p style="color: var(--muted-color); margin-top: 0;">
+                Browser-only diagnostics view. Use this page to confirm readiness before opening the full admin app.
+            </p>
+            <div class="onboarding-actions">
+                <a href="/admin.html" role="button">Open Admin Login</a>
+                <button type="button" class="secondary" onclick="refreshOnboardingStatus()">Refresh Checks</button>
+            </div>
+        </div>
+
         <!-- Login Section -->
         <div id="login-section">
             <div class="login-container">
@@ -260,16 +385,21 @@ PREREQUISITES:
                 <div class="form-field">
                     <label for="setup-token">Setup Token</label>
                     <input type="password" id="setup-token" placeholder="Enter SETUP_TOKEN from Cloudflare secret">
+                    <small>
+                        One-time setup gate only. After first admin is created, rotate/remove this value in Cloudflare.
+                    </small>
                 </div>
 
                 <div class="form-field">
                     <label for="setup-username">Admin Username</label>
                     <input type="text" id="setup-username" value="admin" autocomplete="username">
+                    <small>This becomes your real LOON login username.</small>
                 </div>
 
                 <div class="form-field">
                     <label for="setup-password">Admin Password</label>
                     <input type="password" id="setup-password" placeholder="Minimum 8 characters" autocomplete="new-password">
+                    <small>This becomes your real LOON login password.</small>
                 </div>
 
                 <div class="form-field">
@@ -303,6 +433,21 @@ PREREQUISITES:
                 <button onclick="switchTab('account')" id="tab-account">My Account</button>
                 <button onclick="logout()" class="logout-btn">Logout</button>
             </nav>
+            <div id="post-setup-banner" class="status-message status-info hidden">
+                Initial setup is complete.
+                Security recommendation: rotate or remove SETUP_TOKEN in Cloudflare Pages environment variables.
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem;">
+                    <button type="button" onclick="copySetupTokenRotationReminder()">Copy Rotation Reminder</button>
+                    <button type="button" class="secondary" onclick="dismissPostSetupBanner()">Dismiss</button>
+                </div>
+            </div>
+            <div id="first-page-wizard" class="status-message status-info hidden">
+                First-time setup helper: create and save your first page now to verify the full GitHub write path.
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem;">
+                    <button type="button" onclick="startFirstPageWizard()">Start First Page Wizard</button>
+                    <button type="button" class="secondary" onclick="dismissFirstPageWizard()">Dismiss</button>
+                </div>
+            </div>
 
             <!-- Editor Tab -->
             <div id="view-editor">
@@ -565,13 +710,27 @@ PREREQUISITES:
 
         const STORAGE_KEYS = {
             SESSION: 'loon_session',
-            LAST_PAGE: 'loon_last_page'
+            LAST_PAGE: 'loon_last_page',
+            POST_SETUP_NOTICE: 'loon_post_setup_notice',
+            LAST_READINESS: 'loon_last_readiness',
+            FIRST_PAGE_WIZARD_DISMISSED: 'loon_first_page_wizard_dismissed'
         };
+        let ONBOARDING_TIMER = null;
+        const VIEW_MODE = new URLSearchParams(window.location.search).get('view') || 'default';
 
         // =================================================================
         // INITIALIZATION
         // =================================================================
         document.addEventListener('DOMContentLoaded', () => {
+            prefillRepoSuggestion();
+            hydrateLastReadinessStamp();
+
+            if (VIEW_MODE === 'setup-check') {
+                startOnboardingMonitor();
+                showSetupCheckView();
+                return;
+            }
+
             // Check for saved session (localStorage or sessionStorage)
             const saved = localStorage.getItem(STORAGE_KEYS.SESSION) || sessionStorage.getItem(STORAGE_KEYS.SESSION);
             if (saved) {
@@ -597,6 +756,7 @@ PREREQUISITES:
             }
 
             if (!SESSION) {
+                startOnboardingMonitor();
                 checkInitialSetupStatus();
             }
 
@@ -635,14 +795,18 @@ PREREQUISITES:
 
         async function checkInitialSetupStatus() {
             try {
-                const res = await fetch('/api/setup');
-                const data = await res.json();
+                const status = await refreshOnboardingStatus();
+                const data = status.setupData;
+                const resOk = status.setupOk;
 
-                if (res.ok && data.setupRequired) {
+                if (resOk && data.setupRequired) {
                     showSetup();
 
                     if (!data.setupTokenConfigured) {
-                        showError('setup-error', 'Initial setup is required, but SETUP_TOKEN is not configured in environment variables.');
+                        showError('setup-error', [
+                            'Initial setup is required, but SETUP_TOKEN is not configured.',
+                            'Cloudflare Pages -> Settings -> Environment variables -> add SETUP_TOKEN as a Secret, then redeploy.'
+                        ].join('\n'));
                     }
                 } else {
                     showLogin();
@@ -654,13 +818,363 @@ PREREQUISITES:
         }
 
         function showLogin() {
+            document.getElementById('onboarding-guide').classList.remove('hidden');
             document.getElementById('setup-section').classList.add('hidden');
             document.getElementById('login-section').classList.remove('hidden');
         }
 
         function showSetup() {
+            document.getElementById('onboarding-guide').classList.remove('hidden');
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('setup-section').classList.remove('hidden');
+        }
+
+        function showSetupCheckView() {
+            document.getElementById('setup-check-view').classList.remove('hidden');
+            document.getElementById('onboarding-guide').classList.remove('hidden');
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('app-section').classList.add('hidden');
+        }
+
+        function startOnboardingMonitor() {
+            if (ONBOARDING_TIMER) clearInterval(ONBOARDING_TIMER);
+            refreshOnboardingStatus();
+            ONBOARDING_TIMER = setInterval(refreshOnboardingStatus, 30000);
+        }
+
+        function stopOnboardingMonitor() {
+            if (ONBOARDING_TIMER) {
+                clearInterval(ONBOARDING_TIMER);
+                ONBOARDING_TIMER = null;
+            }
+        }
+
+        function openSetupCheckView() {
+            window.open('/admin.html?view=setup-check', '_blank', 'noopener,noreferrer');
+        }
+
+        function prefillRepoSuggestion() {
+            const ownerInput = document.getElementById('repo-owner-input');
+            const repoInput = document.getElementById('repo-name-input');
+            if (!ownerInput || !repoInput) return;
+
+            const host = window.location.hostname || '';
+            const firstLabel = host.split('.')[0] || '';
+            let repoGuess = firstLabel
+                .replace(/-pages$/, '')
+                .replace(/[^a-zA-Z0-9._-]/g, '');
+            if (!repoGuess || repoGuess === 'www' || repoGuess === 'localhost') {
+                repoGuess = 'your-loon-repo';
+            }
+
+            repoInput.value = repoGuess;
+            if (!ownerInput.value) ownerInput.value = 'your-github-owner';
+        }
+
+        function getRepoSuggestion() {
+            const owner = (document.getElementById('repo-owner-input')?.value || '').trim();
+            const repo = (document.getElementById('repo-name-input')?.value || '').trim();
+            if (!owner || !repo) return null;
+            return `${owner}/${repo}`;
+        }
+
+        async function copyGithubRepoSuggestion() {
+            const suggestion = getRepoSuggestion();
+            if (!suggestion) {
+                alert('Enter both GitHub owner and repository name first.');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(suggestion);
+                alert(`Copied: ${suggestion}`);
+            } catch {
+                alert(suggestion);
+            }
+        }
+
+        function generateSecureToken(length = 48) {
+            const bytes = new Uint8Array(length);
+            crypto.getRandomValues(bytes);
+            return Array.from(bytes, b => (b % 36).toString(36)).join('');
+        }
+
+        async function generateAndCopySetupToken() {
+            const token = generateSecureToken(64);
+            try {
+                await navigator.clipboard.writeText(token);
+                alert('Generated and copied SETUP_TOKEN.');
+            } catch {
+                alert(token);
+            }
+        }
+
+        async function copyEnvTemplate() {
+            const repo = getRepoSuggestion() || 'owner/repo';
+            const setupToken = generateSecureToken(64);
+            const template = [
+                `GITHUB_REPO=${repo}`,
+                'GITHUB_TOKEN=<set-as-secret>',
+                `SETUP_TOKEN=${setupToken}`,
+                'ENVIRONMENT=production'
+            ].join('\n');
+            try {
+                await navigator.clipboard.writeText(template);
+                alert('Copied env template.');
+            } catch {
+                alert(template);
+            }
+        }
+
+        function hydrateLastReadinessStamp() {
+            const el = document.getElementById('onboarding-last-verified');
+            if (!el) return;
+            const raw = localStorage.getItem(STORAGE_KEYS.LAST_READINESS);
+            if (!raw) return;
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed?.timestamp && parsed?.status) {
+                    el.textContent = `Last verified: ${new Date(parsed.timestamp).toLocaleString()} (${parsed.status})`;
+                }
+            } catch {
+                // no-op
+            }
+        }
+
+        function storeLastReadiness(statusLabel) {
+            const payload = {
+                timestamp: Date.now(),
+                status: statusLabel
+            };
+            localStorage.setItem(STORAGE_KEYS.LAST_READINESS, JSON.stringify(payload));
+            hydrateLastReadinessStamp();
+        }
+
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function fetchJsonWithRetry(url, options = {}, config = {}) {
+            const retries = typeof config.retries === 'number' ? config.retries : 2;
+            const baseDelayMs = typeof config.baseDelayMs === 'number' ? config.baseDelayMs : 1200;
+            const onRetry = typeof config.onRetry === 'function' ? config.onRetry : null;
+            let lastError = null;
+
+            for (let attempt = 0; attempt <= retries; attempt++) {
+                try {
+                    const res = await fetch(url, options);
+                    let data = {};
+                    try {
+                        data = await res.json();
+                    } catch {
+                        data = {};
+                    }
+
+                    const isTransient = !res.ok && res.status >= 500;
+                    if (isTransient && attempt < retries) {
+                        if (onRetry) onRetry(attempt + 1, retries + 1, 'server');
+                        await sleep(baseDelayMs * (attempt + 1));
+                        continue;
+                    }
+
+                    return { res, data };
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < retries) {
+                        if (onRetry) onRetry(attempt + 1, retries + 1, 'network');
+                        await sleep(baseDelayMs * (attempt + 1));
+                        continue;
+                    }
+                }
+            }
+
+            throw lastError || new Error('Request failed');
+        }
+
+        function renderCheckItem(label, detail, state, fix = null) {
+            const chipClass = state === 'pass'
+                ? 'check-pass'
+                : state === 'fail'
+                    ? 'check-fail'
+                    : state === 'warn'
+                        ? 'check-warn'
+                        : 'check-pending';
+
+            const chipLabel = state === 'pass'
+                ? 'Ready'
+                : state === 'fail'
+                    ? 'Required'
+                    : state === 'warn'
+                        ? 'Action'
+                        : 'Checking';
+
+            const fixHtml = fix && state !== 'pass'
+                ? `<div style="margin-top:0.35rem;"><a href="${escapeHtml(fix.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(fix.label)}</a></div>`
+                : '';
+
+            return `
+                <div class="onboarding-item">
+                    <div>
+                        <strong>${escapeHtml(label)}</strong>
+                        <small>${escapeHtml(detail)}</small>
+                        ${fixHtml}
+                    </div>
+                    <span class="check-chip ${chipClass}">${chipLabel}</span>
+                </div>
+            `;
+        }
+
+        function renderOnboarding(status) {
+            const summaryEl = document.getElementById('onboarding-summary');
+            const checksEl = document.getElementById('onboarding-checks');
+            const nextEl = document.getElementById('onboarding-next');
+            const stepsEl = document.getElementById('onboarding-steps');
+
+            const checks = status.healthData?.checks || {};
+            const setupRequired = !!status.setupData?.setupRequired;
+            const setupTokenConfigured = !!status.setupData?.setupTokenConfigured;
+
+            const rows = [
+                renderCheckItem(
+                    'KV Binding',
+                    checks.kv_database ? 'KV binding is available to Functions.' : 'Add LOON_DB (preferred) or KV binding in Cloudflare Pages.',
+                    checks.kv_database ? 'pass' : 'fail',
+                    { label: 'Open Cloudflare Dashboard', url: 'https://dash.cloudflare.com/' }
+                ),
+                renderCheckItem(
+                    'GitHub Repository',
+                    checks.github_repo ? 'GITHUB_REPO is configured.' : 'Set GITHUB_REPO as owner/repo in Cloudflare Pages env vars.',
+                    checks.github_repo ? 'pass' : 'fail',
+                    { label: 'Open Cloudflare Env Vars', url: 'https://dash.cloudflare.com/' }
+                ),
+                renderCheckItem(
+                    'GitHub Token',
+                    checks.github_token ? 'GITHUB_TOKEN is configured.' : 'Set GITHUB_TOKEN Secret with Contents read/write permission.',
+                    checks.github_token ? 'pass' : 'fail',
+                    { label: 'Create GitHub Token', url: 'https://github.com/settings/personal-access-tokens/new' }
+                ),
+                renderCheckItem(
+                    'Setup Token',
+                    setupTokenConfigured ? 'SETUP_TOKEN is configured for first admin setup.' : 'Add SETUP_TOKEN as a Secret in Cloudflare Pages.',
+                    setupTokenConfigured ? 'pass' : 'warn',
+                    { label: 'Open Cloudflare Env Vars', url: 'https://dash.cloudflare.com/' }
+                )
+            ];
+            checksEl.innerHTML = rows.join('');
+
+            const allCoreReady = !!(checks.kv_database && checks.github_repo && checks.github_token);
+            if (allCoreReady && (!setupRequired || setupTokenConfigured)) {
+                summaryEl.className = 'status-message status-success';
+                summaryEl.textContent = setupRequired
+                    ? 'System is ready. Complete first admin setup below.'
+                    : 'System is ready. You can log in normally.';
+                nextEl.classList.add('hidden');
+            } else {
+                summaryEl.className = 'status-message status-info';
+                summaryEl.textContent = 'Some required settings still need attention before setup/login succeeds.';
+                nextEl.className = 'status-message status-info';
+                nextEl.textContent = 'Make updates in Cloudflare Pages Settings, then click "Refresh Checks".';
+                nextEl.classList.remove('hidden');
+            }
+
+            const steps = [];
+            steps.push(`<li>${allCoreReady ? 'Step 1 complete: core Cloudflare + GitHub config is ready.' : 'Step 1: In Cloudflare Pages, configure KV binding and required env vars.'}</li>`);
+            if (setupRequired) {
+                steps.push(`<li>${setupTokenConfigured ? 'Step 2: Create first admin in the Initial Setup form on this page.' : 'Step 2: Add SETUP_TOKEN Secret in Cloudflare, redeploy, then return here.'}</li>`);
+                steps.push('<li>Step 3: Log in as admin, save a test page, then rotate/remove SETUP_TOKEN.</li>');
+            } else {
+                steps.push('<li>Step 2 complete: initial admin already exists.</li>');
+                steps.push('<li>Step 3: Log in and continue normal operations from LOON admin.</li>');
+            }
+            stepsEl.innerHTML = steps.join('');
+        }
+
+        async function refreshOnboardingStatus() {
+            const result = {
+                healthOk: false,
+                setupOk: false,
+                healthData: null,
+                setupData: null
+            };
+
+            try {
+                const [healthPack, setupPack] = await Promise.all([
+                    fetchJsonWithRetry('/api/health', { cache: 'no-store' }, { retries: 1, baseDelayMs: 900 }),
+                    fetchJsonWithRetry('/api/setup', { cache: 'no-store' }, { retries: 1, baseDelayMs: 900 })
+                ]);
+
+                result.healthOk = healthPack.res.ok;
+                result.setupOk = setupPack.res.ok;
+                result.healthData = healthPack.data;
+                result.setupData = setupPack.data;
+            } catch (err) {
+                const summaryEl = document.getElementById('onboarding-summary');
+                summaryEl.className = 'status-message status-error';
+                summaryEl.textContent = 'Unable to reach setup/health endpoints. Verify the deployment URL and redeploy if needed.';
+                storeLastReadiness('failed');
+                return result;
+            }
+
+            renderOnboarding(result);
+            const overall = result.healthData?.status === 'ok' ? 'healthy' : 'degraded';
+            storeLastReadiness(overall);
+            return result;
+        }
+
+        async function runFullReadinessCheck() {
+            const resultEl = document.getElementById('full-readiness-result');
+            resultEl.className = 'status-message status-info';
+            resultEl.textContent = 'Running full readiness check...';
+            resultEl.classList.remove('hidden');
+
+            const lines = [];
+            const base = await refreshOnboardingStatus();
+            const checks = base.healthData?.checks || {};
+            lines.push(`${checks.kv_database ? 'PASS' : 'FAIL'} KV binding`);
+            lines.push(`${checks.github_repo ? 'PASS' : 'FAIL'} GITHUB_REPO configured`);
+            lines.push(`${checks.github_token ? 'PASS' : 'FAIL'} GITHUB_TOKEN configured`);
+            lines.push(`${base.setupData?.setupTokenConfigured ? 'PASS' : 'WARN'} SETUP_TOKEN configured`);
+            lines.push(`${base.setupData?.setupRequired ? 'ACTION' : 'PASS'} Initial setup ${base.setupData?.setupRequired ? 'required' : 'already complete'}`);
+
+            if (SESSION?.token) {
+                try {
+                    const authPack = await fetchJsonWithRetry('/api/auth', {
+                        headers: { Authorization: `Bearer ${SESSION.token}` },
+                        cache: 'no-store'
+                    }, { retries: 1, baseDelayMs: 800 });
+                    lines.push(`${authPack.res.ok ? 'PASS' : 'FAIL'} Session validation`);
+                } catch {
+                    lines.push('FAIL Session validation');
+                }
+
+                try {
+                    const pagesPack = await fetchJsonWithRetry('/api/pages?minimal=true&limit=1', {
+                        headers: { Authorization: `Bearer ${SESSION.token}` },
+                        cache: 'no-store'
+                    }, { retries: 1, baseDelayMs: 800 });
+                    lines.push(`${pagesPack.res.ok ? 'PASS' : 'FAIL'} GitHub content read path`);
+                } catch {
+                    lines.push('FAIL GitHub content read path');
+                }
+            } else {
+                lines.push('INFO Log in as admin to include session/content-path checks.');
+            }
+
+            const failures = lines.filter(line => line.startsWith('FAIL')).length;
+            if (failures > 0) {
+                resultEl.className = 'status-message status-error';
+            } else {
+                resultEl.className = 'status-message status-success';
+            }
+            resultEl.textContent = lines.join('\n');
+        }
+
+        function openCloudflareSetupHelp() {
+            const message = [
+                'Cloudflare Pages setup path:',
+                '1) Project -> Settings -> Functions -> KV namespace bindings',
+                '2) Project -> Settings -> Environment variables (Production)',
+                '3) Deployments -> Retry deployment'
+            ].join('\n');
+            alert(message);
         }
 
         async function completeInitialSetup() {
@@ -687,13 +1201,17 @@ PREREQUISITES:
             hideError('setup-error');
 
             try {
-                const res = await fetch('/api/setup', {
+                const { res, data } = await fetchJsonWithRetry('/api/setup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ setupToken, username, password })
+                }, {
+                    retries: 2,
+                    baseDelayMs: 1200,
+                    onRetry: (attempt, total, kind) => {
+                        showStatus('setup-error', `Temporary ${kind} issue during setup. Retrying (${attempt}/${total - 1})...`, 'info');
+                    }
                 });
-
-                const data = await res.json();
                 if (!res.ok) {
                     throw new Error(data.error || 'Initial setup failed');
                 }
@@ -705,10 +1223,11 @@ PREREQUISITES:
                     expiresAt: Date.now() + (data.expiresIn * 1000)
                 };
 
+                sessionStorage.setItem(STORAGE_KEYS.POST_SETUP_NOTICE, '1');
                 sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(SESSION));
                 showApp();
             } catch (e) {
-                showError('setup-error', e.message);
+                showError('setup-error', mapSetupError(e.message));
             }
         }
         
@@ -755,13 +1274,17 @@ PREREQUISITES:
             hideError('login-error');
 
             try {
-                const res = await fetch('/api/auth', {
+                const { res, data } = await fetchJsonWithRetry('/api/auth', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
+                }, {
+                    retries: 2,
+                    baseDelayMs: 1200,
+                    onRetry: (attempt, total, kind) => {
+                        showStatus('login-error', `Temporary ${kind} issue during login. Retrying (${attempt}/${total - 1})...`, 'info');
+                    }
                 });
-
-                const data = await res.json();
 
                 if (!res.ok) {
                     throw new Error(data.error || 'Login failed');
@@ -783,7 +1306,7 @@ PREREQUISITES:
                 showApp();
 
             } catch (e) {
-                showError('login-error', e.message);
+                showError('login-error', mapLoginError(e.message));
             }
         }
 
@@ -811,6 +1334,8 @@ PREREQUISITES:
         }
 
         function showApp() {
+            stopOnboardingMonitor();
+            document.getElementById('onboarding-guide').classList.add('hidden');
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('setup-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
@@ -827,6 +1352,12 @@ PREREQUISITES:
                 document.getElementById('tab-sessions').classList.remove('hidden');
                 document.getElementById('tab-audit').classList.remove('hidden');
             }
+
+            if (sessionStorage.getItem(STORAGE_KEYS.POST_SETUP_NOTICE) === '1') {
+                document.getElementById('post-setup-banner').classList.remove('hidden');
+            }
+
+            maybeShowFirstPageWizard();
         }
 
         // =================================================================
@@ -1014,13 +1545,21 @@ PREREQUISITES:
             
             try {
                 // Step 1: Get authentication challenge
-                const challengeRes = await fetch('/api/passkeys/auth/challenge');
-                
-                if (!challengeRes.ok) {
+                const challengePack = await fetchJsonWithRetry('/api/passkeys/auth/challenge', {
+                    cache: 'no-store'
+                }, {
+                    retries: 2,
+                    baseDelayMs: 1000,
+                    onRetry: (attempt, total, kind) => {
+                        showStatus('login-error', `Temporary ${kind} issue during passkey challenge. Retrying (${attempt}/${total - 1})...`, 'info');
+                    }
+                });
+
+                if (!challengePack.res.ok) {
                     throw new Error('Failed to get authentication challenge');
                 }
-                
-                const challengeData = await challengeRes.json();
+
+                const challengeData = challengePack.data;
                 const allowCredentials = (challengeData.allowCredentials || []).map(cred => ({
                     id: base64urlToBuffer(cred.id),
                     type: 'public-key',
@@ -1043,7 +1582,7 @@ PREREQUISITES:
                 }
                 
                 // Step 3: Verify assertion
-                const verifyRes = await fetch('/api/passkeys/auth/verify', {
+                const verifyPack = await fetchJsonWithRetry('/api/passkeys/auth/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1059,11 +1598,17 @@ PREREQUISITES:
                         },
                         challengeToken: challengeData.challengeToken
                     })
+                }, {
+                    retries: 2,
+                    baseDelayMs: 1000,
+                    onRetry: (attempt, total, kind) => {
+                        showStatus('login-error', `Temporary ${kind} issue during passkey verification. Retrying (${attempt}/${total - 1})...`, 'info');
+                    }
                 });
-                
-                const verifyData = await verifyRes.json();
-                
-                if (!verifyRes.ok) {
+
+                const verifyData = verifyPack.data;
+
+                if (!verifyPack.res.ok) {
                     throw new Error(verifyData.error || 'Authentication failed');
                 }
                 
@@ -1086,7 +1631,7 @@ PREREQUISITES:
                 
             } catch (e) {
                 console.error('Passkey login failed:', e);
-                showError('login-error', e.message || 'Passkey login failed');
+                showError('login-error', mapLoginError(e.message || 'Passkey login failed'));
             }
         }
         
@@ -2372,6 +2917,116 @@ PREREQUISITES:
         // =================================================================
         // UTILITIES
         // =================================================================
+        function mapSetupError(message) {
+            const msg = String(message || '');
+            const lower = msg.toLowerCase();
+
+            if (lower.includes('invalid setup token')) {
+                return [
+                    'Invalid setup token.',
+                    'Confirm SETUP_TOKEN in Cloudflare Pages -> Settings -> Environment variables (Production), then paste that exact value here.'
+                ].join('\n');
+            }
+            if (lower.includes('setup token') && lower.includes('not configured')) {
+                return [
+                    'SETUP_TOKEN is not configured.',
+                    'Add SETUP_TOKEN as a Secret in Cloudflare Pages, redeploy, then refresh this page.'
+                ].join('\n');
+            }
+            if (lower.includes('kv') && lower.includes('not configured')) {
+                return [
+                    'KV binding is missing.',
+                    'In Cloudflare Pages -> Settings -> Functions, bind LOON_DB (preferred) or KV, then redeploy.'
+                ].join('\n');
+            }
+            if (lower.includes('setup already completed')) {
+                return [
+                    'Initial setup is already complete.',
+                    'Use the normal login form. If you need access, reset admin credentials from an existing admin account.'
+                ].join('\n');
+            }
+            if (lower.includes('too many setup attempts')) {
+                return 'Too many setup attempts. Wait about 1 minute, then retry.';
+            }
+            return msg || 'Initial setup failed.';
+        }
+
+        function mapLoginError(message) {
+            const msg = String(message || '');
+            const lower = msg.toLowerCase();
+
+            if (lower.includes('invalid credentials')) {
+                return 'Login failed. Check username/password and try again.';
+            }
+            if (lower.includes('too many') && lower.includes('login')) {
+                return 'Too many login attempts. Wait about 1 minute and try again.';
+            }
+            if (lower.includes('kv') && lower.includes('not configured')) {
+                return [
+                    'Login is blocked because KV is not configured.',
+                    'Set LOON_DB (preferred) or KV binding in Cloudflare Pages Functions, then redeploy.'
+                ].join('\n');
+            }
+            return msg || 'Login failed.';
+        }
+
+        function dismissPostSetupBanner() {
+            sessionStorage.removeItem(STORAGE_KEYS.POST_SETUP_NOTICE);
+            document.getElementById('post-setup-banner').classList.add('hidden');
+        }
+
+        function maybeShowFirstPageWizard() {
+            if (!SESSION || SESSION.role !== 'admin') return;
+            const dismissed = localStorage.getItem(STORAGE_KEYS.FIRST_PAGE_WIZARD_DISMISSED) === '1';
+            if (dismissed) return;
+            document.getElementById('first-page-wizard').classList.remove('hidden');
+        }
+
+        function dismissFirstPageWizard() {
+            localStorage.setItem(STORAGE_KEYS.FIRST_PAGE_WIZARD_DISMISSED, '1');
+            document.getElementById('first-page-wizard').classList.add('hidden');
+        }
+
+        function startFirstPageWizard() {
+            switchTab('editor');
+            showNewPageDialog();
+
+            const idEl = document.getElementById('new-page-id');
+            const titleEl = document.getElementById('new-page-title');
+            const templateEl = document.getElementById('new-page-template');
+
+            if (idEl && !idEl.value.trim()) {
+                idEl.value = 'welcome';
+            }
+            if (titleEl && !titleEl.value.trim()) {
+                titleEl.value = 'Welcome';
+            }
+            if (templateEl && !templateEl.value) {
+                templateEl.value = 'blog-post';
+            }
+
+            const statusEl = document.getElementById('new-page-status');
+            if (statusEl) {
+                statusEl.className = 'status-message status-info';
+                statusEl.textContent = 'Step 1: Confirm Page ID/Title, then click Create Page. Step 2: Add content and click Save Changes.';
+                statusEl.classList.remove('hidden');
+            }
+        }
+
+        async function copySetupTokenRotationReminder() {
+            const reminder = [
+                'LOON security follow-up:',
+                'Rotate or remove SETUP_TOKEN in Cloudflare Pages -> Settings -> Environment variables (Production).',
+                'Then redeploy so the change takes effect.'
+            ].join(' ');
+            try {
+                await navigator.clipboard.writeText(reminder);
+                alert('Copied setup-token rotation reminder.');
+            } catch (err) {
+                alert(reminder);
+            }
+        }
+
         function showStatus(elementId, message, type) {
             const el = document.getElementById(elementId);
             el.className = `status-message status-${type}`;
@@ -2385,6 +3040,7 @@ PREREQUISITES:
 
         function showError(elementId, message) {
             const el = document.getElementById(elementId);
+            el.className = 'status-message status-error';
             el.textContent = message;
             el.classList.remove('hidden');
         }

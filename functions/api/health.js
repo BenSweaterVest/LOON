@@ -92,9 +92,9 @@ export async function onRequestGet(context) {
     github_token: !!env.GITHUB_TOKEN,
     
     /**
-     * LOON_DB is the KV namespace binding (required)
+     * KV binding is required (LOON_DB preferred, KV fallback supported)
      */
-    kv_database: !!env.LOON_DB,
+    kv_database: !!(env.LOON_DB || env.KV),
 
     /**
      * Optional: Cloudflare Images (media uploads)

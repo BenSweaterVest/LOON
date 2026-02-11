@@ -49,11 +49,11 @@ const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
  */
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     // Check KV binding
     if (!db) {
-        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+        return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     // Validate admin session

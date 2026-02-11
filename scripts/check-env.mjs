@@ -1,143 +1,174 @@
 #!/usr/bin/env node
 /**
- * Environment Variable Validation Script
- * Checks that required environment variables are properly configured
- * 
- * Usage: node scripts/check-env.mjs
+ * Environment/config validation for LOON.
+ *
+ * Validates:
+ * - Required environment variables are present.
+ * - GITHUB_REPO format looks correct.
+ * - wrangler.toml has a KV binding (LOON_DB preferred, KV supported).
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
+const wranglerTomlPath = path.join(projectRoot, 'wrangler.toml');
 
-// Required for all deployments
 const REQUIRED_VARS = ['GITHUB_REPO', 'GITHUB_TOKEN'];
-
-// Optional but recommended for full functionality
 const OPTIONAL_VARS = ['SETUP_TOKEN', 'CORS_ORIGIN', 'CF_ACCOUNT_ID', 'CF_IMAGES_TOKEN'];
+const GITHUB_REPO_REGEX = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
-function checkFile(filePath, description) {
-    try {
-        if (fs.existsSync(filePath)) {
-            const content = fs.readFileSync(filePath, 'utf-8');
-            return {
-                exists: true,
-                content,
-                path: filePath
-            };
-        }
-    } catch (err) {
-        console.warn(`Warning: Could not read ${description}: ${err.message}`);
-    }
-    return { exists: false };
+function readFileIfExists(filePath) {
+    if (!fs.existsSync(filePath)) return null;
+    return fs.readFileSync(filePath, 'utf8');
 }
 
 function parseEnvFile(content) {
     const vars = {};
-    content.split('\n').forEach(line => {
+    if (!content) return vars;
+
+    for (const line of content.split('\n')) {
         const trimmed = line.trim();
-        if (trimmed && !trimmed.startsWith('#')) {
-            const [key, ...valueParts] = trimmed.split('=');
-            const value = valueParts.join('=').replace(/^["']|["']$/g, '');
-            if (key && value) {
-                vars[key] = value;
-            }
-        }
-    });
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        const eq = trimmed.indexOf('=');
+        if (eq <= 0) continue;
+
+        const key = trimmed.slice(0, eq).trim();
+        const rawValue = trimmed.slice(eq + 1).trim();
+        const value = rawValue.replace(/^["']|["']$/g, '');
+        if (key && value) vars[key] = value;
+    }
     return vars;
 }
 
-console.log('\nLOON Environment Variable Check\n');
-console.log('=====================================\n');
+function detectGitHubRepoFromRemote() {
+    try {
+        const remote = execSync('git remote get-url origin', {
+            cwd: projectRoot,
+            stdio: ['ignore', 'pipe', 'ignore'],
+            encoding: 'utf8'
+        }).trim();
 
-// Detect if running in CI environment
-const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+        // Supports:
+        // - https://github.com/owner/repo.git
+        // - git@github.com:owner/repo.git
+        const match = remote.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/i);
+        if (!match) return null;
+        return `${match[1]}/${match[2]}`;
+    } catch {
+        return null;
+    }
+}
 
-if (isCI) {
-    console.log('??  Running in CI environment (GitHub Actions)');
-    console.log('   Environment variables configured via GitHub Secrets');
-    console.log('   Skipping local .env file check\n');
-    
-    // In CI, just verify that GitHub variables are available
-    const hasGithubRepo = 'GITHUB_REPO' in process.env;
-    const hasGithubToken = 'GITHUB_TOKEN' in process.env;
-    
-    if (hasGithubRepo && hasGithubToken) {
-        console.log('[OK] GitHub secrets are configured in CI');
-        console.log('   Deployment will proceed\n');
-        process.exit(0);
+function parseKvBindingsFromWranglerToml(content) {
+    if (!content) return [];
+    const bindings = [];
+    const regex = /binding\s*=\s*"([^"]+)"/g;
+    let m;
+    while ((m = regex.exec(content)) !== null) {
+        bindings.push(m[1]);
+    }
+    return bindings;
+}
+
+function printLine(label, value = '') {
+    console.log(`${label}${value ? ` ${value}` : ''}`);
+}
+
+function main() {
+    printLine('\nLOON Environment Check');
+    printLine('======================\n');
+
+    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+    const envFiles = ['.env', '.env.local', '.dev.vars'].map(name => path.join(projectRoot, name));
+    const fileVars = {};
+
+    if (isCI) {
+        printLine('[Info] Running in CI environment; using process env only.');
     } else {
-        console.log('Warning: GitHub secrets not detected in CI');
-        console.log('   Configure GITHUB_REPO and GITHUB_TOKEN in GitHub Secrets');
-        console.log('   See https://github.com/settings/secrets\n');
-        process.exit(0); // Don't fail - CI admin needs to configure this
+        for (const filePath of envFiles) {
+            const content = readFileIfExists(filePath);
+            if (content) {
+                const parsed = parseEnvFile(content);
+                Object.assign(fileVars, parsed);
+                printLine('[OK] Found', path.basename(filePath));
+            }
+        }
+        if (Object.keys(fileVars).length === 0) {
+            printLine('[Warn] No local env file found (.env, .env.local, .dev.vars).');
+        }
     }
-}
 
-// Check .env files (local development only)
-const envFiles = [
-    { path: path.join(projectRoot, '.env'), desc: '.env (local)' },
-    { path: path.join(projectRoot, '.env.local'), desc: '.env.local (local)' },
-    { path: path.join(projectRoot, '.dev.vars'), desc: '.dev.vars (Wrangler)' }
-];
+    const getVar = (name) => process.env[name] || fileVars[name];
 
-let foundVars = {};
-let foundFile = null;
-
-for (const file of envFiles) {
-    const result = checkFile(file.path, file.desc);
-    if (result.exists) {
-        const vars = parseEnvFile(result.content);
-        foundVars = { ...foundVars, ...vars };
-        foundFile = file.desc;
-        console.log(`[OK] Found ${file.desc}`);
+    let hasErrors = false;
+    printLine('\nRequired Variables:');
+    for (const key of REQUIRED_VARS) {
+        const value = getVar(key);
+        if (value) {
+            printLine('[OK]', key);
+        } else {
+            hasErrors = true;
+            printLine('[Missing]', key);
+        }
     }
-}
 
-if (!foundFile) {
-    console.log('Warning: No local .env files found');
-    console.log('   This is OK for production (use Cloudflare dashboard)');
-    console.log('   For local dev, create .env or .env.local');
-}
-
-console.log('\n=====================================\n');
-
-// Check required variables
-let allGood = true;
-
-console.log('Required Variables:\n');
-REQUIRED_VARS.forEach(varName => {
-    const hasVar = varName in process.env || varName in foundVars;
-    const status = hasVar ? '[OK]' : '[MISSING]';
-    console.log(`  ${status} ${varName}`);
-    
-    if (!hasVar) {
-        allGood = false;
+    const githubRepo = getVar('GITHUB_REPO');
+    if (githubRepo) {
+        if (GITHUB_REPO_REGEX.test(githubRepo)) {
+            printLine('[OK]', `GITHUB_REPO format: ${githubRepo}`);
+        } else {
+            hasErrors = true;
+            printLine('[Invalid]', `GITHUB_REPO format is invalid: ${githubRepo}`);
+        }
     }
-});
 
-console.log('\nOptional Variables:\n');
-OPTIONAL_VARS.forEach(varName => {
-    const hasVar = varName in process.env || varName in foundVars;
-    const status = hasVar ? '[OK]' : '[NOT SET]';
-    console.log(`  ${status} ${varName}`);
-});
+    const guessedRepo = detectGitHubRepoFromRemote();
+    if (!githubRepo && guessedRepo) {
+        printLine('[Hint]', `Detected repo from git remote: ${guessedRepo}`);
+    }
 
-console.log('\n=====================================\n');
+    printLine('\nOptional Variables:');
+    for (const key of OPTIONAL_VARS) {
+        const value = getVar(key);
+        printLine(value ? '[OK]' : '[Not Set]', key);
+    }
 
-// Validation results
-if (allGood) {
-    console.log('[OK] All required variables are set!\n');
+    printLine('\nWrangler KV Binding Check:');
+    const wranglerToml = readFileIfExists(wranglerTomlPath);
+    if (!wranglerToml) {
+        printLine('[Warn]', 'wrangler.toml not found');
+    } else {
+        const bindings = parseKvBindingsFromWranglerToml(wranglerToml);
+        if (bindings.length === 0) {
+            printLine('[Warn]', 'No kv_namespaces binding found in wrangler.toml');
+            printLine('[Hint]', 'Run: npm run setup:kv');
+        } else {
+            printLine('[OK]', `Detected bindings: ${bindings.join(', ')}`);
+            if (bindings.includes('LOON_DB')) {
+                printLine('[OK]', 'Preferred binding LOON_DB is present');
+            } else if (bindings.includes('KV')) {
+                printLine('[Warn]', 'Only KV binding present; runtime supports it but LOON_DB is preferred');
+            } else {
+                printLine('[Warn]', 'Neither LOON_DB nor KV binding found');
+                printLine('[Hint]', 'Run: npm run setup:kv');
+            }
+        }
+    }
+
+    printLine('\n======================');
+    if (hasErrors) {
+        printLine('[FAIL] Missing/invalid required configuration.');
+        printLine('Fix required variables, then rerun: npm run check:env\n');
+        process.exit(1);
+    }
+
+    printLine('[PASS] Required configuration is present.\n');
     process.exit(0);
-} else {
-    console.log('[MISSING] Missing required variables!\n');
-    console.log('Setup instructions:');
-    console.log('  1. Copy .env.example to .env.local');
-    console.log('  2. Fill in GITHUB_REPO and GITHUB_TOKEN');
-    console.log('  3. For Wrangler: use .dev.vars instead');
-    console.log('  4. See .env.example for detailed instructions\n');
-    process.exit(1);
 }
+
+main();

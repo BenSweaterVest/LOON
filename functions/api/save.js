@@ -267,11 +267,11 @@ function canUserEdit(session, existingContent) {
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     // Check bindings
     if (!db) {
-        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {

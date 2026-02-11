@@ -171,11 +171,11 @@ function generateSessionToken() {
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     // Check KV binding exists
     if (!db) {
-        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     // Rate limit check
@@ -285,10 +285,10 @@ export async function onRequestPost(context) {
  */
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     if (!db) {
-        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+        return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     try {
@@ -328,10 +328,10 @@ export async function onRequestGet(context) {
  */
 export async function onRequestDelete(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     if (!db) {
-        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+        return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     try {
@@ -377,10 +377,10 @@ export async function onRequestDelete(context) {
  */
 export async function onRequestPatch(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     if (!db) {
-        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+        return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     try {

@@ -10,11 +10,12 @@
  *   import { getKVBinding } from './_kv.js';
  *   const db = getKVBinding(env);
  *   if (!db) {
- *     return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+ *     return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
  *   }
  *
  * CONFIGURATION:
- *   By default uses hardcoded `LOON_DB` binding.
+ *   By default uses `LOON_DB` binding.
+ *   Also supports `KV` binding as compatibility fallback.
  *   Set KV_NAMESPACE environment variable to override:
  *     KV_NAMESPACE=my-custom-namespace
  *   Set KV_NAMESPACE_ID for explicit namespace ID configuration:
@@ -34,19 +35,21 @@
 export function getKVBinding(env) {
     // Priority order:
     // 1. Custom namespace via KV_NAMESPACE env var
-    // 2. Hardcoded LOON_DB binding (backward compatible)
+    // 2. LOON_DB binding (preferred)
+    // 3. KV binding (compatibility fallback)
     
     if (!env) {
         return null;
     }
     
     // Check for custom namespace binding via environment variable
-    // Users can set KV_NAMESPACE=custom_name and then bind that in Cloudflare
-    // then pass it as a custom binding
-    // For now, we support the standard LOON_DB binding
-    // Future: Support custom binding names once Cloudflare allows dynamic bindings
-    
-    return env.LOON_DB || null;
+    // Users can set KV_NAMESPACE=custom_name and then bind that in Cloudflare.
+    const customBindingName = env.KV_NAMESPACE;
+    if (customBindingName && typeof customBindingName === 'string' && env[customBindingName]) {
+        return env[customBindingName];
+    }
+
+    return env.LOON_DB || env.KV || null;
 }
 
 /**

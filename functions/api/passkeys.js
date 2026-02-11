@@ -193,7 +193,7 @@ async function validateSession(request, env) {
 async function handleRegistrationChallenge(request, env) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -271,7 +271,7 @@ async function handleRegistrationChallenge(request, env) {
 async function handleRegistrationVerify(request, env) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -520,7 +520,7 @@ async function handleRegistrationVerify(request, env) {
 async function handleAuthChallenge(request, env) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -598,7 +598,7 @@ async function handleAuthChallenge(request, env) {
 async function handleAuthVerify(request, env) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -876,7 +876,7 @@ async function handleAuthVerify(request, env) {
 async function handleListPasskeys(request, env) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -927,7 +927,7 @@ async function handleListPasskeys(request, env) {
 async function handleUpdatePasskey(request, env, credentialId) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -991,7 +991,7 @@ async function handleUpdatePasskey(request, env, credentialId) {
 async function handleDeletePasskey(request, env, credentialId) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -1049,7 +1049,7 @@ async function handleDeletePasskey(request, env, credentialId) {
 async function handleRecoveryVerify(request, env) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -1158,7 +1158,7 @@ async function handleRecoveryVerify(request, env) {
 async function handleRecoveryDisable(request, env) {
     if (!env.LOON_DB) {
         return new Response(
-            JSON.stringify({ error: 'KV binding missing' }),
+            JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
@@ -1198,8 +1198,11 @@ async function handleRecoveryDisable(request, env) {
  */
 export default {
     async fetch(request, env) {
+        // Normalize KV binding so deployments using `KV` still work.
+        const normalizedEnv = env.LOON_DB ? env : { ...env, LOON_DB: env.KV };
+
         if (request.method === 'OPTIONS') {
-            return handleCorsOptions(env, request, CORS_OPTIONS);
+            return handleCorsOptions(normalizedEnv, request, CORS_OPTIONS);
         }
         
         const url = new URL(request.url);
@@ -1208,45 +1211,45 @@ export default {
         // Routes
         if (path === '/api/passkeys/register/challenge') {
             if (request.method === 'GET') {
-                return handleRegistrationChallenge(request, env);
+                return handleRegistrationChallenge(request, normalizedEnv);
             }
         } else if (path === '/api/passkeys/register/verify') {
             if (request.method === 'POST') {
-                return handleRegistrationVerify(request, env);
+                return handleRegistrationVerify(request, normalizedEnv);
             }
         } else if (path === '/api/passkeys/auth/challenge') {
             if (request.method === 'GET') {
-                return handleAuthChallenge(request, env);
+                return handleAuthChallenge(request, normalizedEnv);
             }
         } else if (path === '/api/passkeys/auth/verify') {
             if (request.method === 'POST') {
-                return handleAuthVerify(request, env);
+                return handleAuthVerify(request, normalizedEnv);
             }
         } else if (path === '/api/passkeys/recovery/verify') {
             if (request.method === 'POST') {
-                return handleRecoveryVerify(request, env);
+                return handleRecoveryVerify(request, normalizedEnv);
             }
         } else if (path === '/api/passkeys/recovery/disable') {
             if (request.method === 'POST') {
-                return handleRecoveryDisable(request, env);
+                return handleRecoveryDisable(request, normalizedEnv);
             }
         } else if (path === '/api/passkeys') {
             if (request.method === 'GET') {
-                return handleListPasskeys(request, env);
+                return handleListPasskeys(request, normalizedEnv);
             }
         } else if (path.match(/^\/api\/passkeys\/[^/]+$/)) {
             const credentialId = path.split('/').pop();
             
             if (request.method === 'PATCH') {
-                return handleUpdatePasskey(request, env, credentialId);
+                return handleUpdatePasskey(request, normalizedEnv, credentialId);
             } else if (request.method === 'DELETE') {
-                return handleDeletePasskey(request, env, credentialId);
+                return handleDeletePasskey(request, normalizedEnv, credentialId);
             }
         }
         
         return new Response(
             JSON.stringify({ error: 'Not found' }),
-            { status: 404, headers: getCorsHeaders(env, request) }
+            { status: 404, headers: getCorsHeaders(normalizedEnv, request) }
         );
     }
 };

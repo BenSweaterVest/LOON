@@ -101,10 +101,10 @@ async function validateAdminSession(db, authHeader) {
  */
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     if (!db) {
-        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     // Rate limit (KV-backed)
@@ -172,10 +172,10 @@ export async function onRequestGet(context) {
  */
 export async function onRequestDelete(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     if (!db) {
-        return jsonResponse({ error: 'KV database not configured. See OPERATIONS.md for setup.' }, 500, env, request);
+        return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);
     }
 
     // Rate limit (KV-backed)

@@ -107,11 +107,11 @@ async function deleteFromGitHub(env, path, message) {
  */
 export async function onRequestDelete(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     // Check bindings
     if (!db) {
-        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+        return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {

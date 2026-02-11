@@ -5,10 +5,13 @@
  * What it does:
  * 1) Creates production and preview KV namespaces via Wrangler.
  * 2) Writes/updates the LOON_DB binding in wrangler.toml.
+ * 3) Adds a compatibility alias binding (KV) by default.
  *
  * Usage:
  *   node scripts/setup-kv.mjs
  *   node scripts/setup-kv.mjs --binding LOON_DB
+ *   node scripts/setup-kv.mjs --legacy-binding KV
+ *   node scripts/setup-kv.mjs --no-legacy-binding
  *   node scripts/setup-kv.mjs --env staging
  */
 
@@ -30,6 +33,8 @@ const getArg = (name, defaultValue) => {
 };
 
 const BINDING = getArg('--binding', 'LOON_DB');
+const DISABLE_LEGACY_BINDING = args.includes('--no-legacy-binding');
+const LEGACY_BINDING = DISABLE_LEGACY_BINDING ? '' : getArg('--legacy-binding', 'KV');
 const ENV = getArg('--env', '');
 const PROD_NAMESPACE_NAME = getArg('--name', BINDING);
 const PREVIEW_NAMESPACE_NAME = getArg('--preview-name', `${BINDING}_preview`);
@@ -107,14 +112,26 @@ function upsertWranglerKvBinding(prodId, previewId) {
     }
 
     const current = fs.readFileSync(wranglerPath, 'utf8');
-    const block = [
+    const blocks = [
         BEGIN_MARKER,
         `[[kv_namespaces]]`,
         `binding = "${BINDING}"`,
         `id = "${prodId}"`,
-        `preview_id = "${previewId}"`,
-        END_MARKER
-    ].join('\n');
+        `preview_id = "${previewId}"`
+    ];
+
+    if (LEGACY_BINDING && LEGACY_BINDING !== BINDING) {
+        blocks.push(
+            '',
+            `[[kv_namespaces]]`,
+            `binding = "${LEGACY_BINDING}"`,
+            `id = "${prodId}"`,
+            `preview_id = "${previewId}"`
+        );
+    }
+
+    blocks.push(END_MARKER);
+    const block = blocks.join('\n');
 
     const markerRegex = new RegExp(`${BEGIN_MARKER}[\\s\\S]*?${END_MARKER}`, 'm');
     let next;
@@ -130,6 +147,11 @@ function upsertWranglerKvBinding(prodId, previewId) {
 
 function main() {
     console.log(`Setting up KV binding "${BINDING}" in ${path.basename(wranglerPath)}...`);
+    if (LEGACY_BINDING && LEGACY_BINDING !== BINDING) {
+        console.log(`Compatibility alias binding enabled: "${LEGACY_BINDING}"`);
+    } else if (DISABLE_LEGACY_BINDING) {
+        console.log('Compatibility alias binding disabled.');
+    }
     if (ENV) {
         console.log(`Using env: ${ENV}`);
     }
@@ -141,7 +163,11 @@ function main() {
     console.log(`Created namespace "${PREVIEW_NAMESPACE_NAME}" => ${previewId}`);
 
     upsertWranglerKvBinding(prodId, previewId);
-    console.log(`Updated wrangler.toml with ${BINDING} binding.`);
+    if (LEGACY_BINDING && LEGACY_BINDING !== BINDING) {
+        console.log(`Updated wrangler.toml with bindings: ${BINDING}, ${LEGACY_BINDING}.`);
+    } else {
+        console.log(`Updated wrangler.toml with binding: ${BINDING}.`);
+    }
     console.log('Next: run your normal deploy (push to main or wrangler pages deploy).');
 }
 

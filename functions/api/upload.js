@@ -111,7 +111,7 @@ async function validateSession(db, authHeader) {
 export async function onRequestPost(context) {
     const { request, env } = context;
 
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
     if (!db) {
         return jsonResponse({ error: 'Database not configured' }, 500, env, request);
     }

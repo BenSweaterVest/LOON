@@ -155,7 +155,7 @@ export async function onRequestGet(context) {
 
         // Check for authentication (optional)
         let session = null;
-        const db = env.LOON_DB;
+        const db = env.LOON_DB || env.KV;
         const authHeader = request.headers.get('Authorization');
 
         if (db && authHeader && authHeader.startsWith('Bearer ')) {
@@ -217,11 +217,11 @@ export async function onRequestGet(context) {
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const db = env.LOON_DB;
+    const db = env.LOON_DB || env.KV;
 
     // Check required bindings
     if (!db) {
-        return jsonResponse({ error: 'KV not configured' }, 500, env, request);
+        return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
@@ -575,4 +575,3 @@ async function fetchFileFromGitHub(env, headers, path) {
 export async function onRequestOptions(context) {
     return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }
-
