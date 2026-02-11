@@ -36,7 +36,7 @@ API ENDPOINTS USED:
 
 PREREQUISITES:
 - Cloudflare KV namespace "LOON_DB" configured
-- At least one admin user created via bootstrap-admin.sh
+- Initial setup token configured for first-run admin creation (SETUP_TOKEN)
 ================================================================================
 -->
 <html lang="en">
@@ -246,6 +246,40 @@ PREREQUISITES:
                 </button>
                 
                 <div id="login-error" class="status-message status-error hidden"></div>
+            </div>
+        </div>
+
+        <!-- Initial Setup Section (shown only when no admin exists) -->
+        <div id="setup-section" class="hidden">
+            <div class="login-container">
+                <h2>LOON Initial Setup</h2>
+                <p style="color: var(--muted-color); margin-bottom: 1rem;">
+                    Create the first admin account to finish setup.
+                </p>
+
+                <div class="form-field">
+                    <label for="setup-token">Setup Token</label>
+                    <input type="password" id="setup-token" placeholder="Enter SETUP_TOKEN from Cloudflare secret">
+                </div>
+
+                <div class="form-field">
+                    <label for="setup-username">Admin Username</label>
+                    <input type="text" id="setup-username" value="admin" autocomplete="username">
+                </div>
+
+                <div class="form-field">
+                    <label for="setup-password">Admin Password</label>
+                    <input type="password" id="setup-password" placeholder="Minimum 8 characters" autocomplete="new-password">
+                </div>
+
+                <div class="form-field">
+                    <label for="setup-password-confirm">Confirm Password</label>
+                    <input type="password" id="setup-password-confirm" placeholder="Re-enter password" autocomplete="new-password">
+                </div>
+
+                <button onclick="completeInitialSetup()" style="width: 100%;">Create Admin & Continue</button>
+
+                <div id="setup-error" class="status-message status-error hidden"></div>
             </div>
         </div>
 
@@ -562,6 +596,10 @@ PREREQUISITES:
                 }
             }
 
+            if (!SESSION) {
+                checkInitialSetupStatus();
+            }
+
             // Restore last page ID
             const lastPage = localStorage.getItem(STORAGE_KEYS.LAST_PAGE);
             if (lastPage) {
@@ -574,6 +612,9 @@ PREREQUISITES:
             });
             document.getElementById('password').addEventListener('keypress', e => {
                 if (e.key === 'Enter') login();
+            });
+            document.getElementById('setup-password-confirm').addEventListener('keypress', e => {
+                if (e.key === 'Enter') completeInitialSetup();
             });
             document.getElementById('pageId').addEventListener('keypress', e => {
                 if (e.key === 'Enter') loadEditor();
@@ -591,6 +632,85 @@ PREREQUISITES:
         // =================================================================
         // AUTHENTICATION
         // =================================================================
+
+        async function checkInitialSetupStatus() {
+            try {
+                const res = await fetch('/api/setup');
+                const data = await res.json();
+
+                if (res.ok && data.setupRequired) {
+                    showSetup();
+
+                    if (!data.setupTokenConfigured) {
+                        showError('setup-error', 'Initial setup is required, but SETUP_TOKEN is not configured in environment variables.');
+                    }
+                } else {
+                    showLogin();
+                }
+            } catch (e) {
+                // Fall back to login mode if setup status check fails.
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('login-section').classList.remove('hidden');
+        }
+
+        function showSetup() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.remove('hidden');
+        }
+
+        async function completeInitialSetup() {
+            const setupToken = document.getElementById('setup-token').value;
+            const username = document.getElementById('setup-username').value.trim();
+            const password = document.getElementById('setup-password').value;
+            const confirmPassword = document.getElementById('setup-password-confirm').value;
+
+            if (!setupToken || !username || !password || !confirmPassword) {
+                showError('setup-error', 'All setup fields are required');
+                return;
+            }
+
+            if (password.length < 8) {
+                showError('setup-error', 'Password must be at least 8 characters');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('setup-error', 'Passwords do not match');
+                return;
+            }
+
+            hideError('setup-error');
+
+            try {
+                const res = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ setupToken, username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Initial setup failed');
+                }
+
+                SESSION = {
+                    token: data.token,
+                    username: data.username,
+                    role: data.role,
+                    expiresAt: Date.now() + (data.expiresIn * 1000)
+                };
+
+                sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(SESSION));
+                showApp();
+            } catch (e) {
+                showError('setup-error', e.message);
+            }
+        }
         
         /**
          * Verify saved session is still valid server-side
@@ -692,6 +812,7 @@ PREREQUISITES:
 
         function showApp() {
             document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
 
             document.getElementById('display-username').textContent = SESSION.username;

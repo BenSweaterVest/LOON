@@ -27,23 +27,15 @@ local_protocol = "http"
 #   API endpoints available at http://localhost:8788/api/*
 
 # KV Namespace Configuration
-# 
-# For LOCAL development (optional):
-# Uncomment the section below to test with KV locally
-# 
-# [[kv_namespaces]]
-# binding = "LOON_DB"
-# id = "your-kv-namespace-id"           # Get from Cloudflare dashboard
-# preview_id = "your-preview-id"       # Optional: separate preview namespace
 #
-# Then run: npm run dev:kv
+# Optional automation (local Wrangler):
+#   npm run setup:kv
 #
-# For PRODUCTION:
-# Configure in Cloudflare Pages dashboard:
-#   Settings > Functions > KV Namespace Bindings
-#   Binding Name: LOON_DB
-#   KV Namespace: Select your production namespace
+# This script creates KV namespaces and injects a managed binding block below.
+# Dashboard-only setup is also supported (no local scripts required).
 #
-# For more details, see:
-#   - OPERATIONS.md (Environment Setup section)
-#   - CONTRIBUTING.md (Local Development with KV section)
+# Then run local KV dev with:
+#   npm run dev:kv
+#
+# If you need to customize binding names/namespace names:
+#   node scripts/setup-kv.mjs --binding LOON_DB --name LOON_DB --preview-name LOON_DB_preview

@@ -17,7 +17,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const REQUIRED_VARS = ['GITHUB_REPO', 'GITHUB_TOKEN'];
 
 // Optional but recommended for full functionality
-const OPTIONAL_VARS = ['CORS_ORIGIN', 'CF_ACCOUNT_ID', 'CF_IMAGES_TOKEN'];
+const OPTIONAL_VARS = ['SETUP_TOKEN', 'CORS_ORIGIN', 'CF_ACCOUNT_ID', 'CF_IMAGES_TOKEN'];
 
 function checkFile(filePath, description) {
     try {

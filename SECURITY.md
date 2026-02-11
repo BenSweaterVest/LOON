@@ -299,7 +299,8 @@ If you suspect a security incident:
 ### Security Checklist for Operations
 
 **Initial Deployment**:
-- [ ] Change default bootstrap admin password
+- [ ] Set `SETUP_TOKEN` as a secret for first-run setup
+- [ ] Remove or rotate `SETUP_TOKEN` after first admin is created
 - [ ] Generate strong GitHub token
 - [ ] Verify HTTPS enabled (automatic with Cloudflare)
 - [ ] Test authentication with strong password

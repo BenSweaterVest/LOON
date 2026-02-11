@@ -37,13 +37,25 @@ if (-not $SkipTests) {
     npm test
 }
 
+if (Get-Command "wrangler" -ErrorAction SilentlyContinue) {
+    Write-Host "Setting up KV namespaces and binding..." -ForegroundColor Cyan
+    try {
+        npm run setup:kv
+        Write-Host "KV setup complete." -ForegroundColor Green
+    } catch {
+        Write-Host "KV setup skipped (wrangler auth/account may be missing)." -ForegroundColor Yellow
+        Write-Host "Run 'npm run setup:kv' after 'wrangler login'." -ForegroundColor Yellow
+    }
+}
+
 Write-Host "" 
 Write-Host "Next steps (Cloudflare Pages):" -ForegroundColor Cyan
-Write-Host "1) Create KV namespace 'LOON_DB' and bind it to your Pages project." -ForegroundColor Gray
-Write-Host "2) Set environment variables in Pages > Settings > Environment Variables:" -ForegroundColor Gray
+Write-Host "1) Set environment variables in Pages > Settings > Environment Variables:" -ForegroundColor Gray
 Write-Host "   - GITHUB_REPO (owner/repo)" -ForegroundColor Gray
 Write-Host "   - GITHUB_TOKEN (secret)" -ForegroundColor Gray
+Write-Host "   - SETUP_TOKEN (secret, one-time setup token)" -ForegroundColor Gray
 Write-Host "   - (Optional) CF_ACCOUNT_ID, CF_IMAGES_TOKEN for uploads" -ForegroundColor Gray
-Write-Host "3) Deploy (push to main for Pages auto-deploy, or run 'wrangler pages deploy .')." -ForegroundColor Gray
-Write-Host "4) Bootstrap first admin via scripts/bootstrap-admin.sh (use WSL/Git Bash on Windows)." -ForegroundColor Gray
-Write-Host "5) Visit /admin.html and confirm health at /api/health." -ForegroundColor Gray
+Write-Host "2) Deploy (push to main for Pages auto-deploy, or run 'wrangler pages deploy .')." -ForegroundColor Gray
+Write-Host "3) Open /admin.html and complete Initial Setup with SETUP_TOKEN." -ForegroundColor Gray
+Write-Host "4) Remove or rotate SETUP_TOKEN after first admin is created." -ForegroundColor Gray
+Write-Host "5) Confirm health at /api/health." -ForegroundColor Gray

@@ -28,6 +28,7 @@ LOON exposes the following API endpoints via Cloudflare Functions:
 | `/api/sessions` | GET, DELETE | Session management (admin) |
 | `/api/content` | DELETE | Delete content |
 | `/api/audit` | GET | View audit logs (admin) |
+| `/api/setup` | GET, POST | One-time first admin setup |
 | `/api/health` | GET | System status check |
 
 All endpoints:
@@ -139,6 +140,55 @@ curl https://your-domain.com/api/health | jq .
 
 ---
 ## Authentication
+
+### GET /api/setup
+
+Check whether initial setup is required.
+
+#### Response (200)
+
+```json
+{
+  "setupRequired": true,
+  "setupTokenConfigured": true
+}
+```
+
+### POST /api/setup
+
+Create first admin account when no admin exists.
+
+#### Request
+
+```http
+POST /api/setup
+Content-Type: application/json
+
+{
+  "setupToken": "<SETUP_TOKEN>",
+  "username": "admin",
+  "password": "StrongPassword123"
+}
+```
+
+#### Response (201)
+
+```json
+{
+  "success": true,
+  "message": "Initial admin created successfully",
+  "token": "session-token",
+  "username": "admin",
+  "role": "admin",
+  "expiresIn": 86400
+}
+```
+
+#### Notes
+
+- Requires `SETUP_TOKEN` env var to be configured.
+- Works only while no admin user exists.
+- Password is hashed before storage.
 
 ### POST /api/auth
 

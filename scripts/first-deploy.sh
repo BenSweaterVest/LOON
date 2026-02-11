@@ -30,13 +30,24 @@ if [ "$SKIP_TESTS" = "false" ]; then
   npm test
 fi
 
+if command -v wrangler >/dev/null 2>&1; then
+  echo "Setting up KV namespaces and binding..."
+  if npm run setup:kv; then
+    echo "KV setup complete."
+  else
+    echo "KV setup skipped (wrangler auth/account may be missing)."
+    echo "Run 'npm run setup:kv' after 'wrangler login'."
+  fi
+fi
+
 echo ""
 echo "Next steps (Cloudflare Pages):"
-echo "1) Create KV namespace 'LOON_DB' and bind it to your Pages project."
-echo "2) Set environment variables in Pages > Settings > Environment Variables:"
+echo "1) Set environment variables in Pages > Settings > Environment Variables:"
 echo "   - GITHUB_REPO (owner/repo)"
 echo "   - GITHUB_TOKEN (secret)"
+echo "   - SETUP_TOKEN (secret, one-time setup token)"
 echo "   - (Optional) CF_ACCOUNT_ID, CF_IMAGES_TOKEN for uploads"
-echo "3) Deploy (push to main for Pages auto-deploy, or run 'wrangler pages deploy .')."
-echo "4) Bootstrap first admin via scripts/bootstrap-admin.sh."
-echo "5) Visit /admin.html and confirm health at /api/health."
+echo "2) Deploy (push to main for Pages auto-deploy, or run 'wrangler pages deploy .')."
+echo "3) Open /admin.html and complete Initial Setup with SETUP_TOKEN."
+echo "4) Remove or rotate SETUP_TOKEN after first admin is created."
+echo "5) Confirm health at /api/health."

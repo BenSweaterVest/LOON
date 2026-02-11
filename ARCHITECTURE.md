@@ -249,7 +249,7 @@ loon/
 �
 +-- Admin Scripts
 �   +-- scripts/
-�       +-- bootstrap-admin.sh  # Create first admin
+�       +-- setup flow via /admin.html + /api/setup  # Create first admin
 �       +-- bulk-users.sh       # Bulk user creation
 �       +-- backup-content.sh   # Export content backup
 �       +-- restore-content.sh  # Restore from backup
@@ -294,6 +294,7 @@ LOON exposes the following API endpoints via Cloudflare Functions:
 | `/api/sessions` | GET, DELETE | Session management (admin) |
 | `/api/content` | DELETE | Delete content |
 | `/api/audit` | GET | View audit logs (admin) |
+| `/api/setup` | GET, POST | One-time first admin setup |
 | `/api/health` | GET | System status check |
 See [docs/API.md](docs/API.md) for complete API documentation.
 ---
@@ -329,10 +330,10 @@ See [docs/API.md](docs/API.md) for complete API documentation.
 - All accounts stored securely in Cloudflare KV with 24-hour session tokens and role-based access control
 
 **Setup**:
-1. Create KV namespace `LOON_DB` in Cloudflare
-2. Bind to Pages project in Functions settings
-3. Run bootstrap: `./scripts/bootstrap-admin.sh admin MyPassword`
-4. Deploy
+1. Run `npm run setup:kv`
+2. Set `SETUP_TOKEN` in Cloudflare Pages environment variables
+3. Deploy
+4. Open `/admin.html` and complete Initial Setup form
 
 **Using Passkeys**:
 1. Log in with password

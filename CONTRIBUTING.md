@@ -343,13 +343,14 @@ Before deploying to production, verify these steps:
 - [ ] `GITHUB_REPO` set to your repository (`your-username/your-repo`)
 - [ ] `GITHUB_TOKEN` created with `repo` scope at https://github.com/settings/tokens
 - [ ] GitHub token stored as Cloudflare Pages Secret (not visible in public settings)
-- [ ] KV namespace `LOON_DB` created and bound in Cloudflare Pages dashboard
-- [ ] KV binding named exactly `LOON_DB` in Functions > KV namespace bindings
+- [ ] KV binding `LOON_DB` configured (Dashboard binding or `wrangler.toml`)
+- [ ] If wrangler-managed, `wrangler.toml` contains a `[[kv_namespaces]]` entry for `LOON_DB`
 
 ### Initial Admin Setup
-- [ ] Bootstrap script run to create first admin user
+- [ ] `SETUP_TOKEN` set as Cloudflare Pages Secret
+- [ ] Initial admin created via `/admin.html` setup flow
 - [ ] Admin credentials tested locally before production deployment
-- [ ] Bootstrap credentials deleted/regenerated after first login
+- [ ] `SETUP_TOKEN` rotated/removed after initial setup
 
 ### Security Verification
 - [ ] `ENVIRONMENT=production` set (enables minimal error logging)

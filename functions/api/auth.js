@@ -31,7 +31,7 @@
  *
  * REQUIRED:
  *   - KV Namespace binding: LOON_DB
- *   - Bootstrap user created via scripts/bootstrap-admin.sh
+ *   - At least one admin user created (via /admin.html initial setup or bootstrap script)
  *
  * SECURITY FEATURES:
  *   - PBKDF2 password hashing (100,000 iterations)

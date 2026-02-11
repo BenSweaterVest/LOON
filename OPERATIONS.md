@@ -23,6 +23,7 @@ All production environment variables should be configured in **Cloudflare Pages 
 |----------|---------|---------|
 | `GITHUB_REPO` | Your repository for content storage | `YOUR_GITHUB_ORG/LOON` |
 | `GITHUB_TOKEN` | API token for Git operations | Personal Access Token from GitHub |
+| `SETUP_TOKEN` | One-time setup secret for first admin creation | High-entropy random string |
 | `ENVIRONMENT` | Set to "production" for minimal logging | `production` |
 
 **Optional Variables** (for advanced features):
@@ -46,13 +47,29 @@ All production environment variables should be configured in **Cloudflare Pages 
 
 ### KV Namespace Setup
 
-1. In Cloudflare Dashboard > Workers & Pages > KV, create a namespace (e.g., `LOON_DB`)
+Preferred (dashboard-only, no local tooling):
+
+1. In Cloudflare Dashboard > Workers & Pages > KV, create namespace `LOON_DB`
 2. In Cloudflare Pages project > Settings > Functions > KV namespace bindings
 3. Create binding:
-   - **Variable name**: `LOON_DB` (must match code exactly)
-   - **KV Namespace**: Select the namespace you created
-   - **Environment**: Production
-4. Note: You can use the same namespace for staging and production, or separate them
+   - Variable name: `LOON_DB`
+   - Namespace: `LOON_DB`
+
+If the Add button is disabled because bindings are managed by `wrangler.toml`:
+- Add a `[[kv_namespaces]]` block in `wrangler.toml` with your namespace ID and redeploy.
+
+Optional automation (requires local Wrangler):
+
+```bash
+npm run setup:kv
+```
+
+This automation creates:
+- Production namespace: `LOON_DB`
+- Preview namespace: `LOON_DB_preview`
+- Wrangler-managed binding in `wrangler.toml`
+
+Note: If Cloudflare shows "Bindings for this project are being managed through wrangler.toml", the dashboard Add button is intentionally disabled.
 
 ### Cloudflare Images Setup (Optional)
 
@@ -69,7 +86,7 @@ To enable image uploads:
 ---
 ## Production Checklist
 Before going live, confirm:
-- KV binding `LOON_DB` is set in Pages Functions and points to the correct namespace
+- KV binding `LOON_DB` is configured (Cloudflare Dashboard binding or `wrangler.toml`)
 - `GITHUB_REPO` and `GITHUB_TOKEN` are set in Pages environment variables
 - `CORS_ORIGIN` is set to your production domain (if you want to restrict origins)
 - `RP_ID` and `RP_ORIGIN` are set to your production domain for passkeys
@@ -131,47 +148,20 @@ Monitor for:
 ## User Management
 
 ### First-Time Admin Setup
-When deploying LOON for the first time, use the automated bootstrap script to create your first admin user.
+LOON supports a one-time web setup flow for first admin creation.
 
-Both scripts (`.js` and `.sh`) use bootstrap mode: they store the password temporarily in plaintext, then auth.js hashes it securely (PBKDF2, 100k iterations) on first login.
-
-**Option 1: Node.js script** (cross-platform, requires Node.js):
-```bash
-node scripts/bootstrap-admin.js \
-  --username admin \
-  --password YourSecurePassword123 \
-  --namespace-id YOUR_KV_NAMESPACE_ID
-
-# The script outputs a wrangler KV command:
-wrangler kv:key put --namespace-id YOUR_KV_NAMESPACE_ID \
-  'user:admin' '{"username":"admin","role":"admin","password":"...","bootstrap":true,...}'
-```
-
-**Option 2: Bash script** (Linux/Mac, requires curl + CF API token):
-```bash
-export CF_ACCOUNT_ID="your-account-id"
-export CF_API_TOKEN="your-api-token"
-export KV_NAMESPACE_ID="your-kv-namespace-id"
-
-./scripts/bootstrap-admin.sh admin YourSecurePassword123
-# Automatically writes to KV via Cloudflare API
-```
+1. Set `SETUP_TOKEN` as a Cloudflare Pages secret (high-entropy random string)
+2. Deploy
+3. Open `/admin.html`
+4. Complete the **Initial Setup** form (setup token + admin username + password)
+5. On success, you are signed in as admin
 
 **Security Notes**:
 - Use a strong password (minimum 8 characters)
-- Password is stored in plaintext temporarily (bootstrap mode only)
-- On first login, auth.js re-hashes the password securely and removes plaintext
+- Password is hashed before storage (PBKDF2, 100k iterations)
+- Setup only works while no admin exists
 - Never commit passwords to version control
-- Clear shell history after running: `history -c`
-
-**Windows Users**: Use Git Bash, WSL, or PowerShell to run the bootstrap script:
-
-```powershell
-# PowerShell example
-node scripts/bootstrap-admin.js --username admin --password YourSecurePassword123 --namespace-id YOUR_KV_ID
-```
-
-Note: There is no web-based setup wizard. You must use the bootstrap script to create the first admin.
+- Rotate/remove `SETUP_TOKEN` after successful setup
 
 ### Create a New User
 After your first admin is set up:
@@ -183,10 +173,7 @@ After your first admin is set up:
 4. Enter username, password, and role
 5. Click "Create"
 
-**Via script (after first admin)**:
-```bash
-node scripts/bootstrap-admin.js --username newuser --password TempPassword123
-```
+Use the web UI for ongoing user creation (Users tab).
 
 ### Reset User Password
 When a user forgets their password:
@@ -398,8 +385,8 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
    - Pages ? Settings ? Environment Variables
    - Verify `GITHUB_TOKEN` and `GITHUB_REPO` exist
 3. Check KV namespace binding:
-   - Pages ? Settings ? Functions
-   - Verify "LOON_DB" namespace is bound
+   - Open `wrangler.toml`
+   - Verify a `[[kv_namespaces]]` entry exists for `binding = "LOON_DB"`
 4. Wait 1-2 minutes for redeploy to complete
 ### All Users Locked Out
 **Symptom**: Nobody can login, KV appears down
@@ -415,7 +402,7 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
    - Delete namespace
    - Create new KV namespace with same name
    - Update binding in Pages settings
-   - Recreate first admin user: `node scripts/bootstrap-admin.js --username admin --password SecurePass123`
+   - Temporarily set `SETUP_TOKEN` and use `/admin.html` initial setup flow
    - All previous content is safe (in GitHub)
 ### GitHub Integration Broken
 **Symptom**: Saves fail with "GitHub PUT failed"
@@ -509,9 +496,13 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
 
 ### KV & Authentication
 **"KV not configured"**:
-- Create namespace "LOON_DB" in Cloudflare
-- Bind in Pages ? Settings ? Functions
+- Configure binding `LOON_DB` in Cloudflare Pages > Settings > Functions
+- If project is wrangler-managed, add `[[kv_namespaces]]` in `wrangler.toml`
 - Redeploy
+
+**"Initial setup is disabled"**:
+- Set `SETUP_TOKEN` in Cloudflare Pages environment variables
+- Redeploy and retry `/admin.html`
 
 **"Invalid or expired session"**:
 - Sessions expire after 24 hours
@@ -529,7 +520,7 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
 **Bootstrap admin cannot log in**:
 - Verify KV entry exists: Cloudflare > KV > LOON_DB
 - Key should be `user:yourusername`
-- Re-run bootstrap script if needed
+- If no admin exists, rerun initial setup via `/admin.html` with valid `SETUP_TOKEN`
 
 ### Deployment Issues
 **Cloudflare build failing**:
@@ -575,9 +566,7 @@ View in Cloudflare Dashboard ? Workers & Pages ? LOON ? Analytics
 - Check browser privacy settings
 
 **Windows script issues**:
-- Bootstrap scripts are bash-only (requires Git Bash or WSL)
-- Alternative: Use Cloudflare Dashboard to manually add KV entries
-- See README.md for manual user creation via Cloudflare API
+- Ensure browser can reach `/api/setup` and `SETUP_TOKEN` is set
 - Once first admin is created, use admin UI for subsequent users
 
 ### API Issues
