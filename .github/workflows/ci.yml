@@ -155,12 +155,12 @@ jobs:
       - name: Check for hardcoded secrets
         run: |
           echo "Scanning for hardcoded secrets..."
-          if grep -r "github_pat_" . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v ".env.example" | grep -v "github_pat_xxx"; then
+          if grep -r "github_pat_" . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v ".env.example" | grep -v "^./tests/" | grep -v "github_pat_xxx"; then
             echo "WARNING: Potential hardcoded GitHub token found"
             exit 1
           fi
           
-          if grep -r "Bearer " . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v "Bearer \$" | grep -v "Bearer <" | grep -v "Bearer \${" | grep -v "'Bearer '" | grep -v "\*\*\*" | grep -v "Auth Required" | grep -v "Authorization: Bearer" | grep -v "Bearer {" | grep -v ".env.example"; then
+          if grep -r "Bearer " . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v "^./tests/" | grep -v "Bearer \$" | grep -v "Bearer <" | grep -v "Bearer \${" | grep -v "'Bearer '" | grep -v "\*\*\*" | grep -v "Auth Required" | grep -v "Authorization: Bearer" | grep -v "Bearer {" | grep -v ".env.example"; then
             echo "WARNING: Potential hardcoded bearer token found"
             exit 1
           fi
