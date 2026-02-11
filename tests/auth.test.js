@@ -1,137 +1,181 @@
-/**
- * Tests for Auth Endpoint
- * functions/api/auth.js
-
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createMockKV } from './helpers.js';
+import {
+    onRequestPost,
+    onRequestGet,
+    onRequestDelete,
+    onRequestPatch
+} from '../functions/api/auth.js';
+import { createMockKV, createMockEnv, createMockRequest } from './helpers.js';
+
+function authHeader(token) {
+    return { Authorization: `Bearer ${token}` };
+}
 
 describe('Auth Endpoint', () => {
-    let mockKV;
-    
-    beforeEach(() => {
-        mockKV = createMockKV();
-    });
-    
-    describe('Username Sanitization', () => {
-        it('should lowercase usernames', () => {
-            const username = 'JohnDoe';
-            const sanitized = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-            expect(sanitized).toBe('johndoe');
-        });
-        
-        it('should allow underscores and hyphens', () => {
-            const username = 'john_doe-123';
-            const sanitized = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-            expect(sanitized).toBe('john_doe-123');
-        });
-        
-        it('should remove special characters', () => {
-            const username = 'john@doe.com';
-            const sanitized = username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-            expect(sanitized).toBe('johndoecom');
-        });
-    });
-    
-    describe('Session Token Generation', () => {
-        it('should generate valid UUID format', () => {
-            const token = crypto.randomUUID();
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            expect(token).toMatch(uuidRegex);
-        });
-    });
-    
-    describe('KV Operations', () => {
-        it('should store and retrieve user', async () => {
-            const user = { role: 'admin', hash: 'test-hash', salt: 'test-salt' };
-            await mockKV.put('user:testuser', JSON.stringify(user));
-            
-            const retrieved = await mockKV.get('user:testuser', { type: 'json' });
-            expect(retrieved.role).toBe('admin');
-        });
-        
-        it('should store and retrieve session', async () => {
-            const session = { username: 'admin', role: 'admin', created: Date.now() };
-            await mockKV.put('session:test-token', JSON.stringify(session));
-            
-            const retrieved = await mockKV.get('session:test-token', { type: 'json' });
-            expect(retrieved.username).toBe('admin');
-        });
-        
-        it('should return null for non-existent keys', async () => {
-            const result = await mockKV.get('user:nonexistent');
-            expect(result).toBeNull();
-        });
-        
-        it('should delete sessions', async () => {
-            await mockKV.put('session:to-delete', '{"username":"test"}');
-            await mockKV.delete('session:to-delete');
-            
-            const result = await mockKV.get('session:to-delete');
-            expect(result).toBeNull();
-        });
-        
-        it('should list keys by prefix', async () => {
-            await mockKV.put('user:alice', '{}');
-            await mockKV.put('user:bob', '{}');
-            await mockKV.put('session:token1', '{}');
-            
-            const users = await mockKV.list({ prefix: 'user:' });
-            expect(users.keys.length).toBe(2);
-        });
-    });
-    
-    describe('Password Requirements', () => {
-        it('should require minimum 8 characters', () => {
-            const password = 'short';
-            expect(password.length >= 8).toBe(false);
-        });
-        
-        it('should accept valid passwords', () => {
-            const password = 'validpassword123';
-            expect(password.length >= 8).toBe(true);
-        });
-    });
-});
+    let db;
+    let env;
 
-describe('Role-Based Access Control', () => {
-    describe('Role Validation', () => {
-        const validRoles = ['admin', 'editor', 'contributor'];
-        
-        it('should accept valid roles', () => {
-            expect(validRoles.includes('admin')).toBe(true);
-            expect(validRoles.includes('editor')).toBe(true);
-            expect(validRoles.includes('contributor')).toBe(true);
-        });
-        
-        it('should reject invalid roles', () => {
-            expect(validRoles.includes('superuser')).toBe(false);
-            expect(validRoles.includes('guest')).toBe(false);
-        });
+    beforeEach(() => {
+        db = createMockKV();
+        env = createMockEnv({ LOON_DB: db });
     });
-    
-    describe('Permission Checks', () => {
-        function canUserEdit(role, isOwner) {
-            if (role === 'admin' || role === 'editor') return true;
-            if (role === 'contributor' && isOwner) return true;
-            return false;
-        }
-        
-        it('should allow admin to edit any content', () => {
-            expect(canUserEdit('admin', false)).toBe(true);
-        });
-        
-        it('should allow editor to edit any content', () => {
-            expect(canUserEdit('editor', false)).toBe(true);
-        });
-        
-        it('should allow contributor to edit own content', () => {
-            expect(canUserEdit('contributor', true)).toBe(true);
-        });
-        
-        it('should deny contributor from editing others content', () => {
-            expect(canUserEdit('contributor', false)).toBe(false);
-        });
+
+    it('POST should return 500 when KV binding is missing', async () => {
+        const request = createMockRequest('POST', { username: 'admin', password: 'password123' });
+        const response = await onRequestPost({ request, env: createMockEnv() });
+        const body = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(body.error).toContain('KV database not configured');
+    });
+
+    it('POST should reject missing username/password', async () => {
+        const request = createMockRequest('POST', { username: 'admin' });
+        const response = await onRequestPost({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error).toContain('Username and password required');
+    });
+
+    it('POST should reject invalid username format', async () => {
+        const request = createMockRequest('POST', { username: 'bad@name', password: 'password123' });
+        const response = await onRequestPost({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error).toContain('Invalid username format');
+    });
+
+    it('POST should reject invalid credentials', async () => {
+        const request = createMockRequest('POST', { username: 'admin', password: 'password123' });
+        const response = await onRequestPost({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(body.error).toContain('Invalid credentials');
+    });
+
+    it('POST should login bootstrap user and upgrade stored password', async () => {
+        await db.put('user:admin', JSON.stringify({
+            role: 'admin',
+            bootstrap: true,
+            password: 'StrongPassword123'
+        }));
+
+        const request = createMockRequest('POST', { username: 'admin', password: 'StrongPassword123' });
+        const response = await onRequestPost({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.success).toBe(true);
+        expect(body.token).toBeTruthy();
+        expect(body.role).toBe('admin');
+
+        const upgraded = await db.get('user:admin', { type: 'json' });
+        expect(upgraded.bootstrap).toBeUndefined();
+        expect(upgraded.password).toBeUndefined();
+        expect(upgraded.hash).toBeTruthy();
+        expect(upgraded.salt).toBeTruthy();
+    });
+
+    it('GET should return 401 when token is missing', async () => {
+        const request = createMockRequest('GET');
+        const response = await onRequestGet({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(body.valid).toBe(false);
+    });
+
+    it('GET should return valid session details for active token', async () => {
+        const token = 'token-123';
+        await db.put(`session:${token}`, JSON.stringify({
+            username: 'admin',
+            role: 'admin',
+            created: Date.now()
+        }));
+
+        const request = createMockRequest('GET', null, authHeader(token));
+        const response = await onRequestGet({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.valid).toBe(true);
+        expect(body.username).toBe('admin');
+        expect(body.role).toBe('admin');
+        expect(body.expiresIn).toBeGreaterThan(0);
+    });
+
+    it('DELETE should return 400 when token is missing', async () => {
+        const request = createMockRequest('DELETE');
+        const response = await onRequestDelete({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error).toContain('No token provided');
+    });
+
+    it('DELETE should remove session and return success', async () => {
+        const token = 'token-delete';
+        await db.put(`session:${token}`, JSON.stringify({ username: 'admin', role: 'admin', created: Date.now() }));
+
+        const request = createMockRequest('DELETE', null, authHeader(token));
+        const response = await onRequestDelete({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.success).toBe(true);
+
+        const removed = await db.get(`session:${token}`);
+        expect(removed).toBeNull();
+    });
+
+    it('PATCH should return 401 when token is missing', async () => {
+        const request = createMockRequest('PATCH', { currentPassword: 'x', newPassword: 'newPassword123' });
+        const response = await onRequestPatch({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(body.error).toContain('No token provided');
+    });
+
+    it('PATCH should reject weak new password', async () => {
+        const token = 'token-patch';
+        await db.put(`session:${token}`, JSON.stringify({ username: 'admin', role: 'admin', created: Date.now() }));
+        await db.put('user:admin', JSON.stringify({ role: 'admin', bootstrap: true, password: 'CurrentPass123' }));
+
+        const request = createMockRequest(
+            'PATCH',
+            { currentPassword: 'CurrentPass123', newPassword: 'short' },
+            authHeader(token)
+        );
+        const response = await onRequestPatch({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.error).toContain('at least 8 characters');
+    });
+
+    it('PATCH should update password when current password is valid', async () => {
+        const token = 'token-patch-ok';
+        await db.put(`session:${token}`, JSON.stringify({ username: 'admin', role: 'admin', created: Date.now() }));
+        await db.put('user:admin', JSON.stringify({ role: 'admin', bootstrap: true, password: 'CurrentPass123' }));
+
+        const request = createMockRequest(
+            'PATCH',
+            { currentPassword: 'CurrentPass123', newPassword: 'NewPass456' },
+            authHeader(token)
+        );
+        const response = await onRequestPatch({ request, env });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.success).toBe(true);
+
+        const updated = await db.get('user:admin', { type: 'json' });
+        expect(updated.password).toBeUndefined();
+        expect(updated.hash).toBeTruthy();
+        expect(updated.salt).toBeTruthy();
     });
 });

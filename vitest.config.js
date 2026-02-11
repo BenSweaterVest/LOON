@@ -11,9 +11,15 @@ export default defineConfig({
         // Coverage settings
         coverage: {
             provider: 'v8',
-            reporter: ['text', 'html'],
+            reporter: ['text', 'html', 'json-summary'],
             include: ['functions/**/*.js'],
-            exclude: ['node_modules', 'tests']
+            exclude: ['node_modules', 'tests'],
+            thresholds: {
+                statements: 35,
+                branches: 55,
+                functions: 50,
+                lines: 35
+            }
         },
         
         // Timeout for async tests

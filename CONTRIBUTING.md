@@ -5,7 +5,7 @@ This file defines the contributor workflow for code, tests, and docs.
 1. Fork and clone.
 2. Install dependencies:
 ```bash
-npm install
+npm ci
 ```
 3. Run checks:
 ```bash
@@ -36,7 +36,7 @@ npm run dev:kv
 Required before opening a PR:
 ```bash
 npm run lint
-npm test
+npm run validate:ci
 ```
 
 Useful extras:
@@ -44,6 +44,7 @@ Useful extras:
 npm run test:watch
 npm run test:coverage
 npm run check:env
+npm run validate
 ```
 
 Testing expectations:

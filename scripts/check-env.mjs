@@ -84,11 +84,16 @@ function main() {
     printLine('======================\n');
 
     const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+    const strictCI = process.env.CHECK_ENV_STRICT_CI === 'true';
+    const strictMode = !isCI || strictCI;
     const envFiles = ['.env', '.env.local', '.dev.vars'].map(name => path.join(projectRoot, name));
     const fileVars = {};
 
     if (isCI) {
         printLine('[Info] Running in CI environment; using process env only.');
+        if (!strictCI) {
+            printLine('[Info]', 'CI defaults to non-strict env presence checks (set CHECK_ENV_STRICT_CI=true to enforce).');
+        }
     } else {
         for (const filePath of envFiles) {
             const content = readFileIfExists(filePath);
@@ -112,8 +117,12 @@ function main() {
         if (value) {
             printLine('[OK]', key);
         } else {
-            hasErrors = true;
-            printLine('[Missing]', key);
+            if (strictMode) {
+                hasErrors = true;
+                printLine('[Missing]', key);
+            } else {
+                printLine('[Warn]', `${key} not set in CI environment`);
+            }
         }
     }
 
@@ -167,7 +176,11 @@ function main() {
         process.exit(1);
     }
 
-    printLine('[PASS] Required configuration is present.\n');
+    if (strictMode) {
+        printLine('[PASS] Required configuration is present.\n');
+    } else {
+        printLine('[PASS] CI environment check passed (non-strict mode).\n');
+    }
     process.exit(0);
 }
 

@@ -1,113 +1,66 @@
-/**
- * Tests for Health Endpoint
- * functions/api/health.js
-
- */
-
 import { describe, it, expect } from 'vitest';
+import { onRequestGet } from '../functions/api/health.js';
+
+function createRequest() {
+    return new Request('http://localhost/api/health');
+}
 
 describe('Health Endpoint', () => {
-    describe('Configuration Checks', () => {
-        it('should detect missing GITHUB_REPO', () => {
-            const env = { GITHUB_TOKEN: 'token', LOON_DB: {} };
-            const checks = {
-                github_repo: !!env.GITHUB_REPO,
-                github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB,
-                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
-            };
-
-            expect(checks.github_repo).toBe(false);
-            expect(checks.github_token).toBe(true);
-            expect(checks.kv_database).toBe(true);
+    it('should return degraded (503) when required configuration is missing', async () => {
+        const response = await onRequestGet({
+            request: createRequest(),
+            env: {}
         });
+        const body = await response.json();
 
-        it('should detect missing GITHUB_TOKEN', () => {
-            const env = { GITHUB_REPO: 'user/repo', LOON_DB: {} };
-            const checks = {
-                github_repo: !!env.GITHUB_REPO,
-                github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB,
-                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
-            };
+        expect(response.status).toBe(503);
+        expect(body.status).toBe('degraded');
+        expect(body.checks.github_repo).toBe(false);
+        expect(body.checks.github_token).toBe(false);
+        expect(body.checks.kv_database).toBe(false);
+    });
 
-            expect(checks.github_repo).toBe(true);
-            expect(checks.github_token).toBe(false);
-            expect(checks.kv_database).toBe(true);
-        });
-
-        it('should detect missing KV database', () => {
-            const env = { GITHUB_REPO: 'user/repo', GITHUB_TOKEN: 'token' };
-            const checks = {
-                github_repo: !!env.GITHUB_REPO,
-                github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB,
-                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
-            };
-
-            expect(checks.github_repo).toBe(true);
-            expect(checks.github_token).toBe(true);
-            expect(checks.kv_database).toBe(false);
-        });
-
-        it('should pass when all required vars present', () => {
-            const env = {
-                GITHUB_REPO: 'user/repo',
+    it('should return ok (200) when required configuration exists', async () => {
+        const response = await onRequestGet({
+            request: createRequest(),
+            env: {
+                GITHUB_REPO: 'owner/repo',
                 GITHUB_TOKEN: 'token',
-                LOON_DB: {} // Mock KV binding
-            };
-            const checks = {
-                github_repo: !!env.GITHUB_REPO,
-                github_token: !!env.GITHUB_TOKEN,
-                kv_database: !!env.LOON_DB,
-                images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
-            };
-
-            // Only check required vars (github + kv), not optional images
-            const requiredChecks = [checks.github_repo, checks.github_token, checks.kv_database];
-            const allHealthy = requiredChecks.every(v => v);
-            expect(allHealthy).toBe(true);
+                LOON_DB: {}
+            }
         });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.status).toBe('ok');
+        expect(body.checks.github_repo).toBe(true);
+        expect(body.checks.github_token).toBe(true);
+        expect(body.checks.kv_database).toBe(true);
     });
 
-    describe('Response Format', () => {
-        it('should include all required fields', () => {
-            const response = {
-                status: 'ok',
-                timestamp: new Date().toISOString(),
-                checks: {
-                    github_repo: true,
-                    github_token: true,
-                    kv_database: true,
-                    images_configured: false
-                }
-            };
+    it('should treat KV fallback binding as healthy', async () => {
+        const response = await onRequestGet({
+            request: createRequest(),
+            env: {
+                GITHUB_REPO: 'owner/repo',
+                GITHUB_TOKEN: 'token',
+                KV: {}
+            }
+        });
+        const body = await response.json();
 
-            expect(response.status).toBeDefined();
-            expect(response.timestamp).toBeDefined();
-            expect(response.checks).toBeDefined();
-            expect(response.checks.kv_database).toBe(true);
-        });
-        
-        it('should return valid ISO timestamp', () => {
-            const timestamp = new Date().toISOString();
-            const parsed = new Date(timestamp);
-            expect(parsed instanceof Date).toBe(true);
-            expect(isNaN(parsed.getTime())).toBe(false);
-        });
+        expect(response.status).toBe(200);
+        expect(body.checks.kv_database).toBe(true);
     });
-    
-    describe('HTTP Status Codes', () => {
-        it('should return 200 when healthy', () => {
-            const allHealthy = true;
-            const statusCode = allHealthy ? 200 : 503;
-            expect(statusCode).toBe(200);
+
+    it('should include a valid ISO timestamp', async () => {
+        const response = await onRequestGet({
+            request: createRequest(),
+            env: {}
         });
-        
-        it('should return 503 when degraded', () => {
-            const allHealthy = false;
-            const statusCode = allHealthy ? 200 : 503;
-            expect(statusCode).toBe(503);
-        });
+        const body = await response.json();
+        const parsed = new Date(body.timestamp);
+
+        expect(Number.isNaN(parsed.getTime())).toBe(false);
     });
 });

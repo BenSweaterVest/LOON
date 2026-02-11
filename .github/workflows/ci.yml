@@ -185,24 +185,23 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package.json ]; then
-            npm install --legacy-peer-deps
+            npm ci
           fi
       
-      - name: Run tests
+      - name: Run validate suite
         run: |
           if [ -f package.json ] && grep -q '"test"' package.json; then
-            npm test -- --reporter=verbose
+            npm run validate:ci
           else
             echo "No test script found, skipping automated tests"
-            echo "See QA_TESTING_GUIDE.md for manual testing procedures"
+            echo "See CONTRIBUTING.md for test expectations"
           fi
       
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: coverage-report
           path: |
             coverage/
-            test-results.json
           retention-days: 30

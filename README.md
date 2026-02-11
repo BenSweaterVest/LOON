@@ -177,10 +177,19 @@ loon/
 +-- tests/
    +-- helpers.js          # Test utilities (mock request, env, KV)
    +-- auth.test.js        # Auth endpoint tests
-   +-- save.test.js        # Save endpoint tests
-   +-- pages.test.js       # Pages endpoint tests
+   +-- content.test.js     # Content deletion endpoint tests
    +-- health.test.js      # Health endpoint tests
+   +-- kv-util.test.js     # KV utility tests
+   +-- kv-fallback.test.js # KV fallback compatibility tests
+   +-- pages.test.js       # Pages endpoint tests
+   +-- publish.test.js     # Publish/unpublish endpoint tests
+   +-- save.test.js        # Save endpoint tests
+   +-- setup.test.js       # Initial setup endpoint tests
    +-- schemas.test.js     # Schema validation tests
+   +-- templates.test.js   # Templates endpoint tests
+   +-- upload.test.js      # Upload endpoint tests
+   +-- webauthn.test.js    # WebAuthn utility tests
+   +-- passkeys.test.js    # Passkeys flow and schema tests
 +-- data/
    +-- demo/
       +-- schema.json     # Form field definitions
@@ -287,13 +296,17 @@ Open http://localhost:8788 to test locally.
 ## Testing
 ```bash
 # Install dev dependencies
-npm install
+npm ci
 # Run all tests
 npm test
+# Run with coverage report
+npm run test:coverage
 # Validate JSON files
 npm run lint:json
 # Full validation (lint + test)
 npm run validate
+# CI-equivalent validation (lint + coverage + env check)
+npm run validate:ci
 ```
 ---
 ## Security

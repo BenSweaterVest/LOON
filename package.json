@@ -19,6 +19,7 @@
     "lint:json": "node scripts/validate-json.mjs",
     "check:env": "node scripts/check-env.mjs",
     "validate": "npm run lint && npm run test && npm run check:env",
+    "validate:ci": "npm run lint && npm run test:coverage && npm run check:env",
     "release": "npm run validate && echo 'Ready for release'"
   },
   "dependencies": {
@@ -26,8 +27,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
-    "vitest": "^1.2.0",
-    "miniflare": "^3.20240129.0"
+    "@vitest/coverage-v8": "^1.6.1",
+    "miniflare": "^3.20240129.0",
+    "vitest": "^1.2.0"
   },
   "engines": {
     "node": ">=18.0.0"
