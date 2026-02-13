@@ -502,13 +502,25 @@ PREREQUISITES:
                         <input id="repo-name-input" type="text" placeholder="your-loon-repo">
                     </div>
                 </div>
+                <div class="grid">
+                    <div>
+                        <label for="kv-prod-id-input">KV Production Namespace ID</label>
+                        <input id="kv-prod-id-input" type="text" placeholder="paste Cloudflare KV namespace id">
+                    </div>
+                    <div>
+                        <label for="kv-preview-id-input">KV Preview Namespace ID (optional)</label>
+                        <input id="kv-preview-id-input" type="text" placeholder="optional; uses production ID if blank">
+                    </div>
+                </div>
                 <div class="onboarding-actions" style="margin-bottom: 0.5rem;">
                     <button type="button" onclick="copyGithubRepoSuggestion()">Copy GITHUB_REPO Suggestion</button>
                     <button type="button" onclick="generateAndCopySetupToken()">Generate SETUP_TOKEN</button>
                     <button type="button" onclick="copyEnvTemplate()">Copy Env Template</button>
+                    <button type="button" onclick="copyWranglerKvBindingTemplate()">Copy wrangler.toml KV Block</button>
                 </div>
+                <small id="kv-helper-status" style="display:block; color: var(--muted-color); margin-bottom: 0.4rem;"></small>
                 <small style="color: var(--muted-color);">
-                    `GITHUB_REPO` must be exactly `owner/repo`. `SETUP_TOKEN` is only for first-admin setup and should be rotated after setup.
+                    If Cloudflare shows "Bindings are being managed through wrangler.toml", use the KV block helper above and commit to GitHub.
                 </small>
             </div>
         </div>
@@ -2060,6 +2072,44 @@ PREREQUISITES:
             }
         }
 
+        async function copyWranglerKvBindingTemplate() {
+            const prodId = (document.getElementById('kv-prod-id-input')?.value || '').trim();
+            const previewInput = (document.getElementById('kv-preview-id-input')?.value || '').trim();
+            const previewId = previewInput || prodId;
+            const statusEl = document.getElementById('kv-helper-status');
+
+            if (!prodId) {
+                if (statusEl) statusEl.textContent = 'Paste your production KV namespace ID first.';
+                alert('Paste your production KV namespace ID first.');
+                return;
+            }
+
+            const block = [
+                '[[kv_namespaces]]',
+                'binding = "LOON_DB"',
+                `id = "${prodId}"`,
+                `preview_id = "${previewId}"`,
+                '',
+                '[[kv_namespaces]]',
+                'binding = "KV"',
+                `id = "${prodId}"`,
+                `preview_id = "${previewId}"`
+            ].join('\n');
+
+            try {
+                await navigator.clipboard.writeText(block);
+                if (statusEl) {
+                    statusEl.textContent = 'Copied KV binding block. Paste into wrangler.toml in GitHub and redeploy.';
+                }
+                alert('Copied wrangler.toml KV block.');
+            } catch {
+                if (statusEl) {
+                    statusEl.textContent = 'Copy failed. The KV block is shown in this alert.';
+                }
+                alert(block);
+            }
+        }
+
         function hydrateLastReadinessStamp() {
             const el = document.getElementById('onboarding-last-verified');
             if (!el) return;
@@ -2213,7 +2263,11 @@ PREREQUISITES:
                 summaryEl.className = 'status-message status-info';
                 summaryEl.textContent = 'Some required settings still need attention before setup/login succeeds.';
                 nextEl.className = 'status-message status-info';
-                nextEl.textContent = 'Make updates in Cloudflare Pages Settings, then click "Refresh Checks".';
+                if (!checks.kv_database) {
+                    nextEl.textContent = 'KV binding is missing. If the binding controls are grayed out, copy the wrangler.toml KV block below, commit in GitHub, then redeploy.';
+                } else {
+                    nextEl.textContent = 'Make updates in Cloudflare Pages Settings, then click "Refresh Checks".';
+                }
                 nextEl.classList.remove('hidden');
             }
 

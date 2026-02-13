@@ -58,15 +58,29 @@ Browser-only requirement:
 
 ### 2. Configure KV Binding
 1. Create KV namespace `LOON_DB` in Cloudflare.
-2. In Pages project settings, add KV binding:
-   - Variable: `LOON_DB`
-   - Namespace: `LOON_DB`
+2. Use one of these browser-only paths:
+   - Path A (Dashboard-managed bindings): In Pages project settings, add binding `LOON_DB` -> namespace `LOON_DB`.
+   - Path B (Wrangler-managed bindings): Edit `wrangler.toml` in GitHub and add:
+
+```toml
+[[kv_namespaces]]
+binding = "LOON_DB"
+id = "YOUR_PRODUCTION_NAMESPACE_ID"
+preview_id = "YOUR_PREVIEW_NAMESPACE_ID"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "YOUR_PRODUCTION_NAMESPACE_ID"
+preview_id = "YOUR_PREVIEW_NAMESPACE_ID"
+```
+
+Then commit and redeploy.
 
 Notes:
 - Preferred binding name is `LOON_DB`.
 - Runtime compatibility fallback: `KV` is also accepted.
-- For **GitHub-connected Pages deployments**, treat Cloudflare Dashboard as source-of-truth for production KV binding.
-- Do **not** commit project-specific KV namespace IDs from one deployment into the shared template repo.
+- If Cloudflare shows "Bindings for this project are being managed through wrangler.toml", use Path B.
+- Do not commit account-specific namespace IDs back to the shared template source repo.
 
 ### KV Best Practice (What Automates vs What Does Not)
 - Browser-only production setup (recommended): create and bind KV in Cloudflare Dashboard once per Pages project.
@@ -117,8 +131,13 @@ Use this if you want an exact click path with no CLI.
    - Select your LOON repo and deploy with default LOON settings (no build command).
 3. Cloudflare KV binding
    - Go to **Workers & Pages -> KV** and create namespace `LOON_DB`.
-   - Go to your Pages project -> **Settings -> Functions -> KV namespace bindings**.
-   - Add binding name `LOON_DB` to namespace `LOON_DB`.
+   - If bindings are editable in Cloudflare:
+     - Go to your Pages project -> **Settings -> Functions -> KV namespace bindings**.
+     - Add binding name `LOON_DB` to namespace `LOON_DB`.
+   - If bindings are grayed out with Wrangler-managed message:
+     - Open `wrangler.toml` in GitHub.
+     - Add `[[kv_namespaces]]` entries for both `LOON_DB` and `KV`.
+     - Commit to main and redeploy.
 4. Cloudflare environment variables
    - Go to Pages project -> **Settings -> Environment variables -> Production**.
    - Add:
@@ -424,6 +443,7 @@ Returns system status, version, and configuration validation. See [health check 
 - **Need a guided diagnostics view?** Open `/admin/setup-check` and run **Run Full Readiness Check**.
 - **Need help creating first content?** Log in as admin and click **Start First Page Wizard**.
 - **`KV database not configured` error?** Verify a KV binding exists (`LOON_DB` preferred, `KV` also supported) in Cloudflare Pages project settings. For local CLI flows, check `wrangler.local.toml`/`wrangler.toml`.
+- **Bindings UI is grayed out in Cloudflare?** Your project is Wrangler-managed. Add `[[kv_namespaces]]` in `wrangler.toml` via GitHub web editor, commit, and redeploy.
 - **Passkeys not registering/authenticating?** Check `/api/health` and confirm `passkeys_ready: true` plus correct `RP_ID`/`RP_ORIGIN`.
 - **Health check degraded?** Check `/api/health` response to see which required check failed (GitHub token, KV binding, etc.)
 - **Login fails?** Wait 10 seconds for KV sync, clear browser cache
