@@ -139,17 +139,23 @@ jobs:
             echo "WARNING: GITHUB_TOKEN not documented"
           fi
       
-      - name: Validate wrangler.toml configuration
+      - name: Validate Wrangler local configuration
         run: |
-          if [ ! -f wrangler.toml ]; then
-            echo "ERROR: wrangler.toml not found"
+          CONFIG_FILE=""
+          if [ -f wrangler.dev.toml ]; then
+            CONFIG_FILE="wrangler.dev.toml"
+          elif [ -f wrangler.toml ]; then
+            CONFIG_FILE="wrangler.toml"
+          else
+            echo "ERROR: no Wrangler config found (expected wrangler.dev.toml or wrangler.toml)"
             exit 1
           fi
-          
-          if grep -q 'name = "loon"' wrangler.toml; then
-            echo "PASS: wrangler.toml project name correct"
+
+          echo "Using $CONFIG_FILE for validation"
+          if grep -q 'name = "loon"' "$CONFIG_FILE"; then
+            echo "PASS: $CONFIG_FILE project name correct"
           else
-            echo "WARNING: wrangler.toml project name may need verification"
+            echo "WARNING: $CONFIG_FILE project name may need verification"
           fi
       
       - name: Check for hardcoded secrets
