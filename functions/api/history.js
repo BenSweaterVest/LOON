@@ -13,48 +13,21 @@
 import { handleCorsOptions } from './_cors.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getStrictPageId } from '../lib/page-id.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { getRepoApiJson, getRepoFileJson } from '../lib/github.js';
 
 const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
 
-function sanitizePageId(pageId) {
-    const normalized = String(pageId || '').trim().toLowerCase();
-    if (!normalized) return null;
-    if (!/^[a-z0-9_-]{3,50}$/.test(normalized)) return null;
-    return normalized;
-}
-
-async function validateSession(db, request) {
-    const auth = request.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
-    const raw = await db.get(`session:${token}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-}
-
-async function fetchGitHubJson(env, path, extra = '') {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/${path}${extra}`;
-    const res = await fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0'
-        }
-    });
-    if (!res.ok) {
-        const body = await res.text();
-        const err = new Error(`GitHub request failed (${res.status}): ${body}`);
-        err.status = res.status;
-        throw err;
-    }
-    return await res.json();
-}
-
 async function getCurrentContent(env, pageId) {
     const filePath = `data/${pageId}/content.json`;
-    const data = await fetchGitHubJson(env, `contents/${filePath}`);
-    const decoded = JSON.parse(atob(data.content));
-    return decoded;
+    const file = await getRepoFileJson(env, filePath);
+    if (!file.exists) {
+        const err = new Error('Page not found');
+        err.status = 404;
+        throw err;
+    }
+    return file.content;
 }
 
 export async function onRequestGet(context) {
@@ -69,13 +42,18 @@ export async function onRequestGet(context) {
     }
 
     try {
-        const session = await validateSession(db, request);
+        const token = getBearerToken(request);
+        if (!token) {
+            return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        }
+
+        const session = await getSessionFromRequest(db, request);
         if (!session) {
-            return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+            return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
         }
 
         const url = new URL(request.url);
-        const pageId = sanitizePageId(url.searchParams.get('pageId'));
+        const pageId = getStrictPageId(url.searchParams.get('pageId'), { min: 3, max: 50, trim: true });
         const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10)));
 
         if (!pageId) {
@@ -90,7 +68,7 @@ export async function onRequestGet(context) {
         }
 
         const path = encodeURIComponent(`data/${pageId}/content.json`);
-        const commits = await fetchGitHubJson(env, `commits`, `?path=${path}&per_page=${limit}`);
+        const commits = await getRepoApiJson(env, `commits?path=${path}&per_page=${limit}`);
         const history = commits.map(entry => ({
             sha: entry.sha,
             message: entry.commit?.message || '',

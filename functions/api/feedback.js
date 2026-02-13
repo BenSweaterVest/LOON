@@ -26,44 +26,16 @@
 import { handleCorsOptions } from './_cors.js';
 import { jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getStrictPageId } from '../lib/page-id.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 const RATE_LIMIT = { maxAttempts: 10, windowMs: 60000 }; // 10 submissions/minute per IP
-
-function sanitizePageId(input) {
-    const value = String(input || '').trim().toLowerCase();
-    return /^[a-z0-9_-]{1,100}$/.test(value) ? value : '';
-}
 
 function normalizeTimestamp(input) {
     if (!input) return new Date().toISOString();
     const date = new Date(input);
     return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
-}
-
-async function checkRateLimit(db, ip) {
-    if (!db) return true;
-
-    const now = Date.now();
-    const key = `ratelimit:feedback:${ip}`;
-
-    try {
-        const stored = await db.get(key);
-        const attempts = stored ? JSON.parse(stored) : [];
-        const recent = attempts.filter(ts => now - ts < RATE_LIMIT.windowMs);
-
-        if (recent.length >= RATE_LIMIT.maxAttempts) {
-            return false;
-        }
-
-        recent.push(now);
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-        return true;
-    } catch {
-        return true;
-    }
 }
 
 /**
@@ -81,7 +53,7 @@ export async function onRequestPost(context) {
 
     try {
         const feedback = await request.json();
-        const pageId = sanitizePageId(feedback.pageId);
+        const pageId = getStrictPageId(feedback.pageId, { min: 1, max: 100, trim: true });
         const trimmedMessage = String(feedback.message || '').trim();
         const db = getKVBinding(env);
         const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -108,7 +80,16 @@ export async function onRequestPost(context) {
             return jsonResponse({ error: 'Invalid email format' }, 400, env, request);
         }
 
-        if (!(await checkRateLimit(db, ip))) {
+        let rateLimitOk = true;
+        try {
+            rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('feedback', ip), {
+                maxAttempts: RATE_LIMIT.maxAttempts,
+                windowMs: RATE_LIMIT.windowMs
+            });
+        } catch {
+            rateLimitOk = true;
+        }
+        if (!rateLimitOk) {
             return jsonResponse({ error: 'Too many feedback submissions. Try again later.' }, 429, env, request);
         }
 

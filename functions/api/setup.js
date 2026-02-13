@@ -18,6 +18,7 @@ import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { jsonResponse, logError } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
 
 const CORS_OPTIONS = { methods: 'GET, POST, OPTIONS' };
 const RATE_LIMIT = { maxAttempts: 10, windowMs: 60000 };
@@ -62,31 +63,6 @@ function timingSafeEqualString(a, b) {
         result |= a.charCodeAt(i) ^ b.charCodeAt(i);
     }
     return result === 0;
-}
-
-async function checkRateLimit(db, ip) {
-    const now = Date.now();
-    const key = `ratelimit:setup:${ip}`;
-
-    try {
-        const stored = await db.get(key);
-        const attempts = stored ? JSON.parse(stored) : [];
-        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
-
-        if (recent.length >= RATE_LIMIT.maxAttempts) {
-            return false;
-        }
-
-        recent.push(now);
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-
-        return true;
-    } catch (err) {
-        logError(err, 'Setup/RateLimit');
-        return true;
-    }
 }
 
 async function adminExists(db) {
@@ -160,7 +136,16 @@ export async function onRequestPost(context) {
     }
 
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!(await checkRateLimit(db, ip))) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('setup', ip), {
+            maxAttempts: RATE_LIMIT.maxAttempts,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Setup/RateLimit');
+    }
+    if (!rateLimitOk) {
         return jsonResponse({ error: 'Too many setup attempts. Try again later.' }, 429, env, request);
     }
 

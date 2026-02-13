@@ -11,14 +11,11 @@
 import { handleCorsOptions } from './_cors.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getStrictPageId } from '../lib/page-id.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { getRepoFileJson } from '../lib/github.js';
 
 const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
-
-function sanitizePageId(pageId) {
-    const normalized = String(pageId || '').trim().toLowerCase();
-    if (!/^[a-z0-9_-]{3,50}$/.test(normalized)) return null;
-    return normalized;
-}
 
 function sanitizeRef(ref) {
     const value = String(ref || 'HEAD').trim();
@@ -27,32 +24,14 @@ function sanitizeRef(ref) {
     return null;
 }
 
-async function validateSession(db, request) {
-    const auth = request.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
-    const raw = await db.get(`session:${token}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-}
-
 async function githubGet(env, path, ref = 'HEAD') {
-    const query = ref && ref !== 'HEAD' ? `?ref=${encodeURIComponent(ref)}` : '';
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/${path}${query}`;
-    const res = await fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0'
-        }
-    });
-    if (!res.ok) {
-        const txt = await res.text();
-        const err = new Error(`GitHub read failed (${res.status}): ${txt}`);
-        err.status = res.status;
+    const file = await getRepoFileJson(env, path, { ref });
+    if (!file.exists) {
+        const err = new Error('Page or revision not found');
+        err.status = 404;
         throw err;
     }
-    return await res.json();
+    return file;
 }
 
 function buildLineDiff(fromText, toText) {
@@ -81,28 +60,30 @@ export async function onRequestGet(context) {
     if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
 
     try {
-        const session = await validateSession(db, request);
-        if (!session) return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        const token = getBearerToken(request);
+        if (!token) return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        const session = await getSessionFromRequest(db, request);
+        if (!session) return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
 
         const url = new URL(request.url);
-        const pageId = sanitizePageId(url.searchParams.get('pageId'));
+        const pageId = getStrictPageId(url.searchParams.get('pageId'), { min: 3, max: 50, trim: true });
         const fromRef = sanitizeRef(url.searchParams.get('from'));
         const toRef = sanitizeRef(url.searchParams.get('to') || 'HEAD');
         if (!pageId || !fromRef || !toRef) return jsonResponse({ error: 'Valid pageId, from, and to refs are required' }, 400, env, request);
 
         const filePath = `data/${pageId}/content.json`;
-        const head = await githubGet(env, `contents/${filePath}`, 'HEAD');
-        const headContent = JSON.parse(atob(head.content));
+        const head = await githubGet(env, filePath, 'HEAD');
+        const headContent = head.content;
         const createdBy = headContent?._meta?.createdBy || null;
         if (session.role === 'contributor' && createdBy && createdBy !== session.username) {
             return jsonResponse({ error: 'Contributors can only diff pages they created' }, 403, env, request);
         }
 
-        const fromData = await githubGet(env, `contents/${filePath}`, fromRef);
-        const toData = await githubGet(env, `contents/${filePath}`, toRef);
+        const fromData = await githubGet(env, filePath, fromRef);
+        const toData = await githubGet(env, filePath, toRef);
 
-        const fromText = JSON.stringify(JSON.parse(atob(fromData.content)), null, 2);
-        const toText = JSON.stringify(JSON.parse(atob(toData.content)), null, 2);
+        const fromText = JSON.stringify(fromData.content, null, 2);
+        const toText = JSON.stringify(toData.content, null, 2);
         const diff = buildLineDiff(fromText, toText);
 
         return jsonResponse({

@@ -21,9 +21,10 @@
     "lint": "npm run lint:js && npm run lint:json",
     "lint:js": "node scripts/check-js-syntax.mjs",
     "lint:json": "node scripts/validate-json.mjs",
+    "check:helper-coverage": "node scripts/check-helper-coverage.mjs",
     "check:env": "node scripts/check-env.mjs",
     "validate": "npm run lint && npm run test && npm run check:env",
-    "validate:ci": "npm run lint && npm run test:coverage && npm run check:env",
+    "validate:ci": "npm run lint && npm run test:coverage && npm run check:helper-coverage && npm run check:env",
     "release": "npm run validate && echo 'Ready for release'"
   },
   "dependencies": {

@@ -1,101 +1,21 @@
 /**
- * ============================================================================
- * LOON Publish Endpoint (functions/api/publish.js)
- * ============================================================================
- *
- * Draft/Publish workflow management. Allows admins and editors to promote
- * draft content to published state or unpublish content.
- *
- * ENDPOINT: POST /api/publish
- *
- * REQUEST HEADERS:
- *   Authorization: Bearer <session-token>
- *
- * REQUEST BODY:
- *   {
- *     "pageId": "blog-post",
- *     "action": "publish" | "unpublish"
- *   }
- *
- * RESPONSE (Success):
- *   {
- *     "success": true,
- *     "pageId": "blog-post",
- *     "status": "published",
- *     "publishedBy": "admin",
- *     "publishedAt": "2026-02-02T10:00:00Z"
- *   }
- *
- * PERMISSIONS:
- *   - Admin: Can publish/unpublish any content
- *   - Editor: Can publish/unpublish any content
- *   - Contributor: Cannot publish (must request approval)
- *
- * @module functions/api/publish
-
+ * Publish endpoint (`POST /api/publish`).
+ * Promotes drafts to published content or unpublishes existing content.
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError, jsonResponse } from './_response.js';
+import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getUnchangedSanitizedPageId } from '../lib/page-id.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { getRepoFileJson, putRepoFileJson } from '../lib/github.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
 // Rate limiting constants
 const RATE_LIMIT = { maxRequests: 20, windowMs: 60000 };
-
-/**
- * Check rate limit using KV (persists across worker restarts)
- * Key format: ratelimit:publish:{ip}
- * Value: JSON array of timestamps within window
- */
-async function checkRateLimit(db, ip, env) {
-    const now = Date.now();
-    const key = `ratelimit:publish:${ip}`;
-
-    try {
-        const stored = await db.get(key);
-        let attempts = stored ? JSON.parse(stored) : [];
-
-        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
-
-        if (recent.length >= RATE_LIMIT.maxRequests) {
-            return false;
-        }
-
-        recent.push(now);
-
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-
-        return true;
-    } catch (err) {
-        logError(err, 'Publish/RateLimit', env);
-        return true;
-    }
-}
-
-/**
- * Validate session and check permissions
- */
-async function validateSession(db, authHeader) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return { valid: false, error: 'No authorization token' };
-    }
-    
-    const token = authHeader.slice(7);
-    const sessionKey = `session:${token}`;
-    const sessionRaw = await db.get(sessionKey);
-    
-    if (!sessionRaw) {
-        return { valid: false, error: 'Invalid or expired session' };
-    }
-    
-    const session = JSON.parse(sessionRaw);
-    return { valid: true, session };
-}
 
 /**
  * Check if user can publish content
@@ -105,74 +25,11 @@ function canPublish(role) {
 }
 
 /**
- * Get content from GitHub
- */
-async function getContentFromGitHub(env, pageId) {
-    const [owner, repo] = env.GITHUB_REPO.split('/');
-    const path = `data/${pageId}/content.json`;
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    
-    const res = await fetch(url, {
-        headers: {
-            'Authorization': `token ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0'
-        }
-    });
-    
-    if (!res.ok) {
-        if (res.status === 404) return null;
-        throw new Error(`GitHub API error: ${res.status}`);
-    }
-    
-    const data = await res.json();
-    const content = JSON.parse(atob(data.content));
-    
-    return { content, sha: data.sha };
-}
-
-/**
- * Save content to GitHub
- */
-async function saveToGitHub(env, pageId, content, message, existingSha) {
-    const [owner, repo] = env.GITHUB_REPO.split('/');
-    const path = `data/${pageId}/content.json`;
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    
-    const contentStr = JSON.stringify(content, null, 2);
-    const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
-    
-    const payload = {
-        message,
-        content: contentBase64,
-        ...(existingSha && { sha: existingSha })
-    };
-    
-    const res = await fetch(url, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `token ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-            'User-Agent': 'LOON-CMS/1.0'
-        },
-        body: JSON.stringify(payload)
-    });
-    
-    if (!res.ok) {
-        const error = await res.text();
-        throw new Error(`GitHub API error: ${res.status} - ${error}`);
-    }
-    
-    const result = await res.json();
-    return result.commit.sha;
-}
-
-/**
  * Main handler
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
+    const security = buildSecurityContext(request, '/api/publish', 'anonymous');
 
     const db = getKVBinding(env);
     if (!db) {
@@ -185,22 +42,55 @@ export async function onRequestPost(context) {
 
     // Rate limit (KV-backed)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!(await checkRateLimit(db, ip, env))) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('publish', ip), {
+            maxAttempts: RATE_LIMIT.maxRequests,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Publish/RateLimit', env);
+    }
+    if (!rateLimitOk) {
+        logSecurityEvent({
+            ...security,
+            event: 'publish_rate_limit_blocked',
+            outcome: 'denied'
+        }, env);
         return jsonResponse({ error: 'Rate limit exceeded (20 requests/minute). Try again later.' }, 429, env, request);
     }
     
     // Validate session
-    const authHeader = request.headers.get('Authorization');
-    const auth = await validateSession(db, authHeader);
-    
-    if (!auth.valid) {
-        return jsonResponse({ error: auth.error || 'Unauthorized' }, 401, env, request);
+    const token = getBearerToken(request);
+    if (!token) {
+        logSecurityEvent({
+            ...security,
+            event: 'publish_auth_failed',
+            outcome: 'denied'
+        }, env);
+        return jsonResponse({ error: 'No authorization token' }, 401, env, request);
     }
-    
-    const { session } = auth;
+
+    const session = await getSessionFromRequest(db, request);
+
+    if (!session) {
+        logSecurityEvent({
+            ...security,
+            event: 'publish_auth_failed',
+            outcome: 'denied'
+        }, env);
+        return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
+    }
+    security.actor = session.username;
     
     // Check permissions
     if (!canPublish(session.role)) {
+        logSecurityEvent({
+            ...security,
+            event: 'publish_permission_denied',
+            outcome: 'denied',
+            details: { role: session.role }
+        }, env);
         return jsonResponse({ 
             error: 'Only admins and editors can publish content',
             role: session.role
@@ -226,13 +116,16 @@ export async function onRequestPost(context) {
     }
     
     // Sanitize pageId
-    const sanitizedPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const sanitizedPageId = getUnchangedSanitizedPageId(pageId);
+    if (!sanitizedPageId) {
+        return jsonResponse({ error: 'Invalid pageId format' }, 400, env, request);
+    }
     
     try {
         // Get existing content
-        const existing = await getContentFromGitHub(env, sanitizedPageId);
+        const existing = await getRepoFileJson(env, `data/${sanitizedPageId}/content.json`);
         
-        if (!existing) {
+        if (!existing.exists) {
             return jsonResponse({ error: 'Page not found' }, 404, env, request);
         }
         
@@ -256,13 +149,7 @@ export async function onRequestPost(context) {
             content._meta.publishedAt = now;
             content._meta.publishedBy = session.username;
             
-            const commitSha = await saveToGitHub(
-                env,
-                sanitizedPageId,
-                content,
-                `Publish ${sanitizedPageId} by ${session.username}`,
-                sha
-            );
+            const commitSha = await putRepoFileJson(env, `data/${sanitizedPageId}/content.json`, content, `Publish ${sanitizedPageId} by ${session.username}`, sha, { pretty: true });
             
             // Log audit
             await logAudit(db, 'content_publish', session.username, {
@@ -270,6 +157,12 @@ export async function onRequestPost(context) {
                 publishedBy: session.username,
                 ip: request.headers.get('CF-Connecting-IP')
             });
+            logSecurityEvent({
+                ...security,
+                event: 'content_published',
+                outcome: 'allowed',
+                details: { pageId: sanitizedPageId }
+            }, env);
             
             return jsonResponse({
                 success: true,
@@ -286,13 +179,7 @@ export async function onRequestPost(context) {
             content._meta.unpublishedAt = now;
             content._meta.unpublishedBy = session.username;
             
-            const commitSha = await saveToGitHub(
-                env,
-                sanitizedPageId,
-                content,
-                `Unpublish ${sanitizedPageId} by ${session.username}`,
-                sha
-            );
+            const commitSha = await putRepoFileJson(env, `data/${sanitizedPageId}/content.json`, content, `Unpublish ${sanitizedPageId} by ${session.username}`, sha, { pretty: true });
             
             // Log audit
             await logAudit(db, 'content_unpublish', session.username, {
@@ -300,6 +187,12 @@ export async function onRequestPost(context) {
                 unpublishedBy: session.username,
                 ip: request.headers.get('CF-Connecting-IP')
             });
+            logSecurityEvent({
+                ...security,
+                event: 'content_unpublished',
+                outcome: 'allowed',
+                details: { pageId: sanitizedPageId }
+            }, env);
             
             return jsonResponse({
                 success: true,

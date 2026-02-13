@@ -43,68 +43,18 @@
 
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // Rate limiting constants
 const RATE_LIMIT = { maxRequests: 20, windowMs: 60000 };
-
-/**
- * Check rate limit using KV (persists across worker restarts)
- * Key format: ratelimit:upload:{ip}
- * Value: JSON array of timestamps within window
- */
-async function checkRateLimit(db, ip, env) {
-    const now = Date.now();
-    const key = `ratelimit:upload:${ip}`;
-
-    try {
-        const stored = await db.get(key);
-        let attempts = stored ? JSON.parse(stored) : [];
-
-        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
-
-        if (recent.length >= RATE_LIMIT.maxRequests) {
-            return false;
-        }
-
-        recent.push(now);
-
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-
-        return true;
-    } catch (err) {
-        logError(err, 'Upload/RateLimit', env);
-        return true;
-    }
-}
-
-/**
- * Validate session
- */
-async function validateSession(db, authHeader) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return { valid: false, error: 'No authorization token' };
-    }
-    
-    const token = authHeader.slice(7);
-    const sessionKey = `session:${token}`;
-    const sessionRaw = await db.get(sessionKey);
-    
-    if (!sessionRaw) {
-        return { valid: false, error: 'Invalid or expired session' };
-    }
-    
-    const session = JSON.parse(sessionRaw);
-    return { valid: true, session };
-}
 
 /**
  * Main handler
@@ -127,19 +77,29 @@ export async function onRequestPost(context) {
 
     // Rate limit (KV-backed)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!(await checkRateLimit(db, ip, env))) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('upload', ip), {
+            maxAttempts: RATE_LIMIT.maxRequests,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Upload/RateLimit', env);
+    }
+    if (!rateLimitOk) {
         return jsonResponse({ error: 'Rate limit exceeded (20 requests/minute). Try again later.' }, 429, env, request);
     }
     
     // Validate session
-    const authHeader = request.headers.get('Authorization');
-    const auth = await validateSession(db, authHeader);
-    
-    if (!auth.valid) {
-        return jsonResponse({ error: auth.error || 'Unauthorized' }, 401, env, request);
+    const token = getBearerToken(request);
+    if (!token) {
+        return jsonResponse({ error: 'No authorization token' }, 401, env, request);
     }
-    
-    const { session } = auth;
+
+    const session = await getSessionFromRequest(db, request);
+    if (!session) {
+        return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
+    }
     
     try {
         // Parse multipart form data

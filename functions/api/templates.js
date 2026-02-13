@@ -30,8 +30,9 @@
 
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logError, jsonResponse } from './_response.js';
+import { getRepoFileJson, listRepoDirectory } from '../lib/github.js';
 
 /**
  * CORS options for this endpoint.
@@ -100,24 +101,11 @@ export async function onRequestGet(context) {
  * Fetch templates from GitHub examples/ directory
  */
 async function fetchTemplates(env) {
-    const headers = {
-        'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/1.0'
-    };
-
     // List examples/ directory
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/examples`;
-    const res = await fetch(url, { headers });
-
-    if (!res.ok) {
-        if (res.status === 404) {
-            return []; // No examples directory
-        }
-        throw new Error(`GitHub API error: ${res.status}`);
+    const contents = await listRepoDirectory(env, 'examples');
+    if (!contents) {
+        return []; // No examples directory
     }
-
-    const contents = await res.json();
     const directories = contents.filter(item => item.type === 'dir');
 
     // Fetch schema for each template in parallel
@@ -131,16 +119,12 @@ async function fetchTemplates(env) {
         };
 
         try {
-            const schemaUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/examples/${templateId}/schema.json`;
-            const schemaRes = await fetch(schemaUrl, { headers });
-
-            if (schemaRes.ok) {
-                const schemaData = await schemaRes.json();
-                const schema = JSON.parse(atob(schemaData.content));
-
-                if (schema.title) template.title = schema.title;
-                if (schema.description) template.description = schema.description;
-                if (schema.fields) template.fieldCount = schema.fields.length;
+            const schemaData = await getRepoFileJson(env, `examples/${templateId}/schema.json`);
+            if (schemaData.exists) {
+                const schema = schemaData.content;
+                if (schema?.title) template.title = schema.title;
+                if (schema?.description) template.description = schema.description;
+                if (Array.isArray(schema?.fields)) template.fieldCount = schema.fields.length;
             }
         } catch (e) {
             // Continue with defaults; server-side logging available

@@ -1,16 +1,5 @@
 /**
- * ============================================================================
- * LOON Response Utilities (functions/api/_response.js)
- * ============================================================================
- *
- * Standardized response formatting across all API endpoints.
- * Handles JSON responses, CORS headers, error responses, and logging.
- *
- * USAGE:
- *   import { jsonResponse, errorResponse, logError } from './_response.js';
- *   return jsonResponse({ data: 'value' }, 200, env, request);
- *
- * @module functions/api/_response
+ * Shared response and error helpers for API endpoints.
  */
 
 import { getCorsHeaders } from './_cors.js';
@@ -70,8 +59,6 @@ export function errorResponse(message, status, internalError, env, request, cont
 export function logError(error, context = 'API', env = {}) {
     if (!error) return;
     
-    // Only log detailed errors in development/debug mode
-    // Production environments should have ENVIRONMENT !== 'production' check
     const isDevelopment = env.ENVIRONMENT !== 'production' && env.ENVIRONMENT !== 'prod';
     
     if (isDevelopment) {
@@ -81,9 +68,66 @@ export function logError(error, context = 'API', env = {}) {
             name: error.name
         });
     } else {
-        // Production: log minimal info
         console.error(`[${context}] Error: ${error.message}`);
     }
+}
+
+function shouldUseStructuredSecurityLogs(env = {}) {
+    const mode = String(env.SECURITY_LOG_MODE || '').toLowerCase();
+    return mode === 'structured' || mode === 'json' || mode === '1' || mode === 'true';
+}
+
+function shouldUsePlainSecurityLogs(env = {}) {
+    const mode = String(env.SECURITY_LOG_MODE || '').toLowerCase();
+    return mode === 'plain' || mode === 'text';
+}
+
+function getRequestId(request) {
+    return request?.headers?.get('CF-Ray') ||
+        request?.headers?.get('X-Request-ID') ||
+        crypto.randomUUID();
+}
+
+/**
+ * Emit a security event log.
+ * Modes:
+ * - `SECURITY_LOG_MODE=structured` (or json/1/true) for JSON logs
+ * - `SECURITY_LOG_MODE=plain` (or text) for compact text logs
+ * - unset/other values: no security event log output
+ *
+ * @param {Object} event
+ * @param {Object} env
+ */
+export function logSecurityEvent(event = {}, env = {}) {
+    const payload = {
+        type: 'security_event',
+        timestamp: new Date().toISOString(),
+        event: event.event || 'unknown_event',
+        actor: event.actor || 'unknown',
+        endpoint: event.endpoint || 'unknown',
+        requestId: event.requestId || null,
+        outcome: event.outcome || 'unknown',
+        details: event.details || {}
+    };
+
+    if (shouldUseStructuredSecurityLogs(env)) {
+        console.log(JSON.stringify(payload));
+        return;
+    }
+
+    if (shouldUsePlainSecurityLogs(env)) {
+        console.log(
+            `[Security] ${payload.event} actor=${payload.actor} endpoint=${payload.endpoint} outcome=${payload.outcome} requestId=${payload.requestId || 'n/a'}`
+        );
+    }
+}
+
+export function buildSecurityContext(request, endpoint, actor = 'anonymous') {
+    return {
+        requestId: getRequestId(request),
+        endpoint,
+        actor
+    };
 }
 
 /**
@@ -131,12 +175,12 @@ export function rateLimitResponse(retriesRemaining, resetSeconds, env, request) 
 /**
  * Create a standardized authentication error response.
  *
- * @param {string} message - Error message (default: 'Authentication required')
+ * @param {string} message - Error message (default: 'No authorization token')
  * @param {Object} env - Environment object
  * @param {Request} request - Fetch request object
  * @returns {Response}
  */
-export function authErrorResponse(message = 'Authentication required', env, request) {
+export function authErrorResponse(message = 'No authorization token', env, request) {
     return jsonResponse(
         { error: message },
         401,

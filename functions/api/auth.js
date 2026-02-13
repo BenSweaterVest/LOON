@@ -49,10 +49,12 @@
 
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError, jsonResponse } from './_response.js';
+import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
+import { getBearerToken } from '../lib/session.js';
 
 /**
  * CORS options for this endpoint.
@@ -61,42 +63,6 @@ const CORS_OPTIONS = { methods: 'GET, POST, PATCH, DELETE, OPTIONS' };
 
 // Rate limiting constants (KV-backed)
 const RATE_LIMIT = { maxAttempts: 5, windowMs: 60000 }; // 5 attempts per minute
-
-/**
- * Check rate limit using KV (persists across worker restarts)
- * Key format: ratelimit:auth:{ip}
- * Value: JSON array of timestamps within window
- */
-async function checkRateLimit(db, ip) {
-    const now = Date.now();
-    const key = `ratelimit:auth:${ip}`;
-    
-    try {
-        const stored = await db.get(key);
-        let attempts = stored ? JSON.parse(stored) : [];
-        
-        // Filter to only recent attempts
-        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
-        
-        if (recent.length >= RATE_LIMIT.maxAttempts) {
-            return false;
-        }
-        
-        // Add current attempt
-        recent.push(now);
-        
-        // Store updated attempts with TTL matching rate limit window
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-        
-        return true;
-    } catch (err) {
-        logError(err, 'Auth/RateLimit');
-        // Fail open on KV errors (don't block requests)
-        return true;
-    }
-}
 
 /**
  * Hash password using PBKDF2
@@ -173,6 +139,7 @@ function generateSessionToken() {
 export async function onRequestPost(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/auth', 'anonymous');
 
     // Check KV binding exists
     if (!db) {
@@ -181,7 +148,21 @@ export async function onRequestPost(context) {
 
     // Rate limit check
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!(await checkRateLimit(db, ip))) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('auth', ip), {
+            maxAttempts: RATE_LIMIT.maxAttempts,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Auth/RateLimit');
+    }
+    if (!rateLimitOk) {
+        logSecurityEvent({
+            ...security,
+            event: 'auth_rate_limit_blocked',
+            outcome: 'denied'
+        }, env);
         return jsonResponse({ error: 'Too many login attempts. Try again later.' }, 429, env, request);
     }
 
@@ -204,6 +185,11 @@ export async function onRequestPost(context) {
 
         if (!userRecord) {
             // Generic error to prevent username enumeration
+            logSecurityEvent({
+                ...security,
+                event: 'auth_login_failed',
+                outcome: 'denied'
+            }, env);
             return jsonResponse({ error: 'Invalid credentials' }, 401, env, request);
         }
 
@@ -240,6 +226,12 @@ export async function onRequestPost(context) {
         }
 
         if (!isValid) {
+            logSecurityEvent({
+                ...security,
+                event: 'auth_login_failed',
+                actor: sanitizedUsername,
+                outcome: 'denied'
+            }, env);
             return jsonResponse({ error: 'Invalid credentials' }, 401, env, request);
         }
 
@@ -265,6 +257,12 @@ export async function onRequestPost(context) {
 
         // Audit log
         await logAudit(db, 'login', sanitizedUsername, { ip, role: userRecord.role });
+        logSecurityEvent({
+            ...security,
+            event: 'auth_login_success',
+            actor: sanitizedUsername,
+            outcome: 'allowed'
+        }, env);
 
         return jsonResponse({
             success: true,
@@ -303,12 +301,10 @@ export async function onRequestGet(context) {
     }
 
     try {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        const token = getBearerToken(request);
+        if (!token) {
             return jsonResponse({ valid: false, error: 'No token provided' }, 401, env, request);
         }
-
-        const token = authHeader.slice(7);
         const sessionRaw = await db.get(`session:${token}`);
 
         if (!sessionRaw) {
@@ -340,18 +336,17 @@ export async function onRequestGet(context) {
 export async function onRequestDelete(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/auth', 'anonymous');
 
     if (!db) {
         return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
     }
 
     try {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        const token = getBearerToken(request);
+        if (!token) {
             return jsonResponse({ error: 'No token provided' }, 400, env, request);
         }
-
-        const token = authHeader.slice(7);
 
         // Get session info for audit log before deleting
         const sessionRaw = await db.get(`session:${token}`);
@@ -366,6 +361,12 @@ export async function onRequestDelete(context) {
 
         // Audit log
         await logAudit(db, 'logout', username, {});
+        logSecurityEvent({
+            ...security,
+            event: 'auth_logout',
+            actor: username,
+            outcome: 'allowed'
+        }, env);
 
         return jsonResponse({ success: true, message: 'Logged out' }, 200, env, request);
 
@@ -389,6 +390,7 @@ export async function onRequestDelete(context) {
 export async function onRequestPatch(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/auth', 'anonymous');
 
     if (!db) {
         return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
@@ -396,12 +398,10 @@ export async function onRequestPatch(context) {
 
     try {
         // Validate session
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        const token = getBearerToken(request);
+        if (!token) {
             return jsonResponse({ error: 'No token provided' }, 401, env, request);
         }
-
-        const token = authHeader.slice(7);
         const sessionRaw = await db.get(`session:${token}`);
 
         if (!sessionRaw) {
@@ -459,6 +459,12 @@ export async function onRequestPatch(context) {
 
         // Audit log
         await logAudit(db, 'password_change', session.username, {});
+        logSecurityEvent({
+            ...security,
+            event: 'auth_password_change',
+            actor: session.username,
+            outcome: 'allowed'
+        }, env);
 
         return jsonResponse({ success: true, message: 'Password changed successfully' }, 200, env, request);
 

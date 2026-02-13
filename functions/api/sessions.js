@@ -29,9 +29,11 @@
 
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
-import { logError, jsonResponse } from './_response.js';
+import { handleCorsOptions } from './_cors.js';
+import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 
 /**
  * CORS options for this endpoint.
@@ -42,58 +44,23 @@ const CORS_OPTIONS = { methods: 'GET, DELETE, OPTIONS' };
 const RATE_LIMIT = { maxRequests: 30, windowMs: 60000 };
 
 /**
- * Check rate limit using KV (persists across worker restarts)
- * Key format: ratelimit:sessions:{ip}
- * Value: JSON array of timestamps within window
- */
-async function checkRateLimit(db, ip, env) {
-    const now = Date.now();
-    const key = `ratelimit:sessions:${ip}`;
-
-    try {
-        const stored = await db.get(key);
-        let attempts = stored ? JSON.parse(stored) : [];
-
-        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
-
-        if (recent.length >= RATE_LIMIT.maxRequests) {
-            return false;
-        }
-
-        recent.push(now);
-
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-
-        return true;
-    } catch (err) {
-        logError(err, 'Sessions/RateLimit', env);
-        return true;
-    }
-}
-
-/**
  * Validate admin session
  */
-async function validateAdminSession(db, authHeader) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return { valid: false, error: 'No authorization token' };
+async function validateAdminSession(db, request) {
+    const token = getBearerToken(request);
+    if (!token) {
+        return { valid: false, error: 'No authorization token', status: 401 };
     }
-    
-    const token = authHeader.slice(7);
-    const sessionRaw = await db.get(`session:${token}`);
-    
-    if (!sessionRaw) {
-        return { valid: false, error: 'Invalid or expired session' };
+
+    const session = await getSessionFromRequest(db, request);
+    if (!session) {
+        return { valid: false, error: 'Invalid or expired session', status: 401 };
     }
-    
-    const session = JSON.parse(sessionRaw);
-    
+
     if (session.role !== 'admin') {
-        return { valid: false, error: 'Admin access required' };
+        return { valid: false, error: 'Admin access required', status: 403 };
     }
-    
+
     return { valid: true, session, token };
 }
 
@@ -103,6 +70,7 @@ async function validateAdminSession(db, authHeader) {
 export async function onRequestGet(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/sessions', 'anonymous');
 
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);
@@ -110,16 +78,34 @@ export async function onRequestGet(context) {
 
     // Rate limit (KV-backed)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!(await checkRateLimit(db, ip, env))) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('sessions', ip), {
+            maxAttempts: RATE_LIMIT.maxRequests,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Sessions/RateLimit', env);
+    }
+    if (!rateLimitOk) {
+        logSecurityEvent({
+            ...security,
+            event: 'sessions_rate_limit_blocked',
+            outcome: 'denied'
+        }, env);
         return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     // Validate admin session
-    const authHeader = request.headers.get('Authorization');
-    const auth = await validateAdminSession(db, authHeader);
+    const auth = await validateAdminSession(db, request);
 
     if (!auth.valid) {
-        return jsonResponse({ error: auth.error }, 403, env, request);
+        logSecurityEvent({
+            ...security,
+            event: 'sessions_admin_auth_failed',
+            outcome: 'denied'
+        }, env);
+        return jsonResponse({ error: auth.error }, auth.status || 403, env, request);
     }
 
     try {
@@ -174,6 +160,7 @@ export async function onRequestGet(context) {
 export async function onRequestDelete(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/sessions', 'anonymous');
 
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);
@@ -181,16 +168,34 @@ export async function onRequestDelete(context) {
 
     // Rate limit (KV-backed)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!(await checkRateLimit(db, ip, env))) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('sessions', ip), {
+            maxAttempts: RATE_LIMIT.maxRequests,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Sessions/RateLimit', env);
+    }
+    if (!rateLimitOk) {
+        logSecurityEvent({
+            ...security,
+            event: 'sessions_rate_limit_blocked',
+            outcome: 'denied'
+        }, env);
         return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     // Validate admin session
-    const authHeader = request.headers.get('Authorization');
-    const auth = await validateAdminSession(db, authHeader);
+    const auth = await validateAdminSession(db, request);
 
     if (!auth.valid) {
-        return jsonResponse({ error: auth.error }, 403, env, request);
+        logSecurityEvent({
+            ...security,
+            event: 'sessions_admin_auth_failed',
+            outcome: 'denied'
+        }, env);
+        return jsonResponse({ error: auth.error }, auth.status || 403, env, request);
     }
 
     try {
@@ -229,11 +234,20 @@ export async function onRequestDelete(context) {
             return jsonResponse({ error: 'username and all=true required' }, 400, env, request);
         }
 
+        logSecurityEvent({
+            ...security,
+            event: 'sessions_revoked',
+            actor: auth.session.username,
+            outcome: 'allowed',
+            details: { revoked: revokedCount }
+        }, env);
+
         return jsonResponse({
             success: true,
             revoked: revokedCount,
             message: revokedCount > 0 ? `Revoked ${revokedCount} session(s)` : 'No sessions found to revoke'
         }, 200, env, request);
+
 
     } catch (err) {
         logError(err, 'Sessions/Revoke', env);

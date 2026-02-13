@@ -37,9 +37,12 @@ describe('Workflow Endpoint', () => {
     });
 
     it('should reject contributor', async () => {
+        env.SECURITY_LOG_MODE = 'structured';
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         await db.put('session:test-token', JSON.stringify({ username: 'alice', role: 'contributor' }));
         const res = await onRequestPost({ request: createRequest({ pageId: 'demo', status: 'in_review' }), env });
         expect(res.status).toBe(403);
+        expect(logSpy.mock.calls.some(call => String(call[0]).includes('"event":"workflow_permission_denied"'))).toBe(true);
     });
 
     it('should update workflow status for admin', async () => {

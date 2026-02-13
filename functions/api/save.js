@@ -1,71 +1,16 @@
 /**
- * ============================================================================
- * LOON Save Endpoint (functions/api/save.js)
- * ============================================================================
- *
- * Content saving with Role-Based Access Control (RBAC).
- * Validates session tokens and enforces permission rules based on user roles.
- *
- * ENDPOINT: POST /api/save
- *
- * REQUEST HEADERS:
- *   Authorization: Bearer <session-token>
- *
- * REQUEST BODY:
- *   {
- *     "pageId": "demo",         // Page identifier (lowercase alphanumeric)
- *     "content": { ... }        // JSON content to save
- *   }
- *
- * RESPONSE (Success):
- *   {
- *     "success": true,
- *     "commit": "abc123...",    // Git commit SHA
- *     "pageId": "demo",
- *     "modifiedBy": "admin"
- *   }
- *
- * ROLE-BASED ACCESS CONTROL:
- *   | Role        | Create | Edit Own | Edit Others |
- *   |-------------|--------|----------|-------------|
- *   | admin       | Yes    | Yes      | Yes         |
- *   | editor      | Yes    | Yes      | Yes         |
- *   | contributor | Yes    | Yes      | No          |
- *
- *   Contributors can only edit content where _meta.createdBy matches their
- *   username. Creating new content is allowed for all roles.
- *
- * CONTENT METADATA:
- *   The system automatically injects/preserves metadata in saved content:
- *   {
- *     "_meta": {
- *       "createdBy": "username",       // Set on first save
- *       "created": "2026-01-30T...",   // Set on first save
- *       "modifiedBy": "username",      // Updated on every save
- *       "lastModified": "2026-01-30T..." // Updated on every save
- *     }
- *   }
- *
- * REQUIRED:
- *   - KV Namespace binding: LOON_DB (for session validation)
- *   - GITHUB_TOKEN environment variable
- *   - GITHUB_REPO environment variable
- *
- * SECURITY FEATURES:
- *   - Session token validation via KV
- *   - Rate limiting: 30 requests per minute per IP
- *   - Content size limit: 1MB maximum
- *   - Page ID sanitization (alphanumeric + hyphens only)
- *   - RBAC enforcement on every save
- *
- * @module functions/api/save
- 
+ * Save endpoint (`POST /api/save`).
+ * Handles draft/direct saves with RBAC checks and GitHub persistence.
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getUnchangedSanitizedPageId } from '../lib/page-id.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { getRepoFileJson, putRepoFileJson } from '../lib/github.js';
 
 /**
  * CORS options for this endpoint.
@@ -74,160 +19,6 @@ const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
 // Rate limiting constants
 const RATE_LIMIT = { maxRequests: 30, windowMs: 60000 };
-
-/**
- * Check rate limit using KV (persists across worker restarts)
- * Key format: ratelimit:save:{ip}
- * Value: JSON array of timestamps within window
- */
-async function checkRateLimit(db, ip) {
-    const now = Date.now();
-    const key = `ratelimit:save:${ip}`;
-    
-    try {
-        const stored = await db.get(key);
-        let attempts = stored ? JSON.parse(stored) : [];
-        
-        // Filter to only recent attempts
-        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
-        
-        if (recent.length >= RATE_LIMIT.maxRequests) {
-            return false;
-        }
-        
-        // Add current attempt
-        recent.push(now);
-        
-        // Store updated attempts with TTL matching rate limit window
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-        
-        return true;
-    } catch (err) {
-        logError(err, 'Save/RateLimit');
-        // Fail open on KV errors (don't block requests)
-        return true;
-    }
-}
-
-/**
- * Validate session and return session data
- */
-async function validateSession(db, authHeader) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
-    }
-    
-    const token = authHeader.slice(7);
-    const sessionRaw = await db.get(`session:${token}`);
-    
-    if (!sessionRaw) {
-        return null;
-    }
-    
-    return JSON.parse(sessionRaw);
-}
-
-/**
- * Fetch file from GitHub to check metadata
- */
-async function fetchGitHubFile(env, path) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
-    
-    const res = await fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0', 
-        }
-    });
-    
-    if (!res.ok) {
-        if (res.status === 404) {
-            return { exists: false, sha: null, content: null };
-        }
-        throw new Error(`GitHub GET failed: ${res.status}`);
-    }
-    
-    const json = await res.json();
-    const content = JSON.parse(atob(json.content));
-    
-    return {
-        exists: true,
-        sha: json.sha,
-        content: content
-    };
-}
-
-/**
- * Commit content to GitHub with exponential backoff retry
- * Handles transient failures (rate limits, timeouts) gracefully
- * Retries on: 429 (rate limit), 5xx errors, network failures
- */
-async function commitToGitHub(env, path, content, message, existingSha, retries = 3) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
-    
-    const body = {
-        message: message,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content)))),
-    };
-    
-    if (existingSha) {
-        body.sha = existingSha;
-    }
-    
-    let lastError;
-    
-    for (let attempt = 0; attempt < retries; attempt++) {
-        try {
-            const res = await fetch(url, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'LOON-CMS/1.0', 
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-            });
-            
-            if (res.ok) {
-                const result = await res.json();
-                return result.commit.sha;
-            }
-            
-            // Check if error is retryable
-            if (res.status === 429 || res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504) {
-                const errText = await res.text();
-                lastError = new Error(`GitHub API error: ${res.status} - ${errText}`);
-                
-                // Only retry if we have attempts left
-                if (attempt < retries - 1) {
-                    // Exponential backoff: 1s, 2s, 4s
-                    const backoffMs = Math.pow(2, attempt) * 1000;
-                    console.warn(`GitHub API error (attempt ${attempt + 1}/${retries}), retrying in ${backoffMs}ms: ${res.status}`);
-                    await new Promise(resolve => setTimeout(resolve, backoffMs));
-                    continue;
-                }
-            } else {
-                // Non-retryable error (4xx except 429)
-                const errText = await res.text();
-                throw new Error(`GitHub PUT failed: ${res.status} - ${errText}`);
-            }
-        } catch (err) {
-            lastError = err;
-            if (attempt < retries - 1 && (err instanceof TypeError || err.message.includes('fetch failed'))) {
-                const backoffMs = Math.pow(2, attempt) * 1000;
-                console.warn(`Network error (attempt ${attempt + 1}/${retries}), retrying in ${backoffMs}ms: ${err.message}`);
-                await new Promise(resolve => setTimeout(resolve, backoffMs));
-                continue;
-            }
-        }
-    }
-    
-    throw lastError || new Error('GitHub commit failed after retries');
-}
 
 /**
  * Check if user can edit this content (RBAC)
@@ -281,15 +72,27 @@ export async function onRequestPost(context) {
 
     // Rate limit (using KV for persistence across worker restarts)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const rateLimited = !(await checkRateLimit(db, ip));
-    if (rateLimited) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('save', ip), {
+            maxAttempts: RATE_LIMIT.maxRequests,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Save/RateLimit');
+    }
+    if (!rateLimitOk) {
         return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     try {
         // Validate session
-        const authHeader = request.headers.get('Authorization');
-        const session = await validateSession(db, authHeader);
+        const token = getBearerToken(request);
+        if (!token) {
+            return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        }
+
+        const session = await getSessionFromRequest(db, request);
 
         if (!session) {
             return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
@@ -307,8 +110,8 @@ export async function onRequestPost(context) {
         let saveType = requestedSaveType;
 
         // Sanitize pageId
-        const sanitizedPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-        if (sanitizedPageId !== pageId.toLowerCase()) {
+        const sanitizedPageId = getUnchangedSanitizedPageId(pageId);
+        if (!sanitizedPageId) {
             return jsonResponse({ error: 'Invalid pageId format' }, 400, env, request);
         }
 
@@ -339,7 +142,7 @@ export async function onRequestPost(context) {
 
         // Fetch existing file
         const filePath = `data/${sanitizedPageId}/content.json`;
-        const existing = await fetchGitHubFile(env, filePath);
+        const existing = await getRepoFileJson(env, filePath);
 
         // RBAC check
         const permission = canUserEdit(session, existing.content);
@@ -389,7 +192,7 @@ export async function onRequestPost(context) {
         const commitMessage = saveType === 'draft'
             ? `Save draft: ${sanitizedPageId} by ${session.username}`
             : `Update ${sanitizedPageId} by ${session.username} (${session.role})`;
-        const sha = await commitToGitHub(env, filePath, finalContent, commitMessage, existing.sha);
+        const sha = await putRepoFileJson(env, filePath, finalContent, commitMessage, existing.sha, { retries: 2 });
 
         // Audit log
         await logAudit(db, saveType === 'draft' ? 'content_save_draft' : 'content_save', session.username, {

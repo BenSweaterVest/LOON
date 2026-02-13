@@ -44,6 +44,26 @@ All endpoints:
 - Include CORS headers for cross-origin requests
 - Apply rate limiting on selected sensitive/write-heavy operations
 
+### Rate Limit Contracts
+
+All KV-backed limits are per client IP (`CF-Connecting-IP`) and use rolling windows.
+429 responses use:
+
+```json
+{ "error": "Rate limit exceeded (...) Try again later." }
+```
+
+| Endpoint | Scope Key | Limit | Window |
+|----------|-----------|-------|--------|
+| `/api/auth` (POST) | `ratelimit:auth:{ip}` | 5 attempts | 60s |
+| `/api/setup` (POST) | `ratelimit:setup:{ip}` | 10 attempts | 60s |
+| `/api/save` (POST) | `ratelimit:save:{ip}` | 30 requests | 60s |
+| `/api/publish` (POST) | `ratelimit:publish:{ip}` | 20 requests | 60s |
+| `/api/feedback` (POST) | `ratelimit:feedback:{ip}` | 10 submissions | 60s |
+| `/api/upload` (POST) | `ratelimit:upload:{ip}` | 20 requests | 60s |
+| `/api/users` (all methods) | `ratelimit:users:{ip}` | 30 requests | 60s |
+| `/api/sessions` (GET/DELETE) | `ratelimit:sessions:{ip}` | 30 requests | 60s |
+
 ### Client Examples
 
 The following examples show how to interact with LOON API from different clients:
@@ -719,7 +739,7 @@ Authorization: Bearer <session-token>
 | Status | Error |
 |--------|-------|
 | 400 | Invalid/missing `pageId` |
-| 401 | Authentication required |
+| 401 | No authorization token or invalid/expired session |
 | 403 | Contributor does not own page |
 | 404 | Page not found |
 
@@ -760,7 +780,7 @@ Content-Type: application/json
 | Status | Error |
 |--------|-------|
 | 400 | Invalid `pageId` or `commitSha` |
-| 401 | Authentication required |
+| 401 | No authorization token or invalid/expired session |
 | 403 | Admin/Editor role required |
 | 404 | Page or revision not found |
 
@@ -806,7 +826,7 @@ Authorization: Bearer <session-token>
 | Status | Error |
 |--------|-------|
 | 400 | Invalid/missing refs |
-| 401 | Authentication required |
+| 401 | No authorization token or invalid/expired session |
 | 403 | Contributor does not own page |
 | 404 | Page or revision not found |
 

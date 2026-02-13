@@ -11,37 +11,16 @@
 
 import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError, jsonResponse } from './_response.js';
+import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { getRepoFileJson, listRepoDirectory, putRepoFileJson } from '../lib/github.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
-async function validateSession(db, request) {
-    const auth = request.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
-    const raw = await db.get(`session:${token}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-}
-
-async function github(env, path, init = {}) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/${path}`;
-    return fetch(url, {
-        ...init,
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0',
-            ...init.headers
-        }
-    });
-}
-
 async function listPageIds(env, limit = 150) {
-    const res = await github(env, 'contents/data');
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await listRepoDirectory(env, 'data');
+    if (!data) return [];
     return data
         .filter(item => item.type === 'dir')
         .map(item => item.name)
@@ -50,41 +29,51 @@ async function listPageIds(env, limit = 150) {
 
 async function readPageContent(env, pageId) {
     const path = `data/${pageId}/content.json`;
-    const res = await github(env, `contents/${path}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return { path, sha: data.sha, content: JSON.parse(atob(data.content)) };
+    const file = await getRepoFileJson(env, path);
+    if (!file.exists) return null;
+    return { path, sha: file.sha, content: file.content };
 }
 
 async function writePageContent(env, page, content, actor) {
-    const payload = {
-        message: `Scheduled publish ${page.path} by ${actor}`,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
-        sha: page.sha
-    };
-    const res = await github(env, `contents/${page.path}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Failed publish ${page.path}: ${res.status} ${txt}`);
-    }
-    const data = await res.json();
-    return data.commit?.sha || null;
+    return putRepoFileJson(env, page.path, content, `Scheduled publish ${page.path} by ${actor}`, page.sha, { pretty: true });
 }
 
 export async function onRequestPost(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/scheduled-publish', 'anonymous');
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
 
     try {
-        const session = await validateSession(db, request);
-        if (!session) return jsonResponse({ error: 'Authentication required' }, 401, env, request);
-        if (session.role !== 'admin' && session.role !== 'editor') return jsonResponse({ error: 'Admin or Editor role required' }, 403, env, request);
+        const token = getBearerToken(request);
+        if (!token) {
+            logSecurityEvent({
+                ...security,
+                event: 'scheduled_publish_auth_failed',
+                outcome: 'denied'
+            }, env);
+            return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        }
+        const session = await getSessionFromRequest(db, request);
+        if (!session) {
+            logSecurityEvent({
+                ...security,
+                event: 'scheduled_publish_auth_failed',
+                outcome: 'denied'
+            }, env);
+            return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
+        }
+        security.actor = session.username;
+        if (session.role !== 'admin' && session.role !== 'editor') {
+            logSecurityEvent({
+                ...security,
+                event: 'scheduled_publish_permission_denied',
+                outcome: 'denied',
+                details: { role: session.role }
+            }, env);
+            return jsonResponse({ error: 'Admin or Editor role required' }, 403, env, request);
+        }
 
         const now = Date.now();
         const pageIds = await listPageIds(env, 200);
@@ -119,6 +108,12 @@ export async function onRequestPost(context) {
             const commit = await writePageContent(env, page, next, session.username);
             published.push({ pageId, commit });
             await logAudit(db, 'content_scheduled_publish', session.username, { pageId, commit });
+            logSecurityEvent({
+                ...security,
+                event: 'content_scheduled_published',
+                outcome: 'allowed',
+                details: { pageId, commit }
+            }, env);
         }
 
         return jsonResponse({ success: true, checked: pageIds.length, published, skipped }, 200, env, request);
@@ -131,4 +126,3 @@ export async function onRequestPost(context) {
 export async function onRequestOptions(context) {
     return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }
-

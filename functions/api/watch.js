@@ -15,23 +15,10 @@ import { handleCorsOptions } from './_cors.js';
 import { getAuditLogs } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getStrictPageId } from '../lib/page-id.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 
 const CORS_OPTIONS = { methods: 'GET, POST, DELETE, OPTIONS' };
-
-function sanitizePageId(pageId) {
-    const normalized = String(pageId || '').trim().toLowerCase();
-    if (!/^[a-z0-9_-]{3,50}$/.test(normalized)) return null;
-    return normalized;
-}
-
-async function validateSession(db, request) {
-    const auth = request.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
-    const raw = await db.get(`session:${token}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-}
 
 async function listWatchedPages(db, username) {
     const prefix = `watch:${username}:`;
@@ -64,8 +51,10 @@ export async function onRequestGet(context) {
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
 
     try {
-        const session = await validateSession(db, request);
-        if (!session) return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        const token = getBearerToken(request);
+        if (!token) return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        const session = await getSessionFromRequest(db, request);
+        if (!session) return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
         const watchedPages = await listWatchedPages(db, session.username);
         const recent = await watchedRecentChanges(db, watchedPages, 30);
         return jsonResponse({ watchedPages, recent }, 200, env, request);
@@ -80,10 +69,12 @@ export async function onRequestPost(context) {
     const db = getKVBinding(env);
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     try {
-        const session = await validateSession(db, request);
-        if (!session) return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        const token = getBearerToken(request);
+        if (!token) return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        const session = await getSessionFromRequest(db, request);
+        if (!session) return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
         const body = await request.json();
-        const pageId = sanitizePageId(body.pageId);
+        const pageId = getStrictPageId(body.pageId, { min: 3, max: 50, trim: true });
         if (!pageId) return jsonResponse({ error: 'Valid pageId required' }, 400, env, request);
         await db.put(`watch:${session.username}:${pageId}`, JSON.stringify({ watchedAt: Date.now() }));
         return jsonResponse({ success: true, pageId }, 200, env, request);
@@ -98,10 +89,12 @@ export async function onRequestDelete(context) {
     const db = getKVBinding(env);
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     try {
-        const session = await validateSession(db, request);
-        if (!session) return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        const token = getBearerToken(request);
+        if (!token) return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        const session = await getSessionFromRequest(db, request);
+        if (!session) return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
         const body = await request.json();
-        const pageId = sanitizePageId(body.pageId);
+        const pageId = getStrictPageId(body.pageId, { min: 3, max: 50, trim: true });
         if (!pageId) return jsonResponse({ error: 'Valid pageId required' }, 400, env, request);
         await db.delete(`watch:${session.username}:${pageId}`);
         return jsonResponse({ success: true, pageId }, 200, env, request);
@@ -114,4 +107,3 @@ export async function onRequestDelete(context) {
 export async function onRequestOptions(context) {
     return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }
-

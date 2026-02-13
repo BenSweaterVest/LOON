@@ -35,10 +35,11 @@
 
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { getAuditLogs } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getBearerToken } from '../lib/session.js';
 
 /**
  * CORS options for this endpoint.
@@ -58,12 +59,10 @@ export async function onRequestGet(context) {
     }
 
     // Validate admin session
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+    const token = getBearerToken(request);
+    if (!token) {
+        return jsonResponse({ error: 'No authorization token' }, 401, env, request);
     }
-
-    const token = authHeader.slice(7);
     const sessionRaw = await db.get(`session:${token}`);
 
     if (!sessionRaw) {

@@ -152,4 +152,26 @@ describe('Publish Endpoint', () => {
         expect(data.status).toBe('draft');
         expect(data.commit).toBe('commit456');
     });
+
+    it('should emit structured security event on publish success when enabled', async () => {
+        env.SECURITY_LOG_MODE = 'structured';
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        await db.put('session:test-token', JSON.stringify({ username: 'admin', role: 'admin' }));
+
+        const content = { draft: { title: 'Draft' }, _meta: { status: 'draft' } };
+        const encoded = Buffer.from(JSON.stringify(content)).toString('base64');
+
+        global.fetch = vi.fn()
+            .mockResolvedValueOnce(
+                new Response(JSON.stringify({ content: encoded, sha: 'abc123' }), { status: 200 })
+            )
+            .mockResolvedValueOnce(
+                new Response(JSON.stringify({ commit: { sha: 'commit123' } }), { status: 200 })
+            );
+
+        const response = await onRequestPost({ request: createRequest({ pageId: 'demo', action: 'publish' }), env });
+        expect(response.status).toBe(200);
+
+        expect(logSpy.mock.calls.some(call => String(call[0]).includes('"event":"content_published"'))).toBe(true);
+    });
 });

@@ -13,90 +13,52 @@
 
 import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError, jsonResponse } from './_response.js';
+import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getStrictPageId } from '../lib/page-id.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { getRepoFileJson, putRepoFileJson } from '../lib/github.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
-
-function sanitizePageId(pageId) {
-    const normalized = String(pageId || '').trim().toLowerCase();
-    if (!normalized) return null;
-    if (!/^[a-z0-9_-]{3,50}$/.test(normalized)) return null;
-    return normalized;
-}
 
 function isValidSha(value) {
     return /^[a-f0-9]{7,40}$/i.test(String(value || '').trim());
 }
 
-async function validateSession(db, request) {
-    const auth = request.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
-    const raw = await db.get(`session:${token}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-}
-
-async function githubRequest(env, path, init = {}) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/${path}`;
-    const headers = {
-        'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/1.0',
-        ...init.headers
-    };
-    const res = await fetch(url, { ...init, headers });
-    return res;
-}
-
 async function fetchContentAtRef(env, filePath, ref) {
-    const res = await githubRequest(env, `contents/${filePath}?ref=${encodeURIComponent(ref)}`);
-    if (!res.ok) {
-        const body = await res.text();
-        const err = new Error(`Failed to fetch historical content (${res.status}): ${body}`);
-        err.status = res.status;
+    const file = await getRepoFileJson(env, filePath, { ref });
+    if (!file.exists) {
+        const err = new Error('Page or revision not found');
+        err.status = 404;
         throw err;
     }
-    const data = await res.json();
-    return JSON.parse(atob(data.content));
+    return file.content;
 }
 
 async function fetchCurrentFile(env, filePath) {
-    const res = await githubRequest(env, `contents/${filePath}`);
-    if (!res.ok) {
-        const body = await res.text();
-        const err = new Error(`Failed to fetch current content (${res.status}): ${body}`);
-        err.status = res.status;
+    const file = await getRepoFileJson(env, filePath);
+    if (!file.exists) {
+        const err = new Error('Page or revision not found');
+        err.status = 404;
         throw err;
     }
-    return await res.json();
+    return file;
 }
 
 async function commitRollback(env, filePath, content, currentSha, actor, fromSha) {
-    const body = {
-        message: `Rollback ${filePath} to ${fromSha.slice(0, 10)} by ${actor}`,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content)))),
-        sha: currentSha
-    };
-
-    const res = await githubRequest(env, `contents/${filePath}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Rollback commit failed (${res.status}): ${text}`);
-    }
-    const data = await res.json();
-    return data.commit?.sha || null;
+    return putRepoFileJson(
+        env,
+        filePath,
+        content,
+        `Rollback ${filePath} to ${fromSha.slice(0, 10)} by ${actor}`,
+        currentSha
+    );
 }
 
 export async function onRequestPost(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/rollback', 'anonymous');
 
     if (!db) {
         return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
@@ -106,16 +68,38 @@ export async function onRequestPost(context) {
     }
 
     try {
-        const session = await validateSession(db, request);
-        if (!session) {
-            return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        const token = getBearerToken(request);
+        if (!token) {
+            logSecurityEvent({
+                ...security,
+                event: 'rollback_auth_failed',
+                outcome: 'denied'
+            }, env);
+            return jsonResponse({ error: 'No authorization token' }, 401, env, request);
         }
+
+        const session = await getSessionFromRequest(db, request);
+        if (!session) {
+            logSecurityEvent({
+                ...security,
+                event: 'rollback_auth_failed',
+                outcome: 'denied'
+            }, env);
+            return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
+        }
+        security.actor = session.username;
         if (session.role !== 'admin' && session.role !== 'editor') {
+            logSecurityEvent({
+                ...security,
+                event: 'rollback_permission_denied',
+                outcome: 'denied',
+                details: { role: session.role }
+            }, env);
             return jsonResponse({ error: 'Admin or Editor role required' }, 403, env, request);
         }
 
         const body = await request.json();
-        const pageId = sanitizePageId(body.pageId);
+        const pageId = getStrictPageId(body.pageId, { min: 3, max: 50, trim: true });
         const commitSha = String(body.commitSha || '').trim();
 
         if (!pageId || !isValidSha(commitSha)) {
@@ -138,6 +122,12 @@ export async function onRequestPost(context) {
             fromCommit: commitSha,
             commit: newSha
         });
+        logSecurityEvent({
+            ...security,
+            event: 'content_rolled_back',
+            outcome: 'allowed',
+            details: { pageId, fromCommit: commitSha, commit: newSha }
+        }, env);
 
         return jsonResponse({
             success: true,

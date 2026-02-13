@@ -59,10 +59,12 @@
 
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
-import { logError, jsonResponse } from './_response.js';
+import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 
 /**
  * CORS options for this endpoint.
@@ -73,56 +75,21 @@ const CORS_OPTIONS = { methods: 'GET, POST, DELETE, PATCH, OPTIONS' };
 const RATE_LIMIT = { maxRequests: 30, windowMs: 60000 };
 
 /**
- * Check rate limit using KV (persists across worker restarts)
- * Key format: ratelimit:users:{ip}
- * Value: JSON array of timestamps within window
- */
-async function checkRateLimit(db, ip, env) {
-    const now = Date.now();
-    const key = `ratelimit:users:${ip}`;
-
-    try {
-        const stored = await db.get(key);
-        let attempts = stored ? JSON.parse(stored) : [];
-
-        const recent = attempts.filter(t => now - t < RATE_LIMIT.windowMs);
-
-        if (recent.length >= RATE_LIMIT.maxRequests) {
-            return false;
-        }
-
-        recent.push(now);
-
-        await db.put(key, JSON.stringify(recent), {
-            expirationTtl: Math.ceil(RATE_LIMIT.windowMs / 1000)
-        });
-
-        return true;
-    } catch (err) {
-        logError(err, 'Users/RateLimit', env);
-        return true;
-    }
-}
-
-/**
  * Validate admin session
  */
-async function validateAdminSession(db, authHeader) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return { valid: false, error: 'No authorization token' };
+async function validateAdminSession(db, request) {
+    const token = getBearerToken(request);
+    if (!token) {
+        return { valid: false, error: 'No authorization token', status: 401 };
     }
-    
-    const token = authHeader.slice(7);
-    const sessionRaw = await db.get(`session:${token}`);
-    
-    if (!sessionRaw) {
-        return { valid: false, error: 'Invalid or expired session' };
+
+    const session = await getSessionFromRequest(db, request);
+    if (!session) {
+        return { valid: false, error: 'Invalid or expired session', status: 401 };
     }
-    
-    const session = JSON.parse(sessionRaw);
-    
+
     if (session.role !== 'admin') {
-        return { valid: false, error: 'Admin access required' };
+        return { valid: false, error: 'Admin access required', status: 403 };
     }
     
     return { valid: true, session };
@@ -270,6 +237,13 @@ async function handlePost(db, session, body, env, request) {
 
     // Audit log
     await logAudit(db, 'user_create', session.username, { newUser: sanitizedUsername, role: role });
+    logSecurityEvent({
+        event: 'user_created',
+        actor: session.username,
+        endpoint: '/api/users',
+        outcome: 'allowed',
+        details: { username: sanitizedUsername, role }
+    }, env);
 
     return jsonResponse({
         success: true,
@@ -330,6 +304,13 @@ async function handleDelete(db, session, body, env, request) {
 
     // Audit log
     await logAudit(db, 'user_delete', session.username, { deletedUser: sanitizedUsername });
+    logSecurityEvent({
+        event: 'user_deleted',
+        actor: session.username,
+        endpoint: '/api/users',
+        outcome: 'allowed',
+        details: { username: sanitizedUsername }
+    }, env);
 
     return jsonResponse({
         success: true,
@@ -392,9 +373,23 @@ async function handlePatch(db, session, body, env, request) {
     // Audit log
     if (newPassword) {
         await logAudit(db, 'password_reset', session.username, { targetUser: sanitizedUsername });
+        logSecurityEvent({
+            event: 'user_password_reset',
+            actor: session.username,
+            endpoint: '/api/users',
+            outcome: 'allowed',
+            details: { username: sanitizedUsername }
+        }, env);
     }
     if (role) {
         await logAudit(db, 'user_update', session.username, { targetUser: sanitizedUsername, newRole: role });
+        logSecurityEvent({
+            event: 'user_role_updated',
+            actor: session.username,
+            endpoint: '/api/users',
+            outcome: 'allowed',
+            details: { username: sanitizedUsername, role }
+        }, env);
     }
 
     const response = {
@@ -421,6 +416,7 @@ async function handlePatch(db, session, body, env, request) {
 export async function onRequest(context) {
     const { request, env } = context;
     const db = getKVBinding(env);
+    const security = buildSecurityContext(request, '/api/users', 'anonymous');
 
     // Check KV binding
     if (!db) {
@@ -429,17 +425,36 @@ export async function onRequest(context) {
 
     // Rate limit (KV-backed)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!(await checkRateLimit(db, ip, env))) {
+    let rateLimitOk = true;
+    try {
+        rateLimitOk = await checkKvRateLimit(db, buildRateLimitKey('users', ip), {
+            maxAttempts: RATE_LIMIT.maxRequests,
+            windowMs: RATE_LIMIT.windowMs
+        });
+    } catch (err) {
+        logError(err, 'Users/RateLimit', env);
+    }
+    if (!rateLimitOk) {
+        logSecurityEvent({
+            ...security,
+            event: 'users_rate_limit_blocked',
+            outcome: 'denied'
+        }, env);
         return jsonResponse({ error: 'Rate limit exceeded (30 requests/minute). Try again later.' }, 429, env, request);
     }
 
     // Validate admin session
-    const authHeader = request.headers.get('Authorization');
-    const auth = await validateAdminSession(db, authHeader);
+    const auth = await validateAdminSession(db, request);
 
     if (!auth.valid) {
-        return jsonResponse({ error: auth.error }, 403, env, request);
+        logSecurityEvent({
+            ...security,
+            event: 'users_admin_auth_failed',
+            outcome: 'denied'
+        }, env);
+        return jsonResponse({ error: auth.error }, auth.status || 403, env, request);
     }
+    security.actor = auth.session.username;
 
     try {
         switch (request.method) {

@@ -1,118 +1,28 @@
 /**
- * ============================================================================
- * LOON Pages Endpoint (functions/api/pages.js)
- * ============================================================================
- *
- * Lists and creates pages for the CMS.
- *
- * ENDPOINTS:
- *   GET  /api/pages - List all available pages
- *   POST /api/pages - Create a new page (admin/editor only)
- *
- * GET QUERY PARAMETERS:
- *   ?minimal=true  - Return only pageId list (reduces GitHub API calls)
- *   ?page=1        - Page number for pagination (default: 1)
- *   ?limit=20      - Items per page (default: 20, max: 100)
- *
- * GET RESPONSE:
- *   {
- *     "pages": [
- *       {
- *         "pageId": "demo",
- *         "title": "Demo Page",
- *         "hasContent": true,
- *         "createdBy": "admin",
- *         "lastModified": "2026-01-30"
- *       }
- *     ],
- *     "canEditAll": true,
- *     "total": 25,
- *     "page": 1,
- *     "limit": 20,
- *     "hasMore": true
- *   }
- *
- * POST REQUEST (Create Page):
- *   Headers: Authorization: Bearer <session-token>
- *   Body: {
- *     "pageId": "my-page",           // Required: lowercase alphanumeric + hyphens
- *     "title": "My Page Title",      // Optional: defaults to pageId
- *     "template": "blog-post",       // Optional: use template from examples/
- *     "schema": { ... }              // Optional: custom schema (overrides template)
- *   }
- *
- * POST RESPONSE:
- *   {
- *     "success": true,
- *     "pageId": "my-page",
- *     "schemaCommit": "abc123...",
- *     "contentCommit": "def456...",
- *     "createdBy": "admin",
- *     "schema": { ... },
- *     "content": { ... }
- *   }
- *
- * AUTHENTICATION:
- *   GET:  Optional - contributors see only their pages
- *   POST: Required - admin/editor role needed
- *
- * PERFORMANCE NOTES:
- *   - Uses a single directory listing call for minimal mode
- *   - Fetches schema/content in parallel with Promise.all
- *   - Supports ?minimal=true for lightweight listing
- *   - Caches directory structure for 60 seconds (in-memory)
- *   - Supports pagination to limit response size
- *
- * @module functions/api/pages
-
+ * Pages endpoint.
+ * - GET `/api/pages`: list pages
+ * - POST `/api/pages`: create page (admin/editor)
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getUnchangedSanitizedPageId, isValidPageId } from '../lib/page-id.js';
+import { getRepoFileJson, listRepoDirectory, putRepoFileJson, repoPathExists } from '../lib/github.js';
+import { getBearerToken } from '../lib/session.js';
 
 /**
  * CORS options for this endpoint.
  */
 const CORS_OPTIONS = { methods: 'GET, POST, OPTIONS' };
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
 const CONFIG = {
-    /**
-     * Default number of items per page for pagination.
-     * Balances response size with usability.
-     */
+    // Pagination defaults.
     DEFAULT_PAGE_SIZE: 20,
-
-    /**
-     * Maximum items per page to prevent excessive API calls.
-     * Each page requires 2 GitHub API calls (schema + content).
-     */
     MAX_PAGE_SIZE: 100,
-
-    /**
-     * Cache duration for directory listing in milliseconds.
-     * Reduces GitHub API calls for rapid successive requests.
-     * Default: 60 seconds
-     */
     CACHE_TTL_MS: 60000
 };
-
-// ============================================================================
-// IN-MEMORY CACHE
-// ============================================================================
-
-/**
- * Simple in-memory cache for directory listings.
- * Reduces GitHub API calls when multiple users browse pages simultaneously.
- *
- * Note: This cache is per-worker instance and resets on worker restart.
- * For production with high traffic, consider using Cloudflare KV caching.
- */
 const directoryCache = {
     data: null,
     timestamp: 0
@@ -126,10 +36,6 @@ function isCacheValid() {
     return directoryCache.data !== null &&
            (Date.now() - directoryCache.timestamp) < CONFIG.CACHE_TTL_MS;
 }
-
-// ============================================================================
-// REQUEST HANDLERS
-// ============================================================================
 
 /**
  * Handle GET request - List pages
@@ -233,12 +139,11 @@ export async function onRequestPost(context) {
 
     try {
         // Validate session
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        const token = getBearerToken(request);
+        if (!token) {
+            return jsonResponse({ error: 'No authorization token' }, 401, env, request);
         }
 
-        const token = authHeader.slice(7);
         const sessionRaw = await db.get(`session:${token}`);
 
         if (!sessionRaw) {
@@ -261,12 +166,12 @@ export async function onRequestPost(context) {
         }
 
         // Sanitize and validate pageId format
-        const sanitizedPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-        if (sanitizedPageId !== pageId.toLowerCase()) {
+        const sanitizedPageId = getUnchangedSanitizedPageId(pageId, { min: 1, max: 200 });
+        if (!sanitizedPageId) {
             return jsonResponse({ error: 'Invalid pageId format. Use lowercase letters, numbers, hyphens, and underscores only.' }, 400, env, request);
         }
 
-        if (sanitizedPageId.length < 3 || sanitizedPageId.length > 50) {
+        if (!isValidPageId(sanitizedPageId, { min: 3, max: 50 })) {
             return jsonResponse({ error: 'pageId must be 3-50 characters' }, 400, env, request);
         }
 
@@ -366,77 +271,26 @@ export async function onRequestPost(context) {
  * Check if a page already exists in GitHub
  */
 async function checkPageExists(env, pageId) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/data/${pageId}`;
-    const res = await fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0'
-        }
-    });
-
-    return { exists: res.ok };
+    return { exists: await repoPathExists(env, `data/${pageId}`) };
 }
 
 /**
  * Load a template schema from the examples/ directory
  */
 async function loadTemplate(env, templateName) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/examples/${templateName}/schema.json`;
-    const res = await fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0'
-        }
-    });
-
-    if (!res.ok) {
+    const data = await getRepoFileJson(env, `examples/${templateName}/schema.json`);
+    if (!data.exists) {
         return null;
     }
-
-    const data = await res.json();
-    return JSON.parse(atob(data.content));
+    return data.content;
 }
 
 /**
  * Commit a file to GitHub
  */
 async function commitToGitHub(env, path, content, message, existingSha) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
-
-    const body = {
-        message: message,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content))))
-    };
-
-    if (existingSha) {
-        body.sha = existingSha;
-    }
-
-    const res = await fetch(url, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`GitHub PUT failed: ${res.status} - ${errText}`);
-    }
-
-    const result = await res.json();
-    return result.commit.sha;
+    return putRepoFileJson(env, path, content, message, existingSha);
 }
-
-// ============================================================================
-// GITHUB API INTEGRATION
-// ============================================================================
 
 /**
  * Fetch list of pages from GitHub repository.
@@ -453,29 +307,16 @@ async function commitToGitHub(env, path, content, message, existingSha) {
  * @returns {Promise<Array>} Array of page objects
  */
 async function fetchPagesFromGitHub(env, minimal = false) {
-    const headers = {
-        'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/1.0'
-    };
-
     // Check cache for directory listing
     let directories;
     if (isCacheValid()) {
         directories = directoryCache.data;
     } else {
         // Fetch fresh directory listing
-        const dataUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/data`;
-        const dataRes = await fetch(dataUrl, { headers });
-
-        if (!dataRes.ok) {
-            if (dataRes.status === 404) {
-                return []; // No data directory yet
-            }
-            throw new Error(`GitHub API error: ${dataRes.status}`);
+        const dataContents = await listRepoDirectory(env, 'data');
+        if (!dataContents) {
+            return []; // No data directory yet
         }
-
-        const dataContents = await dataRes.json();
 
         // Filter for directories (each directory is a page)
         directories = dataContents.filter(item => item.type === 'dir');
@@ -509,8 +350,8 @@ async function fetchPagesFromGitHub(env, minimal = false) {
         try {
             // Fetch schema and content in parallel for this page
             const [schemaResult, contentResult] = await Promise.all([
-                fetchFileFromGitHub(env, headers, `data/${pageId}/schema.json`),
-                fetchFileFromGitHub(env, headers, `data/${pageId}/content.json`)
+                fetchFileFromGitHub(env, `data/${pageId}/schema.json`),
+                fetchFileFromGitHub(env, `data/${pageId}/content.json`)
             ]);
 
             // Process schema
@@ -552,26 +393,12 @@ async function fetchPagesFromGitHub(env, minimal = false) {
  * Fetch a single file from GitHub and parse as JSON.
  *
  * @param {Object} env - Environment variables
- * @param {Object} headers - HTTP headers for GitHub API
  * @param {string} path - File path within the repository
  * @returns {Promise<{exists: boolean, content: Object|null}>}
  */
-async function fetchFileFromGitHub(env, headers, path) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
-    const res = await fetch(url, { headers });
-
-    if (!res.ok) {
-        return { exists: false, content: null };
-    }
-
-    const data = await res.json();
-    const content = JSON.parse(atob(data.content));
-    return { exists: true, content: content };
+async function fetchFileFromGitHub(env, path) {
+    return getRepoFileJson(env, path);
 }
-
-// ============================================================================
-// CORS AND RESPONSE HELPERS
-// ============================================================================
 
 /**
  * Handle OPTIONS (CORS preflight)

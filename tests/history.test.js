@@ -38,7 +38,7 @@ describe('History Endpoint', () => {
         });
         const body = await response.json();
         expect(response.status).toBe(401);
-        expect(body.error).toContain('Authentication required');
+        expect(body.error).toContain('No authorization token');
     });
 
     it('should return history for admin', async () => {

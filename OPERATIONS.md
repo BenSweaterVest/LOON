@@ -63,6 +63,26 @@ Browser-first option:
 - Validate passkey settings (`RP_ID`, `RP_ORIGIN`) if passkeys are enabled.
 - Check upstream LOON changes and plan manual instance sync if needed.
 
+## Rate Limit Keys (KV)
+LOON stores rolling-window rate-limit counters in KV using:
+
+- `ratelimit:<scope>:<ip>`
+
+Current scopes:
+- `auth`
+- `setup`
+- `save`
+- `publish`
+- `feedback`
+- `upload`
+- `users`
+- `sessions`
+
+Operational notes:
+- Keys auto-expire using TTL aligned to each endpoint window (currently 60 seconds).
+- A persistent spike in 429s for one scope usually means automated traffic or a stuck client loop from a single IP.
+- Check `/api/audit` and deployment logs together when triaging repeated rate-limit blocks.
+
 ## GitHub Token Setup
 Operational guidance for rotation/replacement:
 1. Create a fine-grained PAT scoped to this repo only.
@@ -70,6 +90,23 @@ Operational guidance for rotation/replacement:
 3. Update `GITHUB_TOKEN` in Cloudflare Pages as Secret.
 4. Redeploy.
 5. Run Post-Change Verification.
+
+## Optional Security Event Logging
+Use this only when you need richer authentication/admin activity logs in deployment logs.
+
+Environment variable:
+- `SECURITY_LOG_MODE=structured` for JSON events (recommended for log ingestion)
+- `SECURITY_LOG_MODE=plain` for compact text events
+- unset (default): security event logging is off
+
+Current instrumented endpoints:
+- `/api/auth`
+- `/api/users`
+- `/api/sessions`
+- `/api/publish`
+- `/api/rollback`
+- `/api/workflow`
+- `/api/scheduled-publish`
 
 ## Manual Upstream Sync (Template Repositories)
 Use this when your deployment repo was created from LOON template and you want to bring in upstream fixes/features.

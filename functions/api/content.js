@@ -26,10 +26,13 @@
 
  */
 
-import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getUnchangedSanitizedPageId } from '../lib/page-id.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { deleteRepoFile } from '../lib/github.js';
 
 /**
  * CORS options for this endpoint.
@@ -39,68 +42,22 @@ const CORS_OPTIONS = { methods: 'DELETE, OPTIONS' };
 /**
  * Validate session and check permissions
  */
-async function validateSession(db, authHeader, requiredRoles = ['admin', 'editor']) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+async function validateSession(db, request, requiredRoles = ['admin', 'editor']) {
+    const token = getBearerToken(request);
+    if (!token) {
         return { valid: false, error: 'No authorization token', status: 401 };
     }
-    
-    const token = authHeader.slice(7);
-    const sessionRaw = await db.get(`session:${token}`);
-    
-    if (!sessionRaw) {
+
+    const session = await getSessionFromRequest(db, request);
+    if (!session) {
         return { valid: false, error: 'Invalid or expired session', status: 401 };
     }
-    
-    const session = JSON.parse(sessionRaw);
-    
+
     if (!requiredRoles.includes(session.role)) {
         return { valid: false, error: `Requires ${requiredRoles.join(' or ')} role`, status: 403 };
     }
     
     return { valid: true, session };
-}
-
-/**
- * Delete file from GitHub
- */
-async function deleteFromGitHub(env, path, message) {
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
-    const headers = {
-        'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LOON-CMS/1.0',
-        'Content-Type': 'application/json'
-    };
-    
-    // Get current file SHA (required for deletion)
-    const getRes = await fetch(url, { headers });
-    
-    if (!getRes.ok) {
-        if (getRes.status === 404) {
-            return { success: false, error: 'Content not found' };
-        }
-        throw new Error(`GitHub GET failed: ${getRes.status}`);
-    }
-    
-    const fileData = await getRes.json();
-    
-    // Delete the file
-    const deleteRes = await fetch(url, {
-        method: 'DELETE',
-        headers,
-        body: JSON.stringify({
-            message: message,
-            sha: fileData.sha
-        })
-    });
-    
-    if (!deleteRes.ok) {
-        const errText = await deleteRes.text();
-        throw new Error(`GitHub DELETE failed: ${deleteRes.status} - ${errText}`);
-    }
-    
-    const result = await deleteRes.json();
-    return { success: true, commit: result.commit.sha };
 }
 
 /**
@@ -120,8 +77,7 @@ export async function onRequestDelete(context) {
     }
 
     // Validate session (admin or editor only)
-    const authHeader = request.headers.get('Authorization');
-    const auth = await validateSession(db, authHeader, ['admin', 'editor']);
+    const auth = await validateSession(db, request, ['admin', 'editor']);
 
     if (!auth.valid) {
         return jsonResponse({ error: auth.error }, auth.status, env, request);
@@ -136,8 +92,8 @@ export async function onRequestDelete(context) {
         }
 
         // Sanitize pageId
-        const sanitizedPageId = pageId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-        if (sanitizedPageId !== pageId.toLowerCase()) {
+        const sanitizedPageId = getUnchangedSanitizedPageId(pageId);
+        if (!sanitizedPageId) {
             return jsonResponse({ error: 'Invalid pageId format' }, 400, env, request);
         }
 
@@ -145,7 +101,7 @@ export async function onRequestDelete(context) {
         const filePath = `data/${sanitizedPageId}/content.json`;
         const commitMessage = `Delete ${sanitizedPageId} content by ${auth.session.username} (${auth.session.role})`;
 
-        const result = await deleteFromGitHub(env, filePath, commitMessage);
+        const result = await deleteRepoFile(env, filePath, commitMessage);
 
         if (!result.success) {
             return jsonResponse({ error: result.error }, 404, env, request);

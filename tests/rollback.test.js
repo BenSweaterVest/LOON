@@ -42,7 +42,7 @@ describe('Rollback Endpoint', () => {
         });
         const body = await response.json();
         expect(response.status).toBe(401);
-        expect(body.error).toContain('Authentication required');
+        expect(body.error).toContain('No authorization token');
     });
 
     it('should reject contributor role', async () => {
@@ -92,5 +92,18 @@ describe('Rollback Endpoint', () => {
         const body = await response.json();
         expect(response.status).toBe(404);
         expect(body.error).toContain('not found');
+    });
+
+    it('should emit structured security event on auth failure when enabled', async () => {
+        env.SECURITY_LOG_MODE = 'structured';
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        const response = await onRequestPost({
+            request: createPostRequest({ pageId: 'demo', commitSha: 'abcdef1' }),
+            env
+        });
+
+        expect(response.status).toBe(401);
+        expect(logSpy.mock.calls.some(call => String(call[0]).includes('"event":"rollback_auth_failed"'))).toBe(true);
     });
 });

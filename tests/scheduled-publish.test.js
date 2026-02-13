@@ -48,5 +48,22 @@ describe('Scheduled Publish Runner', () => {
         expect(body.published.length).toBe(1);
         expect(body.published[0].pageId).toBe('demo');
     });
-});
 
+    it('emits structured security event on scheduled publish success when enabled', async () => {
+        env.SECURITY_LOG_MODE = 'structured';
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        const due = new Date(Date.now() - 60000).toISOString();
+
+        global.fetch = vi.fn()
+            .mockResolvedValueOnce(new Response(JSON.stringify([{ type: 'dir', name: 'demo' }]), { status: 200 }))
+            .mockResolvedValueOnce(githubContentResponse({
+                draft: { title: 'Draft' },
+                _meta: { workflowStatus: 'scheduled', scheduledFor: due }
+            }, 'current-sha'))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ commit: { sha: 'newcommit' } }), { status: 200 }));
+
+        const res = await onRequestPost({ request: request(), env });
+        expect(res.status).toBe(200);
+        expect(logSpy.mock.calls.some(call => String(call[0]).includes('"event":"content_scheduled_published"'))).toBe(true);
+    });
+});

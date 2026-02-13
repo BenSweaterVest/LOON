@@ -11,6 +11,8 @@
 import { handleCorsOptions } from './_cors.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
+import { getRepoFileJson } from '../lib/github.js';
 
 const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
 
@@ -32,28 +34,10 @@ const DEFAULT_BLOCKS = [
     }
 ];
 
-async function validateSession(db, request) {
-    const auth = request.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    const token = auth.slice(7);
-    const raw = await db.get(`session:${token}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-}
-
 async function loadBlocksFromRepo(env) {
-    const path = 'data/_blocks/blocks.json';
-    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
-    const res = await fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'LOON-CMS/1.0'
-        }
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const parsed = JSON.parse(atob(data.content));
+    const file = await getRepoFileJson(env, 'data/_blocks/blocks.json');
+    if (!file.exists) return null;
+    const parsed = file.content;
     if (!Array.isArray(parsed)) return null;
     return parsed
         .filter(item => item && item.id && item.label && typeof item.content === 'string')
@@ -67,8 +51,10 @@ export async function onRequestGet(context) {
     if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
 
     try {
-        const session = await validateSession(db, request);
-        if (!session) return jsonResponse({ error: 'Authentication required' }, 401, env, request);
+        const token = getBearerToken(request);
+        if (!token) return jsonResponse({ error: 'No authorization token' }, 401, env, request);
+        const session = await getSessionFromRequest(db, request);
+        if (!session) return jsonResponse({ error: 'Invalid or expired session' }, 401, env, request);
 
         const repoBlocks = await loadBlocksFromRepo(env);
         const blocks = repoBlocks?.length ? repoBlocks : DEFAULT_BLOCKS;
@@ -82,4 +68,3 @@ export async function onRequestGet(context) {
 export async function onRequestOptions(context) {
     return handleCorsOptions(context.env, context.request, CORS_OPTIONS);
 }
-
