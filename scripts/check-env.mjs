@@ -5,7 +5,7 @@
  * Validates:
  * - Required environment variables are present.
  * - GITHUB_REPO format looks correct.
- * - wrangler config has a KV binding (LOON_DB preferred, KV supported).
+ * - optional local wrangler config can include a KV binding for local development.
  */
 
 import fs from 'node:fs';
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const wranglerTomlPath = path.join(projectRoot, 'wrangler.toml');
+const wranglerTomlPath = path.join(projectRoot, 'wrangler.dev.toml');
 const wranglerLocalTomlPath = path.join(projectRoot, 'wrangler.local.toml');
 
 const REQUIRED_VARS = ['GITHUB_REPO', 'GITHUB_TOKEN'];
@@ -148,14 +148,14 @@ function main() {
         printLine(value ? '[OK]' : '[Not Set]', key);
     }
 
-    printLine('\nWrangler KV Binding Check:');
+    printLine('\nLocal Wrangler KV Binding Check (optional):');
     const wranglerToml = readFileIfExists(wranglerTomlPath);
     const wranglerLocalToml = readFileIfExists(wranglerLocalTomlPath);
     if (!wranglerToml && !wranglerLocalToml) {
-        printLine('[Warn]', 'No Wrangler config file found (wrangler.toml or wrangler.local.toml)');
+        printLine('[Info]', 'No local Wrangler config found (wrangler.dev.toml or wrangler.local.toml).');
     } else {
         const sources = [];
-        if (wranglerToml) sources.push({ name: 'wrangler.toml', content: wranglerToml });
+        if (wranglerToml) sources.push({ name: 'wrangler.dev.toml', content: wranglerToml });
         if (wranglerLocalToml) sources.push({ name: 'wrangler.local.toml', content: wranglerLocalToml });
 
         const bindingSet = new Set();

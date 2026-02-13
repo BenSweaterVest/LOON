@@ -58,34 +58,18 @@ Browser-only requirement:
 
 ### 2. Configure KV Binding
 1. Create KV namespace `LOON_DB` in Cloudflare.
-2. Use one of these browser-only paths:
-   - Path A (Dashboard-managed bindings): In Pages project settings, add binding `LOON_DB` -> namespace `LOON_DB`.
-   - Path B (Wrangler-managed bindings): Edit `wrangler.toml` in GitHub and add:
-
-```toml
-[[kv_namespaces]]
-binding = "LOON_DB"
-id = "YOUR_PRODUCTION_NAMESPACE_ID"
-preview_id = "YOUR_PREVIEW_NAMESPACE_ID"
-
-[[kv_namespaces]]
-binding = "KV"
-id = "YOUR_PRODUCTION_NAMESPACE_ID"
-preview_id = "YOUR_PREVIEW_NAMESPACE_ID"
-```
-
-Then commit and redeploy.
+2. In your Pages project settings, add binding `LOON_DB` -> namespace `LOON_DB`.
+3. Redeploy.
 
 Notes:
 - Preferred binding name is `LOON_DB`.
 - Runtime compatibility fallback: `KV` is also accepted.
-- If Cloudflare shows "Bindings for this project are being managed through wrangler.toml", use Path B.
-- Do not commit account-specific namespace IDs back to the shared template source repo.
+- If Cloudflare shows "Bindings for this project are being managed through wrangler.toml", remove KV blocks from `wrangler.toml` (or remove that file), redeploy, then add the binding in dashboard.
 
 ### KV Best Practice (What Automates vs What Does Not)
 - Browser-only production setup (recommended): create and bind KV in Cloudflare Dashboard once per Pages project.
-- Wrangler local-dev automation (`npm run setup:kv`): creates namespaces and writes bindings to untracked `wrangler.local.toml` for local testing convenience.
-- Wrangler cannot safely auto-create and bind production KV for every template consumer from inside LOON runtime itself; each Cloudflare account/project still needs its own KV namespace/binding in dashboard or via account-level automation.
+- Local CLI automation (`npm run setup:kv`): optional developer convenience for local `wrangler.local.toml` only.
+- Each Cloudflare account/project still needs its own production KV namespace and binding in dashboard.
 
 ### 3. Configure Environment Variables (Production)
 In Cloudflare Pages > Settings > Environment variables:
@@ -131,13 +115,12 @@ Use this if you want an exact click path with no CLI.
    - Select your LOON repo and deploy with default LOON settings (no build command).
 3. Cloudflare KV binding
    - Go to **Workers & Pages -> KV** and create namespace `LOON_DB`.
-   - If bindings are editable in Cloudflare:
-     - Go to your Pages project -> **Settings -> Functions -> KV namespace bindings**.
-     - Add binding name `LOON_DB` to namespace `LOON_DB`.
+   - Go to your Pages project -> **Settings -> Bindings -> KV namespace bindings**.
+   - Add binding name `LOON_DB` to namespace `LOON_DB`.
    - If bindings are grayed out with Wrangler-managed message:
-     - Open `wrangler.toml` in GitHub.
-     - Add `[[kv_namespaces]]` entries for both `LOON_DB` and `KV`.
-     - Commit to main and redeploy.
+     - Remove KV binding blocks from root `wrangler.toml` (or remove that file).
+     - Commit and redeploy.
+     - Return to **Settings -> Bindings** and add `LOON_DB`.
 4. Cloudflare environment variables
    - Go to Pages project -> **Settings -> Environment variables -> Production**.
    - Add:
@@ -165,7 +148,7 @@ Use this if you want an exact click path with no CLI.
 This is optional and not required for browser-only setup:
 
 ```bash
-# Create/update KV bindings in wrangler.local.toml (LOON_DB + KV alias)
+# Create/update local KV bindings in wrangler.local.toml (LOON_DB + KV alias)
 npm run setup:kv
 
 # Validate env/config locally
@@ -173,10 +156,6 @@ npm run check:env
 
 # Do both in one command
 npm run setup:local
-
-# Optional (advanced): write account-specific IDs to wrangler.toml
-# Not recommended for template portability
-npm run setup:kv:project
 ```
 ---
 ## Production Checklist
@@ -199,7 +178,7 @@ loon/
 +-- 404.html                # Custom error page
 +-- robots.txt              # Search engine directives
 +-- _headers                # Cloudflare Pages security headers
-+-- wrangler.toml           # Local development config
++-- wrangler.dev.toml       # Local development Wrangler config
 +-- wrangler.local.toml     # Local-only KV bindings (generated, gitignored)
 +-- package.json            # Node.js config (dev dependencies, scripts)
 +-- vitest.config.js        # Test configuration
@@ -366,13 +345,12 @@ See [docs/API.md](docs/API.md) for full API documentation.
 ```bash
 # Install Wrangler
 npm install -g wrangler
-# Copy environment template
-cp .env.example .env.local
+# Copy .env.example to .env.local
 # Edit .env.local with your GitHub token and repo
 # Optional: auto-create KV namespaces + validate env
 npm run setup:local
 # Start local server
-npx wrangler pages dev .
+npm run dev
 ```
 Open http://localhost:8788 to test locally.
 ---
@@ -442,8 +420,8 @@ Returns system status, version, and configuration validation. See [health check 
 - **Can't complete initial setup?** Verify `SETUP_TOKEN` is set in Cloudflare Pages env vars and redeploy.
 - **Need a guided diagnostics view?** Open `/admin/setup-check` and run **Run Full Readiness Check**.
 - **Need help creating first content?** Log in as admin and click **Start First Page Wizard**.
-- **`KV database not configured` error?** Verify a KV binding exists (`LOON_DB` preferred, `KV` also supported) in Cloudflare Pages project settings. For local CLI flows, check `wrangler.local.toml`/`wrangler.toml`.
-- **Bindings UI is grayed out in Cloudflare?** Your project is Wrangler-managed. Add `[[kv_namespaces]]` in `wrangler.toml` via GitHub web editor, commit, and redeploy.
+- **`KV database not configured` error?** Verify a KV binding exists (`LOON_DB` preferred, `KV` also supported) in Cloudflare Pages project settings. For local CLI flows, check `wrangler.local.toml`/`wrangler.dev.toml`.
+- **Bindings UI is grayed out in Cloudflare?** Remove KV blocks from root `wrangler.toml` (or remove that file), redeploy, then add binding `LOON_DB` in dashboard.
 - **Passkeys not registering/authenticating?** Check `/api/health` and confirm `passkeys_ready: true` plus correct `RP_ID`/`RP_ORIGIN`.
 - **Health check degraded?** Check `/api/health` response to see which required check failed (GitHub token, KV binding, etc.)
 - **Login fails?** Wait 10 seconds for KV sync, clear browser cache

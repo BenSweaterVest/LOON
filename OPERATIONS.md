@@ -95,9 +95,9 @@ Symptoms:
 
 Actions:
 1. Confirm Pages KV binding exists in Production (`LOON_DB` or `KV`).
-2. If Cloudflare binding controls are editable, fix binding in Cloudflare Dashboard.
-3. If controls are grayed out with "managed through wrangler.toml", edit `wrangler.toml` in GitHub and add/fix `[[kv_namespaces]]` for `LOON_DB` (and `KV` compatibility alias), then commit and redeploy.
-4. If using Wrangler-managed local config, verify `[[kv_namespaces]]` in `wrangler.local.toml` (or `wrangler.toml` when intentionally used) and ensure namespace IDs match this specific Cloudflare account/project.
+2. Fix binding in Cloudflare Dashboard (`Settings -> Bindings -> KV namespace bindings`).
+3. If controls are grayed out with "managed through wrangler.toml", remove KV binding blocks from root `wrangler.toml` (or remove that file), commit, and redeploy.
+4. Add binding `LOON_DB` in dashboard.
 5. Redeploy.
 6. Recheck `/api/health`.
 7. Open `/admin/setup-check` and confirm the KV check reports `Ready`.

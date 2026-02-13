@@ -1,10 +1,10 @@
-# Wrangler configuration for local development
+# Local-only Wrangler configuration for development
 # Documentation: https://developers.cloudflare.com/workers/wrangler/configuration/
 
 name = "loon"
 compatibility_date = "2026-01-01"
 
-# Cloudflare Pages configuration
+# Cloudflare Pages local emulation configuration
 pages_build_output_dir = "."
 
 # Local development settings
@@ -26,13 +26,13 @@ local_protocol = "http"
 #   This starts a server at http://localhost:8788
 #   API endpoints available at http://localhost:8788/api/*
 
-# KV Namespace Configuration
+# Local KV Namespace Configuration
 #
-# Optional automation (local Wrangler):
+# Optional automation:
 #   npm run setup:kv
 #
-# This script creates KV namespaces and injects a managed binding block below.
-# Dashboard-only setup is also supported (no local scripts required).
+# This script creates KV namespaces and injects a local binding block below.
+# Production bindings are managed in Cloudflare dashboard.
 #
 # Then run local KV dev with:
 #   npm run dev:kv

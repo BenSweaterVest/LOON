@@ -3,7 +3,7 @@
  * Create the first LOON admin user directly in Cloudflare KV using Wrangler.
  *
  * Prerequisite:
- *   - `npm run setup:kv` already completed (or equivalent kv_namespaces config)
+ *   - `npm run setup:kv` already completed (or equivalent local kv_namespaces config)
  *
  * Usage:
  *   LOON_ADMIN_PASSWORD='YourSecurePassword123' npm run setup:admin -- --username admin
@@ -55,7 +55,7 @@ function resolveWranglerConfigPath() {
         return path.join(projectRoot, wranglerConfigFile);
     }
     const localPath = path.join(projectRoot, 'wrangler.local.toml');
-    const defaultPath = path.join(projectRoot, 'wrangler.toml');
+    const defaultPath = path.join(projectRoot, 'wrangler.dev.toml');
     try {
         readFileSync(localPath, 'utf8');
         return localPath;

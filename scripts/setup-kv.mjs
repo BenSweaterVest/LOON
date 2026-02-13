@@ -11,7 +11,7 @@
  *   node scripts/setup-kv.mjs
  *   node scripts/setup-kv.mjs --binding LOON_DB
  *   node scripts/setup-kv.mjs --target wrangler.local.toml
- *   node scripts/setup-kv.mjs --target wrangler.toml
+ *   node scripts/setup-kv.mjs --target wrangler.dev.toml
  *   node scripts/setup-kv.mjs --legacy-binding KV
  *   node scripts/setup-kv.mjs --no-legacy-binding
  *   node scripts/setup-kv.mjs --env staging
@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, '..');
-const baseWranglerPath = path.join(projectRoot, 'wrangler.toml');
+const baseWranglerPath = path.join(projectRoot, 'wrangler.dev.toml');
 
 const args = process.argv.slice(2);
 const getArg = (name, defaultValue) => {
@@ -112,11 +112,12 @@ function ensureNamespace(name) {
 
 function upsertWranglerKvBinding(prodId, previewId) {
     if (!fs.existsSync(wranglerPath)) {
-        if (!fs.existsSync(baseWranglerPath)) {
-            throw new Error(`Base wrangler.toml not found at ${baseWranglerPath}`);
+        if (fs.existsSync(baseWranglerPath)) {
+            const base = fs.readFileSync(baseWranglerPath, 'utf8');
+            fs.writeFileSync(wranglerPath, base, 'utf8');
+        } else {
+            fs.writeFileSync(wranglerPath, 'name = "loon"\ncompatibility_date = "2026-01-01"\npages_build_output_dir = "."\n', 'utf8');
         }
-        const base = fs.readFileSync(baseWranglerPath, 'utf8');
-        fs.writeFileSync(wranglerPath, base, 'utf8');
     }
 
     const current = fs.readFileSync(wranglerPath, 'utf8');
@@ -155,8 +156,8 @@ function upsertWranglerKvBinding(prodId, previewId) {
 
 function main() {
     console.log(`Setting up KV binding "${BINDING}" in ${path.basename(wranglerPath)}...`);
-    if (TARGET_FILE === 'wrangler.toml') {
-        console.log('Warning: writing account-specific namespace IDs to wrangler.toml can break template portability.');
+    if (TARGET_FILE === 'wrangler.dev.toml') {
+        console.log('Warning: writing account-specific namespace IDs to wrangler.dev.toml is discouraged.');
         console.log('Preferred: use default target wrangler.local.toml for local automation.');
     }
     if (LEGACY_BINDING && LEGACY_BINDING !== BINDING) {
