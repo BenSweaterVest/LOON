@@ -21,6 +21,7 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 - **Auto-Staging in Batch Mode**: Changes can stage in background while you type
 - **Media Management**: Upload images via Cloudflare Images
 - **JSON Schema Support**: Standards-based schema validation
+- **Two-Column Editor Layout**: Clear content canvas + right-side publish/workflow panels
 - **WYSIWYG Editor**: Dynamic forms generated from schema
 - **Import Support**: Import `.json`, `.tid`, `.md`, `.txt`, `.html` into page fields
 - **Theme Support**: Switch admin theme in-app (Slate, Forest, Sunset)
@@ -322,14 +323,15 @@ loon/
 ## Adding Pages
 ### Option A: Admin Panel (Recommended - Easiest!)
 1. Log in to `/admin.html`
-2. Click **"+ New Page"** button
+2. Click **"+ Create Page"** button
 3. Enter a **Page ID** (lowercase, alphanumeric + hyphens only)
 4. Select a **Template** or start with a blank schema
 5. Click **Create Page**
 6. The new page appears in your admin panel and is ready to edit
 7. Optional: click **Import File** in the editor to prefill fields from `.json`, `.tid`, `.md`, `.txt`, or `.html`
 8. Optional: enable **Batch Session Mode** and use **Push All Changes** to commit staged edits together
-9. If staged edits exist for the page, push them first before publishing
+9. Use the **Formatting + Media** toolbar above the content form for bold/italic/headings/lists, links, and inline image insertion
+10. If staged edits exist for the page, push them first before publishing
 
 ### Editing Workflow (Recommended)
 Use one of these modes consistently during a session:

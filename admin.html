@@ -46,7 +46,8 @@ PREREQUISITES:
     <title>LOON Team Admin</title>
     <meta name="description" content="LOON Admin Panel">
     <meta name="robots" content="noindex, nofollow">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>L</text></svg>">
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
+    <link rel="apple-touch-icon" href="/favicon.png">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -309,6 +310,132 @@ PREREQUISITES:
             box-shadow: var(--panel-shadow);
         }
         .editor-container h3 { margin-top: 0; }
+
+        .editor-shell-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.75rem;
+            margin-bottom: 0.8rem;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 0.55rem;
+        }
+
+        .editor-shell-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+
+        .editor-shell-header small {
+            color: var(--muted-color);
+        }
+
+        .editor-two-column-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .editor-main-column {
+            min-width: 0;
+        }
+
+        .editor-content-panel {
+            padding-top: 0.9rem;
+        }
+
+        .editor-content-panel h4 {
+            margin: 0 0 0.7rem 0;
+            font-size: 1rem;
+        }
+
+        .editor-main-column #editor-form {
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 0.85rem;
+            background: var(--panel-background);
+        }
+
+        .editor-main-column .form-field textarea {
+            min-height: 220px;
+            font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+            line-height: 1.5;
+        }
+
+        .editor-format-toolbar {
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: var(--panel-background);
+            padding: 0.65rem 0.75rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .editor-format-toolbar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.45rem;
+        }
+
+        .editor-format-toolbar-title {
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .editor-format-toolbar-note {
+            font-size: 0.78rem;
+            color: var(--muted-color);
+        }
+
+        .editor-format-toolbar-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .editor-format-toolbar-actions button {
+            margin: 0;
+        }
+
+        .editor-sidebar-column {
+            display: grid;
+            gap: 0.75rem;
+            position: sticky;
+            top: 0.75rem;
+        }
+
+        .editor-side-panel {
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: var(--panel-background);
+            padding: 0.75rem 0.85rem;
+        }
+
+        .editor-side-panel h4 {
+            margin: 0 0 0.55rem 0;
+            font-size: 0.95rem;
+        }
+
+        .editor-meta-stack {
+            display: grid;
+            gap: 0.6rem;
+        }
+
+        .editor-meta-stack .meta-info {
+            margin-top: 0;
+        }
+
+        @media (max-width: 1080px) {
+            .editor-two-column-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .editor-sidebar-column {
+                position: static;
+            }
+        }
         
         .save-bar {
             display: flex;
@@ -701,97 +828,139 @@ PREREQUISITES:
                 </div>
                 
                 <div id="editor-container" class="editor-container hidden">
-                    <h3 id="editor-title">Page Editor</h3>
-                    <div id="editor-form"></div>
-                    
-                    <div id="content-meta" class="meta-info hidden"></div>
-                    <div id="content-status" style="margin: 1rem 0; padding: 0.75rem; background: #e7f3ff; border-left: 4px solid #2196F3; display: none;">
-                        <strong id="status-text"></strong>
+                    <div class="editor-shell-header">
+                        <h3 id="editor-title">Page Editor</h3>
+                        <small>Two-column layout: write in the left column, and manage publish/workflow actions on the right.</small>
                     </div>
-                    <div id="workflow-assistant" class="workflow-assistant">
-                        <strong>Workflow Assistant</strong>
-                        <small>Load a page to see recommended next actions.</small>
-                        <div id="workflow-assistant-body"></div>
-                    </div>
-                    
-                    <div class="save-bar">
-                        <span class="last-saved" id="last-saved"></span>
-                        <span id="edit-dirty-chip" class="edit-dirty-chip">No local edits</span>
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <label class="batch-toggle" for="batch-mode-toggle" title="Stage edits during this session, then push all at once">
-                                <input type="checkbox" id="batch-mode-toggle" onchange="setBatchModeEnabled(this.checked)">
-                                Batch Session Mode
-                            </label>
-                            <button onclick="triggerImportFileDialog()" id="import-btn" class="outline" title="Import JSON, .tid, markdown, HTML, or text into this form">
-                                Import File
-                            </button>
-                            <button onclick="pushAllChanges()" id="push-all-btn" class="secondary hidden">
-                                Push All Changes (0)
-                            </button>
-                            <button onclick="saveContentAsDraft()" id="draft-btn" style="display: none;">Save as Draft</button>
-                            <button onclick="saveContent()" id="save-btn">Save Changes</button>
-                            <button onclick="publishContent()" id="publish-btn" class="contrast" style="display: none;">Publish</button>
-                            <button onclick="deleteContent()" id="delete-btn" class="outline" style="color: var(--error); display: none;">Delete</button>
-                        </div>
-                    </div>
-                    <div id="queue-summary" class="queue-summary"></div>
-                    <div id="autosave-indicator" class="autosave-indicator"></div>
-                    <div class="editor-tools">
-                        <details>
-                            <summary>Internal Link Tools</summary>
-                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
-                                <select id="link-page-select" style="min-width:220px;">
-                                    <option value="">Select a page link...</option>
-                                </select>
-                                <button type="button" class="secondary" onclick="insertSelectedPageLink()">Insert [[page-id]]</button>
-                                <button type="button" class="outline" onclick="refreshLinkPageList()">Refresh Pages</button>
-                                <button type="button" class="outline" onclick="findBacklinks()">Find Backlinks</button>
+                    <div class="editor-two-column-layout">
+                        <section class="editor-main-column">
+                            <div class="editor-side-panel editor-content-panel">
+                                <h4>Content</h4>
+                                <div id="content-status" style="margin: 0 0 0.8rem 0; padding: 0.75rem; background: #e7f3ff; border-left: 4px solid #2196F3; display: none;">
+                                    <strong id="status-text"></strong>
+                                </div>
+                                <div class="editor-format-toolbar">
+                                    <div class="editor-format-toolbar-header">
+                                        <span class="editor-format-toolbar-title">Formatting + Media</span>
+                                        <span class="editor-format-toolbar-note">Focus a text field before using these tools</span>
+                                    </div>
+                                    <div class="editor-format-toolbar-actions">
+                                        <button type="button" class="secondary" onclick="insertBoldText()">Bold</button>
+                                        <button type="button" class="secondary" onclick="insertItalicText()">Italic</button>
+                                        <button type="button" class="secondary" onclick="insertHeadingText()">Heading</button>
+                                        <button type="button" class="secondary" onclick="insertBulletList()">Bullet List</button>
+                                        <button type="button" class="secondary" onclick="insertNumberedList()">Numbered List</button>
+                                        <button type="button" class="secondary" onclick="insertLinkMarkdown()">Link</button>
+                                        <button type="button" class="secondary" onclick="insertImageMarkdownFromUrl()">Image URL</button>
+                                        <button type="button" class="contrast" onclick="uploadAndInsertImageMarkdown()">Upload + Insert Image</button>
+                                    </div>
+                                </div>
+                                <div id="editor-form"></div>
                             </div>
-                            <div id="backlinks-status" style="margin-top:0.5rem;"></div>
-                            <div id="backlinks-list" style="margin-top:0.5rem;"></div>
-                        </details>
-                        <details>
-                            <summary>Revision History</summary>
-                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
-                                <button type="button" class="secondary" onclick="loadRevisionHistory()">Load Revisions</button>
-                                <button type="button" class="outline" onclick="openDiffForLatestTwo()">Diff Latest Two</button>
+                            <div class="editor-tools">
+                                <details open>
+                                    <summary>Editor Tips</summary>
+                                    <div style="margin-top:0.6rem;">
+                                        <small style="display:block; color:var(--muted-color); margin-bottom:0.45rem;">
+                                            Use schema image fields for primary/hero images. Use <strong>Upload + Insert Image</strong> for inline images in long text fields.
+                                        </small>
+                                        <small style="display:block; color:var(--muted-color);">
+                                            Save stages: draft first, then publish from the right sidebar when ready.
+                                        </small>
+                                    </div>
+                                </details>
+                                <details>
+                                    <summary>Internal Link Tools</summary>
+                                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                        <select id="link-page-select" style="min-width:220px;">
+                                            <option value="">Select a page link...</option>
+                                        </select>
+                                        <button type="button" class="secondary" onclick="insertSelectedPageLink()">Insert [[page-id]]</button>
+                                        <button type="button" class="outline" onclick="refreshLinkPageList()">Refresh Pages</button>
+                                        <button type="button" class="outline" onclick="findBacklinks()">Find Backlinks</button>
+                                    </div>
+                                    <div id="backlinks-status" style="margin-top:0.5rem;"></div>
+                                    <div id="backlinks-list" style="margin-top:0.5rem;"></div>
+                                </details>
+                                <details>
+                                    <summary>Revision History</summary>
+                                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                        <button type="button" class="secondary" onclick="loadRevisionHistory()">Load Revisions</button>
+                                        <button type="button" class="outline" onclick="openDiffForLatestTwo()">Diff Latest Two</button>
+                                    </div>
+                                    <div id="revision-status" style="margin-top:0.5rem;"></div>
+                                    <div id="revision-list" style="margin-top:0.5rem;"></div>
+                                    <div id="revision-diff" class="diff-view" style="margin-top:0.6rem; display:none;"></div>
+                                </details>
+                                <details>
+                                    <summary>Reusable Blocks</summary>
+                                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                        <select id="block-select" style="min-width:220px;">
+                                            <option value="">Select a reusable block...</option>
+                                        </select>
+                                        <button type="button" class="secondary" onclick="insertSelectedBlock()">Insert Block</button>
+                                        <button type="button" class="outline" onclick="loadReusableBlocks()">Refresh Blocks</button>
+                                    </div>
+                                    <div id="blocks-status" style="margin-top:0.5rem;"></div>
+                                </details>
                             </div>
-                            <div id="revision-status" style="margin-top:0.5rem;"></div>
-                            <div id="revision-list" style="margin-top:0.5rem;"></div>
-                            <div id="revision-diff" class="diff-view" style="margin-top:0.6rem; display:none;"></div>
-                        </details>
-                        <details>
-                            <summary>Workflow + Watchlist</summary>
-                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
-                                <select id="workflow-status-select" style="min-width:180px;">
-                                    <option value="draft">Draft</option>
-                                    <option value="in_review">In Review</option>
-                                    <option value="approved">Approved</option>
-                                    <option value="scheduled">Scheduled</option>
-                                    <option value="published">Published</option>
-                                </select>
-                                <input type="datetime-local" id="workflow-scheduled-for">
-                                <button type="button" class="secondary" onclick="updateWorkflowStatus()">Update Workflow</button>
-                                <button type="button" class="outline" onclick="runScheduledPublishNow()">Run Scheduled Publish</button>
+                        </section>
+                        <aside class="editor-sidebar-column">
+                            <div class="editor-side-panel">
+                                <h4>Publish</h4>
+                                <div class="save-bar" style="margin-top:0; padding-top:0; border-top:none;">
+                                    <span class="last-saved" id="last-saved"></span>
+                                    <span id="edit-dirty-chip" class="edit-dirty-chip">No local edits</span>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        <label class="batch-toggle" for="batch-mode-toggle" title="Stage edits during this session, then push all at once">
+                                            <input type="checkbox" id="batch-mode-toggle" onchange="setBatchModeEnabled(this.checked)">
+                                            Batch Session Mode
+                                        </label>
+                                        <button onclick="triggerImportFileDialog()" id="import-btn" class="outline" title="Import JSON, .tid, markdown, HTML, or text into this form">
+                                            Import File
+                                        </button>
+                                        <button onclick="pushAllChanges()" id="push-all-btn" class="secondary hidden">
+                                            Push All Changes (0)
+                                        </button>
+                                        <button onclick="saveContentAsDraft()" id="draft-btn" style="display: none;">Save as Draft</button>
+                                        <button onclick="saveContent()" id="save-btn">Save Changes</button>
+                                        <button onclick="publishContent()" id="publish-btn" class="contrast" style="display: none;">Publish</button>
+                                        <button onclick="deleteContent()" id="delete-btn" class="outline" style="color: var(--error); display: none;">Delete</button>
+                                    </div>
+                                </div>
+                                <div id="queue-summary" class="queue-summary"></div>
+                                <div id="autosave-indicator" class="autosave-indicator"></div>
                             </div>
-                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
-                                <button type="button" class="outline" id="watch-toggle-btn" onclick="toggleWatchPage()">Watch Page</button>
-                                <button type="button" class="outline" onclick="loadWatchActivity()">Refresh Watch Activity</button>
+                            <div class="editor-side-panel">
+                                <h4>Workflow + Watchlist</h4>
+                                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                    <select id="workflow-status-select" style="min-width:180px;">
+                                        <option value="draft">Draft</option>
+                                        <option value="in_review">In Review</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="scheduled">Scheduled</option>
+                                        <option value="published">Published</option>
+                                    </select>
+                                    <input type="datetime-local" id="workflow-scheduled-for">
+                                    <button type="button" class="secondary" onclick="updateWorkflowStatus()">Update Workflow</button>
+                                    <button type="button" class="outline" onclick="runScheduledPublishNow()">Run Scheduled Publish</button>
+                                </div>
+                                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                    <button type="button" class="outline" id="watch-toggle-btn" onclick="toggleWatchPage()">Watch Page</button>
+                                    <button type="button" class="outline" onclick="loadWatchActivity()">Refresh Watch Activity</button>
+                                </div>
+                                <div id="workflow-status-panel" style="margin-top:0.5rem;"></div>
+                                <div id="watch-activity-list" style="margin-top:0.5rem;"></div>
                             </div>
-                            <div id="workflow-status-panel" style="margin-top:0.5rem;"></div>
-                            <div id="watch-activity-list" style="margin-top:0.5rem;"></div>
-                        </details>
-                        <details>
-                            <summary>Reusable Blocks</summary>
-                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
-                                <select id="block-select" style="min-width:220px;">
-                                    <option value="">Select a reusable block...</option>
-                                </select>
-                                <button type="button" class="secondary" onclick="insertSelectedBlock()">Insert Block</button>
-                                <button type="button" class="outline" onclick="loadReusableBlocks()">Refresh Blocks</button>
+                            <div class="editor-side-panel editor-meta-stack">
+                                <div id="workflow-assistant" class="workflow-assistant" style="margin:0;">
+                                    <strong>Workflow Assistant</strong>
+                                    <small>Load a page to see recommended next actions.</small>
+                                    <div id="workflow-assistant-body"></div>
+                                </div>
+                                <div id="content-meta" class="meta-info hidden"></div>
                             </div>
-                            <div id="blocks-status" style="margin-top:0.5rem;"></div>
-                        </details>
+                        </aside>
                     </div>
                     <input type="file" id="import-file-input" class="hidden" accept=".json,.tid,.md,.markdown,.txt,.html,.htm" onchange="handleImportFileChosen(event)">
                 </div>
@@ -1040,7 +1209,6 @@ PREREQUISITES:
                     
                     // Check if session expired client-side
                     if (SESSION.expiresAt && Date.now() > SESSION.expiresAt) {
-                        console.log('Session expired client-side');
                         localStorage.removeItem(STORAGE_KEYS.SESSION);
                         sessionStorage.removeItem(STORAGE_KEYS.SESSION);
                         SESSION = null;
@@ -1469,31 +1637,116 @@ PREREQUISITES:
             }
         }
 
+        function getFocusedEditableField() {
+            if (!LAST_FOCUSED_FIELD_ID) {
+                showStatus('editor-status', 'Focus a text or textarea field first.', 'error');
+                return null;
+            }
+            const input = document.getElementById(LAST_FOCUSED_FIELD_ID);
+            if (!input || typeof input.value !== 'string') {
+                showStatus('editor-status', 'Focused field does not support text insertion.', 'error');
+                return null;
+            }
+            return input;
+        }
+
+        function insertSnippetAtCursor(input, snippet, cursorOffset = null) {
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? input.value.length;
+            input.value = `${input.value.slice(0, start)}${snippet}${input.value.slice(end)}`;
+            input.focus();
+            const nextPos = start + (cursorOffset === null ? snippet.length : cursorOffset);
+            input.setSelectionRange(nextPos, nextPos);
+            markEditorDirty(true);
+            scheduleAutosave();
+            scheduleAutoStage();
+        }
+
+        function wrapSelection(prefix, suffix, placeholder) {
+            const input = getFocusedEditableField();
+            if (!input) return;
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? input.value.length;
+            const selected = input.value.slice(start, end);
+            const inner = selected || placeholder;
+            const snippet = `${prefix}${inner}${suffix}`;
+            insertSnippetAtCursor(input, snippet, prefix.length + inner.length);
+        }
+
+        function insertBoldText() {
+            wrapSelection('**', '**', 'bold text');
+            showStatus('editor-status', 'Inserted bold formatting.', 'success');
+        }
+
+        function insertItalicText() {
+            wrapSelection('*', '*', 'italic text');
+            showStatus('editor-status', 'Inserted italic formatting.', 'success');
+        }
+
+        function insertHeadingText() {
+            const input = getFocusedEditableField();
+            if (!input) return;
+            insertSnippetAtCursor(input, '## Heading\n', 3);
+            showStatus('editor-status', 'Inserted heading.', 'success');
+        }
+
+        function insertBulletList() {
+            const input = getFocusedEditableField();
+            if (!input) return;
+            insertSnippetAtCursor(input, '- Item 1\n- Item 2\n- Item 3\n');
+            showStatus('editor-status', 'Inserted bullet list.', 'success');
+        }
+
+        function insertNumberedList() {
+            const input = getFocusedEditableField();
+            if (!input) return;
+            insertSnippetAtCursor(input, '1. Item 1\n2. Item 2\n3. Item 3\n');
+            showStatus('editor-status', 'Inserted numbered list.', 'success');
+        }
+
+        function insertLinkMarkdown() {
+            const url = prompt('Enter link URL (example: https://example.com)');
+            if (!url) return;
+            const label = prompt('Link text', 'Read more') || 'Read more';
+            const input = getFocusedEditableField();
+            if (!input) return;
+            const token = `[${label}](${url})`;
+            insertSnippetAtCursor(input, token);
+            showStatus('editor-status', 'Inserted link.', 'success');
+        }
+
+        function insertImageMarkdownFromUrl() {
+            const url = prompt('Enter image URL');
+            if (!url) return;
+            const alt = prompt('Alt text', 'Image') || 'Image';
+            const input = getFocusedEditableField();
+            if (!input) return;
+            const token = `![${alt}](${url})`;
+            insertSnippetAtCursor(input, token);
+            showStatus('editor-status', 'Inserted image markdown.', 'success');
+        }
+
+        async function uploadAndInsertImageMarkdown() {
+            const input = getFocusedEditableField();
+            if (!input) return;
+            const upload = await selectAndUploadImage();
+            if (!upload) return;
+            const alt = prompt('Alt text for image', upload.fileName.replace(/\.[^.]+$/, '') || 'Image') || 'Image';
+            const token = `![${alt}](${upload.url})`;
+            insertSnippetAtCursor(input, token);
+            showStatus('editor-status', 'Uploaded image and inserted markdown.', 'success');
+        }
+
         function insertSelectedPageLink() {
             const select = document.getElementById('link-page-select');
             if (!select || !select.value) {
                 showStatus('editor-status', 'Select a page link first.', 'error');
                 return;
             }
-            if (!LAST_FOCUSED_FIELD_ID) {
-                showStatus('editor-status', 'Focus a text/textarea field first.', 'error');
-                return;
-            }
-            const input = document.getElementById(LAST_FOCUSED_FIELD_ID);
-            if (!input || typeof input.value !== 'string') {
-                showStatus('editor-status', 'Focused field does not support text insertion.', 'error');
-                return;
-            }
-
+            const input = getFocusedEditableField();
+            if (!input) return;
             const token = `[[${select.value}]]`;
-            const start = input.selectionStart ?? input.value.length;
-            const end = input.selectionEnd ?? input.value.length;
-            input.value = `${input.value.slice(0, start)}${token}${input.value.slice(end)}`;
-            input.focus();
-            const nextPos = start + token.length;
-            input.setSelectionRange(nextPos, nextPos);
-            scheduleAutosave();
-            scheduleAutoStage();
+            insertSnippetAtCursor(input, token);
             showStatus('editor-status', `Inserted link ${token}`, 'success');
         }
 
@@ -1844,24 +2097,10 @@ PREREQUISITES:
                 showStatus('editor-status', 'Block not found in cache.', 'error');
                 return;
             }
-            if (!LAST_FOCUSED_FIELD_ID) {
-                showStatus('editor-status', 'Focus a text/textarea field first.', 'error');
-                return;
-            }
-            const input = document.getElementById(LAST_FOCUSED_FIELD_ID);
-            if (!input || typeof input.value !== 'string') {
-                showStatus('editor-status', 'Focused field does not support text insertion.', 'error');
-                return;
-            }
+            const input = getFocusedEditableField();
+            if (!input) return;
             const snippet = `\n${block.content}\n`;
-            const start = input.selectionStart ?? input.value.length;
-            const end = input.selectionEnd ?? input.value.length;
-            input.value = `${input.value.slice(0, start)}${snippet}${input.value.slice(end)}`;
-            input.focus();
-            const nextPos = start + snippet.length;
-            input.setSelectionRange(nextPos, nextPos);
-            scheduleAutosave();
-            scheduleAutoStage();
+            insertSnippetAtCursor(input, snippet);
             showStatus('editor-status', `Inserted block "${block.label}"`, 'success');
         }
 
@@ -2395,8 +2634,7 @@ PREREQUISITES:
                 // Health check doesn't validate session, so we'll verify on first actual request
                 // This is handled by handleSessionError
             } catch (e) {
-                // Network error, don't logout - might be offline
-                console.log('Session verification skipped (network error)');
+                // Network error, don't logout - might be offline.
             }
         }
         
@@ -3643,9 +3881,17 @@ PREREQUISITES:
                 wrapper.appendChild(input);
 
                 // Description
-                if (field.description) {
+                const autoHint = field.type === 'textarea'
+                    ? 'Supports markdown formatting. Use "Formatting + Media" tools below for quick insert.'
+                    : field.type === 'image'
+                        ? 'Upload image here for this field. For inline body images, use "Formatting + Media > Upload + Insert Image".'
+                        : '';
+                const descriptionText = field.description
+                    ? (autoHint ? `${field.description} ${autoHint}` : field.description)
+                    : autoHint;
+                if (descriptionText) {
                     const desc = document.createElement('small');
-                    desc.textContent = field.description;
+                    desc.textContent = descriptionText;
                     wrapper.appendChild(desc);
                 }
 
@@ -3983,74 +4229,89 @@ PREREQUISITES:
             return mapped;
         }
 
-        async function uploadImageForField(fieldId) {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/*';
-            
-            fileInput.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+        async function selectAndUploadImage() {
+            return new Promise(resolve => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
 
-                // Validate file size (10MB max)
-                if (file.size > 10 * 1024 * 1024) {
-                    showStatus('editor-status', 'Image too large. Maximum 10MB.', 'error');
-                    return;
-                }
-
-                showStatus('editor-status', `Uploading ${file.name}...`, 'info');
-
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    const res = await fetch('/api/upload', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${SESSION.token}`
-                        },
-                        body: formData
-                    });
-
-                    const data = await res.json();
-
-                    if (res.status === 401) {
-                        throw new Error(data.error || 'Session expired');
-                    }
-                    
-                    if (!res.ok) {
-                        throw new Error(data.error || 'Upload failed');
+                fileInput.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) {
+                        resolve(null);
+                        return;
                     }
 
-                    // Find the input field for this image and update it
-                    const field = document.getElementById(fieldId);
-                    if (field && field.parentElement) {
-                        // Find the image element or create display
-                        let img = field.querySelector('img');
-                        if (!img) {
-                            img = document.createElement('img');
-                            img.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 8px; object-fit: cover;';
-                            field.insertBefore(img, field.firstChild);
+                    if (file.size > 10 * 1024 * 1024) {
+                        showStatus('editor-status', 'Image too large. Maximum 10MB.', 'error');
+                        resolve(null);
+                        return;
+                    }
+
+                    showStatus('editor-status', `Uploading ${file.name}...`, 'info');
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${SESSION.token}`
+                            },
+                            body: formData
+                        });
+
+                        const data = await res.json();
+
+                        if (res.status === 401) {
+                            throw new Error(data.error || 'Session expired');
                         }
-                        img.src = data.url;
-                        
-                        // Update the hidden value
-                        CURRENT_CONTENT[fieldId.replace('field_', '')] = data.url;
-                        markEditorDirty(true);
-                        scheduleAutoStage();
-                    }
+                        if (!res.ok) {
+                            throw new Error(data.error || 'Upload failed');
+                        }
 
-                    showStatus('editor-status', `Image uploaded: ${data.id}`, 'success');
-                    setTimeout(() => hideStatus('editor-status'), 3000);
-
-                } catch (e) {
-                    if (!handleSessionError(e)) {
-                        showStatus('editor-status', `Upload failed: ${e.message}`, 'error');
+                        resolve({
+                            id: data.id,
+                            url: data.url,
+                            fileName: file.name
+                        });
+                    } catch (e) {
+                        if (!handleSessionError(e)) {
+                            showStatus('editor-status', `Upload failed: ${e.message}`, 'error');
+                        }
+                        resolve(null);
                     }
+                };
+
+                fileInput.click();
+            });
+        }
+
+        async function uploadImageForField(fieldId) {
+            const upload = await selectAndUploadImage();
+            if (!upload) return;
+
+            // Find the input field for this image and update it
+            const field = document.getElementById(fieldId);
+            if (field && field.parentElement) {
+                // Find the image element or create display
+                let img = field.querySelector('img');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 8px; object-fit: cover;';
+                    field.insertBefore(img, field.firstChild);
                 }
-            };
+                img.src = upload.url;
 
-            fileInput.click();
+                // Update the hidden value
+                CURRENT_CONTENT[fieldId.replace('field_', '')] = upload.url;
+                markEditorDirty(true);
+                scheduleAutoStage();
+            }
+
+            showStatus('editor-status', `Image uploaded: ${upload.id}`, 'success');
+            setTimeout(() => hideStatus('editor-status'), 3000);
         }
 
         // =================================================================
