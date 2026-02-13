@@ -205,6 +205,16 @@ async function handleRegistrationChallenge(request, env) {
         );
     }
 
+    let rpConfig;
+    try {
+        rpConfig = getRPConfig(env);
+    } catch {
+        return new Response(
+            JSON.stringify({ error: 'Passkeys not configured for this deployment. Set RP_ID and RP_ORIGIN, then redeploy.' }),
+            { status: 503, headers: getCorsHeaders(env, request) }
+        );
+    }
+
     try {
         // Generate challenge
         const challengeBytes = getRandomBytes(32);
@@ -232,8 +242,6 @@ async function handleRegistrationChallenge(request, env) {
         // Calculate userId as base64url(sha256(username))
         const userIdArray = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(user.username));
         const userId = arrayBufferToBase64Url(userIdArray);
-        
-        const rpConfig = getRPConfig(env);
         
         return new Response(
             JSON.stringify({
@@ -525,6 +533,16 @@ async function handleAuthChallenge(request, env) {
         );
     }
 
+    let rpConfig;
+    try {
+        rpConfig = getRPConfig(env);
+    } catch {
+        return new Response(
+            JSON.stringify({ error: 'Passkeys not configured for this deployment. Set RP_ID and RP_ORIGIN, then redeploy.' }),
+            { status: 503, headers: getCorsHeaders(env, request) }
+        );
+    }
+
     try {
         const url = new URL(request.url);
         const usernameHint = url.searchParams.get('usernamehint');
@@ -559,8 +577,6 @@ async function handleAuthChallenge(request, env) {
                 transports: ['internal', 'usb']
             }));
         }
-        
-        const rpConfig = getRPConfig(env);
         
         return new Response(
             JSON.stringify({

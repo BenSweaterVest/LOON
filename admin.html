@@ -1969,18 +1969,20 @@ PREREQUISITES:
         async function checkPasskeyServerConfig() {
             try {
                 const res = await fetch('/api/health', { cache: 'no-store' });
-                if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                if (!data) {
                     PASSKEY_ENV_READY = null;
                     return null;
                 }
-                const data = await res.json();
                 const checks = data?.checks || {};
                 const ready = !!checks.passkeys_ready;
                 PASSKEY_ENV_READY = ready;
                 return {
                     ready,
                     hasRpId: !!checks.passkeys_rp_id,
-                    hasRpOrigin: !!checks.passkeys_rp_origin
+                    hasRpOrigin: !!checks.passkeys_rp_origin,
+                    healthStatus: data?.status || null,
+                    httpStatus: res.status
                 };
             } catch {
                 PASSKEY_ENV_READY = null;
@@ -2827,19 +2829,24 @@ PREREQUISITES:
             
             try {
                 // Step 1: Get registration challenge
-                const challengeRes = await fetch('/api/passkeys/register/challenge', {
+                const challengePack = await fetchJsonWithRetry('/api/passkeys/register/challenge', {
                     headers: { 'Authorization': `Bearer ${SESSION.token}` }
                 });
-                
+                const challengeRes = challengePack.res;
+                const challengeData = challengePack.data || {};
+
                 if (!challengeRes.ok) {
                     if (challengeRes.status === 401 && handleSessionError(new Error('Unauthorized'))) {
                         return;
                     }
-                    throw new Error('Failed to get registration challenge');
+                    const passkeyEnv = getPasskeyEnvSuggestion();
+                    const serverMsg = challengeData.error || `Failed to get registration challenge (HTTP ${challengeRes.status})`;
+                    if (challengeRes.status === 503) {
+                        throw new Error(`${serverMsg} Set RP_ID=${passkeyEnv.rpId} and RP_ORIGIN=${passkeyEnv.rpOrigin} in Cloudflare, then redeploy.`);
+                    }
+                    throw new Error(serverMsg);
                 }
-                
-                const challengeData = await challengeRes.json();
-                
+
                 // Step 2: Create credential
                 showStatus('passkey-status', 'Please follow your device\'s instructions...', 'info');
                 
