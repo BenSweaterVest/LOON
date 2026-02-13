@@ -44,7 +44,7 @@ LOON uses Cloudflare Pages + Cloudflare KV + GitHub API. Sensitive state is spli
 ### Input and Request Hardening
 - Page/user identifiers sanitized server-side
 - JSON payload validation and bounded content size
-- Rate limiting on sensitive endpoints (login and save)
+- KV-backed rate limiting on selected sensitive/write-heavy endpoints
 - CORS control via `CORS_ORIGIN`
 
 ### Data and Transport

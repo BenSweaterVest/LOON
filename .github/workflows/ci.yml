@@ -160,7 +160,10 @@ jobs:
             exit 1
           fi
           
-          if grep -r "Bearer " . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v "^./tests/" | grep -v "Bearer \$" | grep -v "Bearer <" | grep -v "Bearer \${" | grep -v "'Bearer '" | grep -v "\*\*\*" | grep -v "Auth Required" | grep -v "Authorization: Bearer" | grep -v "Bearer {" | grep -v ".env.example"; then
+          # Only flag Bearer values that look like real tokens (20+ safe chars),
+          # and skip tests/docs/template placeholders.
+          if grep -r -nE "Bearer[[:space:]]+[A-Za-z0-9._-]{20,}" . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null \
+            | grep -vE "^(\./)?tests/|^(\./)?docs/|\.env\.example|placeholder|example|YOUR_|your-|mock|test-token|Bearer[[:space:]]+\*{3,}|Authorization:[[:space:]]*['\"]\*{3,}['\"]"; then
             echo "WARNING: Potential hardcoded bearer token found"
             exit 1
           fi
@@ -196,6 +199,10 @@ jobs:
             echo "No test script found, skipping automated tests"
             echo "See CONTRIBUTING.md for test expectations"
           fi
+        env:
+          CI: 'true'
+          GITHUB_REPO: 'example-org/example-repo'
+          GITHUB_TOKEN: 'ci-placeholder-token'
       
       - name: Upload test results
         if: always()

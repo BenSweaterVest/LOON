@@ -32,12 +32,14 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
       
       - name: Run validation
-        run: npm run validate
+        run: npm run validate:ci
         env:
           CI: 'true'
+          GITHUB_REPO: 'example-org/example-repo'
+          GITHUB_TOKEN: 'ci-placeholder-token'
       
       - name: Check deployment readiness
         run: |

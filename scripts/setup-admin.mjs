@@ -22,7 +22,6 @@ import { spawnSync } from 'node:child_process';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, '..');
-const wranglerPath = path.join(projectRoot, 'wrangler.toml');
 
 const args = process.argv.slice(2);
 const getArg = (name, fallback = null) => {
@@ -36,6 +35,7 @@ const hasFlag = name => args.includes(name);
 const usernameRaw = getArg('--username', 'admin');
 const password = getArg('--password', process.env.LOON_ADMIN_PASSWORD || null);
 const binding = getArg('--binding', 'LOON_DB');
+const wranglerConfigFile = getArg('--config', null);
 const force = hasFlag('--force');
 
 function fail(message) {
@@ -50,7 +50,21 @@ function normalizeUsername(input) {
     return normalized;
 }
 
-function getNamespaceIdFromWranglerToml(bindingName) {
+function resolveWranglerConfigPath() {
+    if (wranglerConfigFile) {
+        return path.join(projectRoot, wranglerConfigFile);
+    }
+    const localPath = path.join(projectRoot, 'wrangler.local.toml');
+    const defaultPath = path.join(projectRoot, 'wrangler.toml');
+    try {
+        readFileSync(localPath, 'utf8');
+        return localPath;
+    } catch {
+        return defaultPath;
+    }
+}
+
+function getNamespaceIdFromWranglerToml(bindingName, wranglerPath) {
     const text = readFileSync(wranglerPath, 'utf8');
 
     // Match the first kv_namespaces block for the requested binding.
@@ -138,9 +152,10 @@ function main() {
         fail('Password required (min 8 chars). Provide --password or LOON_ADMIN_PASSWORD env var.');
     }
 
-    const namespaceId = getNamespaceIdFromWranglerToml(binding);
+    const wranglerPath = resolveWranglerConfigPath();
+    const namespaceId = getNamespaceIdFromWranglerToml(binding, wranglerPath);
     if (!namespaceId) {
-        fail(`No kv namespace ID found for binding "${binding}" in wrangler.toml. Run npm run setup:kv first.`);
+        fail(`No kv namespace ID found for binding "${binding}" in ${path.basename(wranglerPath)}. Run npm run setup:kv first.`);
     }
 
     const key = `user:${username}`;

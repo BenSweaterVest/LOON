@@ -4,12 +4,14 @@
  *
  * What it does:
  * 1) Creates production and preview KV namespaces via Wrangler.
- * 2) Writes/updates the LOON_DB binding in wrangler.toml.
+ * 2) Writes/updates KV bindings in a target Wrangler config (default: wrangler.local.toml).
  * 3) Adds a compatibility alias binding (KV) by default.
  *
  * Usage:
  *   node scripts/setup-kv.mjs
  *   node scripts/setup-kv.mjs --binding LOON_DB
+ *   node scripts/setup-kv.mjs --target wrangler.local.toml
+ *   node scripts/setup-kv.mjs --target wrangler.toml
  *   node scripts/setup-kv.mjs --legacy-binding KV
  *   node scripts/setup-kv.mjs --no-legacy-binding
  *   node scripts/setup-kv.mjs --env staging
@@ -23,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, '..');
-const wranglerPath = path.join(projectRoot, 'wrangler.toml');
+const baseWranglerPath = path.join(projectRoot, 'wrangler.toml');
 
 const args = process.argv.slice(2);
 const getArg = (name, defaultValue) => {
@@ -36,6 +38,8 @@ const BINDING = getArg('--binding', 'LOON_DB');
 const DISABLE_LEGACY_BINDING = args.includes('--no-legacy-binding');
 const LEGACY_BINDING = DISABLE_LEGACY_BINDING ? '' : getArg('--legacy-binding', 'KV');
 const ENV = getArg('--env', '');
+const TARGET_FILE = getArg('--target', 'wrangler.local.toml');
+const wranglerPath = path.join(projectRoot, TARGET_FILE);
 const PROD_NAMESPACE_NAME = getArg('--name', BINDING);
 const PREVIEW_NAMESPACE_NAME = getArg('--preview-name', `${BINDING}_preview`);
 const ENV_FLAG = ENV ? ` --env ${ENV}` : '';
@@ -108,7 +112,11 @@ function ensureNamespace(name) {
 
 function upsertWranglerKvBinding(prodId, previewId) {
     if (!fs.existsSync(wranglerPath)) {
-        throw new Error(`wrangler.toml not found at ${wranglerPath}`);
+        if (!fs.existsSync(baseWranglerPath)) {
+            throw new Error(`Base wrangler.toml not found at ${baseWranglerPath}`);
+        }
+        const base = fs.readFileSync(baseWranglerPath, 'utf8');
+        fs.writeFileSync(wranglerPath, base, 'utf8');
     }
 
     const current = fs.readFileSync(wranglerPath, 'utf8');
@@ -147,6 +155,10 @@ function upsertWranglerKvBinding(prodId, previewId) {
 
 function main() {
     console.log(`Setting up KV binding "${BINDING}" in ${path.basename(wranglerPath)}...`);
+    if (TARGET_FILE === 'wrangler.toml') {
+        console.log('Warning: writing account-specific namespace IDs to wrangler.toml can break template portability.');
+        console.log('Preferred: use default target wrangler.local.toml for local automation.');
+    }
     if (LEGACY_BINDING && LEGACY_BINDING !== BINDING) {
         console.log(`Compatibility alias binding enabled: "${LEGACY_BINDING}"`);
     } else if (DISABLE_LEGACY_BINDING) {
@@ -164,11 +176,11 @@ function main() {
 
     upsertWranglerKvBinding(prodId, previewId);
     if (LEGACY_BINDING && LEGACY_BINDING !== BINDING) {
-        console.log(`Updated wrangler.toml with bindings: ${BINDING}, ${LEGACY_BINDING}.`);
+        console.log(`Updated ${path.basename(wranglerPath)} with bindings: ${BINDING}, ${LEGACY_BINDING}.`);
     } else {
-        console.log(`Updated wrangler.toml with binding: ${BINDING}.`);
+        console.log(`Updated ${path.basename(wranglerPath)} with binding: ${BINDING}.`);
     }
-    console.log('Next: run your normal deploy (push to main or wrangler pages deploy).');
+    console.log('Next: for local development use `wrangler pages dev --config wrangler.local.toml ...` when using local target.');
 }
 
 try {

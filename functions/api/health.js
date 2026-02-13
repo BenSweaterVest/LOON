@@ -19,7 +19,10 @@
  *     "checks": {
  *       "github_repo": true,
  *       "github_token": true,
- *       "kv_database": true
+ *       "kv_database": true,
+ *       "passkeys_rp_id": true,
+ *       "passkeys_rp_origin": true,
+ *       "passkeys_ready": true
  *     }
  *   }
  *
@@ -99,7 +102,14 @@ export async function onRequestGet(context) {
     /**
      * Optional: Cloudflare Images (media uploads)
      */
-    images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN
+    images_configured: !!env.CF_ACCOUNT_ID && !!env.CF_IMAGES_TOKEN,
+
+    /**
+     * Optional: Passkeys/WebAuthn production configuration
+     */
+    passkeys_rp_id: !!env.RP_ID,
+    passkeys_rp_origin: !!env.RP_ORIGIN,
+    passkeys_ready: !!env.RP_ID && !!env.RP_ORIGIN
   };
 
   // ========================================================================

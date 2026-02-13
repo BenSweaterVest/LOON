@@ -63,4 +63,22 @@ describe('Health Endpoint', () => {
 
         expect(Number.isNaN(parsed.getTime())).toBe(false);
     });
+
+    it('should report passkey RP config checks', async () => {
+        const response = await onRequestGet({
+            request: createRequest(),
+            env: {
+                GITHUB_REPO: 'owner/repo',
+                GITHUB_TOKEN: 'token',
+                LOON_DB: {},
+                RP_ID: 'example.com',
+                RP_ORIGIN: 'https://example.com'
+            }
+        });
+        const body = await response.json();
+
+        expect(body.checks.passkeys_rp_id).toBe(true);
+        expect(body.checks.passkeys_rp_origin).toBe(true);
+        expect(body.checks.passkeys_ready).toBe(true);
+    });
 });

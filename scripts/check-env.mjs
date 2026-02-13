@@ -5,7 +5,7 @@
  * Validates:
  * - Required environment variables are present.
  * - GITHUB_REPO format looks correct.
- * - wrangler.toml has a KV binding (LOON_DB preferred, KV supported).
+ * - wrangler config has a KV binding (LOON_DB preferred, KV supported).
  */
 
 import fs from 'node:fs';
@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const wranglerTomlPath = path.join(projectRoot, 'wrangler.toml');
+const wranglerLocalTomlPath = path.join(projectRoot, 'wrangler.local.toml');
 
 const REQUIRED_VARS = ['GITHUB_REPO', 'GITHUB_TOKEN'];
 const OPTIONAL_VARS = ['SETUP_TOKEN', 'CORS_ORIGIN', 'CF_ACCOUNT_ID', 'CF_IMAGES_TOKEN'];
@@ -149,23 +150,35 @@ function main() {
 
     printLine('\nWrangler KV Binding Check:');
     const wranglerToml = readFileIfExists(wranglerTomlPath);
-    if (!wranglerToml) {
-        printLine('[Warn]', 'wrangler.toml not found');
+    const wranglerLocalToml = readFileIfExists(wranglerLocalTomlPath);
+    if (!wranglerToml && !wranglerLocalToml) {
+        printLine('[Warn]', 'No Wrangler config file found (wrangler.toml or wrangler.local.toml)');
     } else {
-        const bindings = parseKvBindingsFromWranglerToml(wranglerToml);
-        if (bindings.length === 0) {
-            printLine('[Warn]', 'No kv_namespaces binding found in wrangler.toml');
-            printLine('[Hint]', 'Run: npm run setup:kv');
-        } else {
-            printLine('[OK]', `Detected bindings: ${bindings.join(', ')}`);
-            if (bindings.includes('LOON_DB')) {
-                printLine('[OK]', 'Preferred binding LOON_DB is present');
-            } else if (bindings.includes('KV')) {
-                printLine('[Warn]', 'Only KV binding present; runtime supports it but LOON_DB is preferred');
+        const sources = [];
+        if (wranglerToml) sources.push({ name: 'wrangler.toml', content: wranglerToml });
+        if (wranglerLocalToml) sources.push({ name: 'wrangler.local.toml', content: wranglerLocalToml });
+
+        const bindingSet = new Set();
+        for (const source of sources) {
+            const bindings = parseKvBindingsFromWranglerToml(source.content);
+            if (bindings.length) {
+                printLine('[OK]', `${source.name} bindings: ${bindings.join(', ')}`);
+                bindings.forEach(b => bindingSet.add(b));
             } else {
-                printLine('[Warn]', 'Neither LOON_DB nor KV binding found');
-                printLine('[Hint]', 'Run: npm run setup:kv');
+                printLine('[Warn]', `No kv_namespaces binding found in ${source.name}`);
             }
+        }
+
+        const mergedBindings = Array.from(bindingSet);
+        if (mergedBindings.length === 0) {
+            printLine('[Hint]', 'Run: npm run setup:kv (writes untracked wrangler.local.toml)');
+        } else if (mergedBindings.includes('LOON_DB')) {
+            printLine('[OK]', 'Preferred binding LOON_DB is present');
+        } else if (mergedBindings.includes('KV')) {
+            printLine('[Warn]', 'Only KV binding present; runtime supports it but LOON_DB is preferred');
+        } else {
+            printLine('[Warn]', 'Neither LOON_DB nor KV binding found');
+            printLine('[Hint]', 'Run: npm run setup:kv');
         }
     }
 

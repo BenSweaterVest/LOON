@@ -22,6 +22,13 @@ LOON exposes the following API endpoints via Cloudflare Functions:
 | `/api/save` | POST | Save content to GitHub |
 | `/api/pages` | GET, POST | List and create pages |
 | `/api/publish` | POST | Publish/unpublish content |
+| `/api/history` | GET | List page revision history |
+| `/api/rollback` | POST | Roll back page content to a prior commit |
+| `/api/revision-diff` | GET | Compare two page revisions |
+| `/api/workflow` | POST | Update page workflow status |
+| `/api/scheduled-publish` | POST | Publish due scheduled drafts |
+| `/api/watch` | GET, POST, DELETE | Manage watchlist + watched activity |
+| `/api/blocks` | GET | List reusable content blocks |
 | `/api/upload` | POST | Upload images (Cloudflare Images) |
 | `/api/templates` | GET | List schema templates |
 | `/api/users` | GET, POST, PATCH, DELETE | User management (admin) |
@@ -34,7 +41,7 @@ LOON exposes the following API endpoints via Cloudflare Functions:
 All endpoints:
 - Return JSON responses
 - Include CORS headers for cross-origin requests
-- Are rate limited per IP address
+- Apply rate limiting on selected sensitive/write-heavy operations
 
 ### Client Examples
 
@@ -675,6 +682,255 @@ Content-Type: application/json
 
 ---
 
+### GET /api/history
+
+List revision history for a page's `content.json`.
+
+**Roles:** Authenticated users (contributors limited to their own pages)
+
+#### Request
+
+```http
+GET /api/history?pageId=demo&limit=20
+Authorization: Bearer <session-token>
+```
+
+#### Response (200)
+
+```json
+{
+  "pageId": "demo",
+  "total": 2,
+  "history": [
+    {
+      "sha": "abcdef123456...",
+      "message": "Update demo by admin",
+      "date": "2026-02-12T12:00:00Z",
+      "author": "Admin User",
+      "url": "https://github.com/owner/repo/commit/abcdef..."
+    }
+  ]
+}
+```
+
+#### Errors
+
+| Status | Error |
+|--------|-------|
+| 400 | Invalid/missing `pageId` |
+| 401 | Authentication required |
+| 403 | Contributor does not own page |
+| 404 | Page not found |
+
+---
+
+### POST /api/rollback
+
+Restore a page's `content.json` to a selected prior commit.
+
+**Roles:** Admin, Editor only
+
+#### Request
+
+```http
+POST /api/rollback
+Authorization: Bearer <session-token>
+Content-Type: application/json
+
+{
+  "pageId": "demo",
+  "commitSha": "abcdef1234567890"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "pageId": "demo",
+  "restoredFrom": "abcdef1234567890",
+  "commit": "newcommitsha123"
+}
+```
+
+#### Errors
+
+| Status | Error |
+|--------|-------|
+| 400 | Invalid `pageId` or `commitSha` |
+| 401 | Authentication required |
+| 403 | Admin/Editor role required |
+| 404 | Page or revision not found |
+
+---
+
+### GET /api/revision-diff
+
+Compare two revisions of a page's `content.json` and return a simple line diff.
+
+**Roles:** Authenticated users (contributors limited to their own pages)
+
+#### Request
+
+```http
+GET /api/revision-diff?pageId=demo&from=abc1234&to=def5678
+Authorization: Bearer <session-token>
+```
+
+`from` / `to` can be commit SHAs (7-40 chars) or `HEAD`.
+
+#### Response (200)
+
+```json
+{
+  "pageId": "demo",
+  "from": "abc1234",
+  "to": "def5678",
+  "summary": {
+    "added": 3,
+    "removed": 1,
+    "unchanged": 42
+  },
+  "diff": [
+    { "type": "same", "line": "{" },
+    { "type": "remove", "line": "  \"title\": \"Old\"" },
+    { "type": "add", "line": "  \"title\": \"New\"" }
+  ]
+}
+```
+
+#### Errors
+
+| Status | Error |
+|--------|-------|
+| 400 | Invalid/missing refs |
+| 401 | Authentication required |
+| 403 | Contributor does not own page |
+| 404 | Page or revision not found |
+
+---
+
+### POST /api/workflow
+
+Update editorial workflow state for a page.
+
+**Roles:** Admin, Editor
+
+#### Request
+
+```http
+POST /api/workflow
+Authorization: Bearer <session-token>
+Content-Type: application/json
+
+{
+  "pageId": "demo",
+  "status": "in_review"
+}
+```
+
+`status` allowed values: `draft`, `in_review`, `approved`, `scheduled`, `published`
+
+If `status = "scheduled"`, include:
+
+```json
+{
+  "scheduledFor": "2026-03-01T15:00:00.000Z"
+}
+```
+
+`scheduledFor` must be a valid ISO datetime string.
+
+---
+
+### POST /api/scheduled-publish
+
+Run the scheduled publish processor for due pages.
+
+**Roles:** Admin, Editor
+
+#### Request
+
+```http
+POST /api/scheduled-publish
+Authorization: Bearer <session-token>
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "checked": 12,
+  "published": [
+    { "pageId": "demo", "commit": "abc123..." }
+  ],
+  "skipped": [
+    { "pageId": "about", "reason": "not_due" }
+  ]
+}
+```
+
+---
+
+### GET /api/watch
+
+Return watched pages for the current user plus recent watched-page activity.
+
+**Auth required:** Yes
+
+#### Response (200)
+
+```json
+{
+  "watchedPages": ["demo", "about"],
+  "recent": [
+    {
+      "action": "content_save",
+      "pageId": "demo",
+      "username": "editor",
+      "timestamp": "2026-02-12T13:00:00Z",
+      "details": {}
+    }
+  ]
+}
+```
+
+### POST /api/watch
+
+Watch a page.
+
+```json
+{
+  "pageId": "demo"
+}
+```
+
+### DELETE /api/watch
+
+Unwatch a page.
+
+```json
+{
+  "pageId": "demo"
+}
+```
+
+---
+
+### GET /api/blocks
+
+List reusable editor snippets.
+
+**Auth required:** Yes
+
+Response includes `source`:
+- `repository` when loaded from `data/_blocks/blocks.json`
+- `default` when falling back to built-in blocks
+
+---
+
 ### POST /api/upload
 
 Upload an image to Cloudflare Images.
@@ -1037,7 +1293,10 @@ curl -s https://your-domain.com/api/health | jq .
   "checks": {
     "github_repo": true,
     "github_token": true,
-    "kv_database": true
+    "kv_database": true,
+    "passkeys_rp_id": true,
+    "passkeys_rp_origin": true,
+    "passkeys_ready": true
   }
 }
 ```
@@ -1047,6 +1306,9 @@ curl -s https://your-domain.com/api/health | jq .
 - `ok` - All required checks pass; system operational
 - `degraded` - One or more required checks failed; see `checks` object
 
+Required checks for overall status are: `github_repo`, `github_token`, `kv_database`.
+Passkey checks are advisory/optional and do not by themselves make status `degraded`.
+
 #### Check Details
 
 | Check | Requirement | Failure Cause |
@@ -1054,6 +1316,9 @@ curl -s https://your-domain.com/api/health | jq .
 | `github_repo` | `GITHUB_REPO` env var set | Missing or empty variable |
 | `github_token` | `GITHUB_TOKEN` env var set | Missing token or invalid format |
 | `kv_database` | KV namespace bound and accessible | KV binding misconfigured or no access |
+| `passkeys_rp_id` | `RP_ID` env var set | Missing relying-party ID for passkeys |
+| `passkeys_rp_origin` | `RP_ORIGIN` env var set | Missing relying-party origin for passkeys |
+| `passkeys_ready` | Both `RP_ID` and `RP_ORIGIN` set | Passkeys may fail in production until both are set |
 
 #### Troubleshooting Failed Checks
 
@@ -1071,6 +1336,11 @@ curl -s https://your-domain.com/api/health | jq .
 - Verify KV namespace exists: Cloudflare > Workers & Pages > KV
 - Verify binding: Your project > Settings > Functions > KV namespace bindings
 - Binding variable name should be `LOON_DB` (preferred); `KV` is also accepted as a compatibility fallback
+
+**If `passkeys_ready` is false**:
+- Set `RP_ID` to your deployed host (for example `your-project.pages.dev` or `cms.example.com`)
+- Set `RP_ORIGIN` to full origin (for example `https://your-project.pages.dev` or `https://cms.example.com`)
+- Redeploy and re-check `/api/health`
 
 #### HTTP Status
 

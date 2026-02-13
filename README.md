@@ -17,9 +17,21 @@ A serverless micro-CMS that runs entirely on Cloudflare Pages + GitHub. No tradi
 - **User Management**: Cloudflare KV for unlimited users
 - **Role-Based Access**: Admin, Editor, and Contributor roles
 - **Draft/Publish Workflow**: Stage content before going live
+- **Session Batch Push**: Stage many edits and push all changes at once
+- **Auto-Staging in Batch Mode**: Changes can stage in background while you type
 - **Media Management**: Upload images via Cloudflare Images
 - **JSON Schema Support**: Standards-based schema validation
 - **WYSIWYG Editor**: Dynamic forms generated from schema
+- **Import Support**: Import `.json`, `.tid`, `.md`, `.txt`, `.html` into page fields
+- **Theme Support**: Switch admin theme in-app (Slate, Forest, Sunset)
+- **Revision History + Rollback**: Restore a page to a prior commit from admin
+- **Revision Diff**: Compare the latest two revisions directly in admin
+- **Autosave Recovery**: Recover local editor snapshots after refresh/interruption
+- **Internal Link Tools**: Insert page links and scan backlinks
+- **Workflow Statuses**: Track `draft`, `in_review`, `approved`, `scheduled`, `published`
+- **Scheduled Publish Runner**: Publish all due scheduled pages with one admin action
+- **Watchlists**: Watch pages and view recent watched-page activity
+- **Reusable Blocks**: Insert shared content snippets from defaults or `data/_blocks/blocks.json`
 - **Mobile-Friendly**: Works on phones and tablets
 - **Dark Mode**: Respects system preference automatically
 - **Audit Logging**: Track all actions in the system
@@ -53,6 +65,13 @@ Browser-only requirement:
 Notes:
 - Preferred binding name is `LOON_DB`.
 - Runtime compatibility fallback: `KV` is also accepted.
+- For **GitHub-connected Pages deployments**, treat Cloudflare Dashboard as source-of-truth for production KV binding.
+- Do **not** commit project-specific KV namespace IDs from one deployment into the shared template repo.
+
+### KV Best Practice (What Automates vs What Does Not)
+- Browser-only production setup (recommended): create and bind KV in Cloudflare Dashboard once per Pages project.
+- Wrangler local-dev automation (`npm run setup:kv`): creates namespaces and writes bindings to untracked `wrangler.local.toml` for local testing convenience.
+- Wrangler cannot safely auto-create and bind production KV for every template consumer from inside LOON runtime itself; each Cloudflare account/project still needs its own KV namespace/binding in dashboard or via account-level automation.
 
 ### 3. Configure Environment Variables (Production)
 In Cloudflare Pages > Settings > Environment variables:
@@ -62,10 +81,13 @@ In Cloudflare Pages > Settings > Environment variables:
 | `GITHUB_REPO` | `YOUR_GITHUB_ORG/LOON` |
 | `GITHUB_TOKEN` | Fine-grained token with repo Contents read/write (Secret) |
 | `SETUP_TOKEN` | High-entropy one-time setup token (Secret) |
+| `RP_ID` | Your deployed host (e.g., `your-project.pages.dev` or `cms.example.com`) |
+| `RP_ORIGIN` | Full origin for that host (e.g., `https://your-project.pages.dev`) |
 
 Important:
 - `GITHUB_REPO` must be explicitly set (not reliably auto-detected at runtime).
 - `SETUP_TOKEN` is only for first-admin setup.
+- Passkeys are optional. If you want passkeys in production, set `RP_ID` + `RP_ORIGIN`.
 
 ### 4. Deploy and Run Initial Setup
 1. Deploy (or redeploy after adding env vars and KV binding).
@@ -80,8 +102,9 @@ Security note:
 
 ### 5. Verify
 1. Check health: `https://YOUR_PROJECT.pages.dev/api/health` and confirm `kv_database: true`.
-2. Log in to `/admin.html`.
-3. Create a page and save once to confirm GitHub commits are working.
+2. If using passkeys, also confirm `passkeys_ready: true` (or both `passkeys_rp_id` and `passkeys_rp_origin` are `true`).
+3. Log in to `/admin.html`.
+4. Create a page and save once to confirm GitHub commits are working.
 
 ### Guided Browser-Only Implementation Checklist
 Use this if you want an exact click path with no CLI.
@@ -102,6 +125,8 @@ Use this if you want an exact click path with no CLI.
      - `GITHUB_REPO=owner/repo`
      - `GITHUB_TOKEN=<fine-grained token>` as Secret
      - `SETUP_TOKEN=<high-entropy value>` as Secret
+     - `RP_ID=<your-hostname>` (for passkeys)
+     - `RP_ORIGIN=https://<your-hostname>` (for passkeys)
    - Redeploy from **Deployments -> Retry deployment**.
 5. LOON guided setup page
    - Open `/admin.html`.
@@ -110,6 +135,8 @@ Use this if you want an exact click path with no CLI.
    - Click **Run Full Readiness Check** to validate setup/login/content-read path.
    - When ready, complete **Initial Setup** with Setup Token + admin credentials.
    - After login, use **Start First Page Wizard** to create and save your first page.
+   - Optional: enable **Batch Session Mode** in the editor to stage multiple edits and click **Push All Changes** once.
+   - Optional: use **Import File** in the editor to load `.json`, `.tid`, markdown, text, or HTML content into current schema fields.
    - Optional diagnostics-only screen: `/admin/setup-check` (browser-only readiness view).
 6. Finalize security
    - After successful first admin creation, rotate/remove `SETUP_TOKEN` in Cloudflare.
@@ -119,7 +146,7 @@ Use this if you want an exact click path with no CLI.
 This is optional and not required for browser-only setup:
 
 ```bash
-# Create/update KV bindings in wrangler.toml (LOON_DB + KV alias)
+# Create/update KV bindings in wrangler.local.toml (LOON_DB + KV alias)
 npm run setup:kv
 
 # Validate env/config locally
@@ -127,6 +154,10 @@ npm run check:env
 
 # Do both in one command
 npm run setup:local
+
+# Optional (advanced): write account-specific IDs to wrangler.toml
+# Not recommended for template portability
+npm run setup:kv:project
 ```
 ---
 ## Production Checklist
@@ -135,7 +166,7 @@ Before going live, confirm these are set and working:
 - Environment: `GITHUB_REPO` and `GITHUB_TOKEN` configured (secret)
 - CORS: `CORS_ORIGIN` set to your production domain (if restricting)
 - Passkeys: `RP_ID` and `RP_ORIGIN` set to your production domain
-- Health check: `/api/health` returns `kv_database: true`
+- Health check: `/api/health` returns `kv_database: true` and, for passkeys, `passkeys_ready: true`
 
 ---
 ## File Structure
@@ -150,6 +181,7 @@ loon/
 +-- robots.txt              # Search engine directives
 +-- _headers                # Cloudflare Pages security headers
 +-- wrangler.toml           # Local development config
++-- wrangler.local.toml     # Local-only KV bindings (generated, gitignored)
 +-- package.json            # Node.js config (dev dependencies, scripts)
 +-- vitest.config.js        # Test configuration
 +-- .env.example            # Environment variable template
@@ -163,6 +195,13 @@ loon/
    |   +-- auth.js         # /api/auth - session auth + password change
    |   +-- save.js         # /api/save - content save with RBAC + drafts
    |   +-- publish.js      # /api/publish - publish/unpublish workflow
+   |   +-- history.js      # /api/history - revision history for content
+   |   +-- rollback.js     # /api/rollback - restore content to prior commit
+   |   +-- revision-diff.js # /api/revision-diff - compare two revisions
+   |   +-- workflow.js     # /api/workflow - editorial workflow status updates
+   |   +-- scheduled-publish.js # /api/scheduled-publish - publish due scheduled drafts
+   |   +-- watch.js        # /api/watch - user watchlist and watched activity
+   |   +-- blocks.js       # /api/blocks - reusable editor snippets
    |   +-- upload.js       # /api/upload - image upload (Cloudflare Images)
    |   +-- users.js        # /api/users - user management (admin)
    |   +-- pages.js        # /api/pages - list and create pages
@@ -179,6 +218,7 @@ loon/
    +-- auth.test.js        # Auth endpoint tests
    +-- content.test.js     # Content deletion endpoint tests
    +-- health.test.js      # Health endpoint tests
+   +-- history.test.js     # Revision history endpoint tests
    +-- kv-util.test.js     # KV utility tests
    +-- kv-fallback.test.js # KV fallback compatibility tests
    +-- pages.test.js       # Pages endpoint tests
@@ -190,6 +230,12 @@ loon/
    +-- upload.test.js      # Upload endpoint tests
    +-- webauthn.test.js    # WebAuthn utility tests
    +-- passkeys.test.js    # Passkeys flow and schema tests
+   +-- rollback.test.js    # Rollback endpoint tests
+   +-- revision-diff.test.js # Revision diff endpoint tests
+   +-- scheduled-publish.test.js # Scheduled publish runner tests
+   +-- workflow.test.js    # Workflow status endpoint tests
+   +-- watch.test.js       # Watchlist endpoint tests
+   +-- blocks.test.js      # Reusable blocks endpoint tests
 +-- data/
    +-- demo/
       +-- schema.json     # Form field definitions
@@ -224,6 +270,17 @@ loon/
 4. Select a **Template** or start with a blank schema
 5. Click **Create Page**
 6. The new page appears in your admin panel and is ready to edit
+7. Optional: click **Import File** in the editor to prefill fields from `.json`, `.tid`, `.md`, `.txt`, or `.html`
+8. Optional: enable **Batch Session Mode** and use **Push All Changes** to commit staged edits together
+9. If staged edits exist for the page, push them first before publishing
+
+### Editing Workflow (Recommended)
+Use one of these modes consistently during a session:
+1. Immediate mode (default): Save buttons commit directly to GitHub each time.
+2. Batch Session Mode: Stage edits while you work, then use **Push All Changes** once.
+3. Before publish: ensure staged changes for that page are pushed, then publish.
+4. Use **Revision History** in the editor to review commit timeline and rollback safely if needed.
+5. If interrupted, restore from local autosave snapshot when prompted.
 ### Option B: Programmatic (API, Optional for Developers)
 Use `POST /api/pages` to create pages programmatically:
 ```bash
@@ -277,6 +334,13 @@ Or manage entirely via web UI: Login as admin -> Users -> Add/Edit/Delete
 | `/api/audit` | GET | View audit logs (admin) |
 | `/api/setup` | GET/POST | Initial setup status + first admin creation |
 | `/api/health` | GET | Health check |
+| `/api/history` | GET | Page content commit history (`pageId` query) |
+| `/api/rollback` | POST | Rollback page content to a specific commit (admin/editor) |
+| `/api/revision-diff` | GET | Compare two page revisions (`from`/`to` refs) |
+| `/api/workflow` | POST | Update page workflow status (admin/editor) |
+| `/api/scheduled-publish` | POST | Run scheduled publish for due pages (admin/editor) |
+| `/api/watch` | GET/POST/DELETE | User watchlist + watched-page activity |
+| `/api/blocks` | GET | List reusable content blocks for editor insertion |
 See [docs/API.md](docs/API.md) for full API documentation.
 ---
 ## Local Development
@@ -359,8 +423,9 @@ Returns system status, version, and configuration validation. See [health check 
 - **Can't complete initial setup?** Verify `SETUP_TOKEN` is set in Cloudflare Pages env vars and redeploy.
 - **Need a guided diagnostics view?** Open `/admin/setup-check` and run **Run Full Readiness Check**.
 - **Need help creating first content?** Log in as admin and click **Start First Page Wizard**.
-- **`KV database not configured` error?** Verify a KV binding exists (`LOON_DB` preferred, `KV` also supported) in `wrangler.toml`/`wrangler.jsonc`.
-- **Health check degraded?** Check `/api/health` response to see which check failed (GitHub token, KV binding, etc.)
+- **`KV database not configured` error?** Verify a KV binding exists (`LOON_DB` preferred, `KV` also supported) in Cloudflare Pages project settings. For local CLI flows, check `wrangler.local.toml`/`wrangler.toml`.
+- **Passkeys not registering/authenticating?** Check `/api/health` and confirm `passkeys_ready: true` plus correct `RP_ID`/`RP_ORIGIN`.
+- **Health check degraded?** Check `/api/health` response to see which required check failed (GitHub token, KV binding, etc.)
 - **Login fails?** Wait 10 seconds for KV sync, clear browser cache
 - **Content not saving?** Check GitHub token permissions and expiration (see [OPERATIONS.md - GitHub Token Setup](OPERATIONS.md#github-token-setup))
 

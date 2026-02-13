@@ -48,16 +48,45 @@ PREREQUISITES:
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>L</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #003865;
-            --primary-hover: #004d8f;
-            --success: #22c55e;
-            --error: #ef4444;
-            --warning: #f59e0b;
+            --primary: #1e4d8f;
+            --primary-hover: #173f76;
+            --success: #17803d;
+            --error: #c33232;
+            --warning: #b7791f;
+            --panel-background: rgba(255, 255, 255, 0.92);
+            --panel-border: rgba(148, 163, 184, 0.35);
+            --panel-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+            --surface-muted: rgba(203, 213, 225, 0.25);
         }
-        
-        body { padding-top: 1rem; }
+
+        [data-theme="forest"] {
+            --primary: #1f6b5c;
+            --primary-hover: #185349;
+        }
+
+        [data-theme="sunset"] {
+            --primary: #b45309;
+            --primary-hover: #92400e;
+        }
+
+        body {
+            padding-top: 1rem;
+            background:
+                radial-gradient(circle at 20% 10%, rgba(30, 77, 143, 0.12), transparent 35%),
+                radial-gradient(circle at 80% 0%, rgba(14, 116, 144, 0.1), transparent 32%),
+                linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+            font-family: "IBM Plex Sans", "Segoe UI", Tahoma, sans-serif;
+        }
+
+        main.container {
+            max-width: 1200px;
+        }
         
         .hidden { display: none !important; }
         
@@ -68,6 +97,7 @@ PREREQUISITES:
             margin-bottom: 1rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--muted-border-color);
+            gap: 1rem;
         }
         
         .header h1 { margin: 0; font-size: 1.5rem; }
@@ -111,6 +141,23 @@ PREREQUISITES:
             margin-left: auto;
             color: var(--error);
         }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-controls label {
+            margin-bottom: 0;
+            font-size: 0.85rem;
+            color: var(--muted-color);
+        }
+
+        .header-controls select {
+            margin-bottom: 0;
+            min-width: 150px;
+        }
         
         .login-container {
             max-width: 400px;
@@ -118,6 +165,8 @@ PREREQUISITES:
             padding: 2rem;
             border: 1px solid var(--muted-border-color);
             border-radius: 8px;
+            background: var(--panel-background);
+            box-shadow: var(--panel-shadow);
         }
         .login-container h2 { text-align: center; margin-bottom: 1.5rem; }
         
@@ -141,6 +190,7 @@ PREREQUISITES:
             border: 1px solid var(--muted-border-color);
             border-radius: 8px;
             background: var(--card-background-color);
+            box-shadow: var(--panel-shadow);
         }
         .onboarding-card h3 {
             margin: 0 0 0.75rem 0;
@@ -221,6 +271,7 @@ PREREQUISITES:
             padding: 1.5rem;
             border-radius: 8px;
             margin-top: 2rem;
+            border: 1px solid var(--panel-border);
         }
         .add-user-form h4 { margin-top: 0; }
         
@@ -228,13 +279,34 @@ PREREQUISITES:
             display: flex;
             gap: 0.5rem;
             margin-bottom: 1.5rem;
+            flex-wrap: wrap;
         }
         .page-selector input { flex: 1; }
+
+        .editor-guide {
+            margin: 0 0 1rem 0;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: var(--surface-muted);
+            padding: 0.8rem 0.9rem;
+        }
+
+        .editor-guide summary {
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .editor-guide ol {
+            margin: 0.35rem 0 0.25rem 1.25rem;
+        }
         
         .editor-container {
             background: var(--card-background-color);
             padding: 1.5rem;
             border-radius: 8px;
+            border: 1px solid var(--panel-border);
+            box-shadow: var(--panel-shadow);
         }
         .editor-container h3 { margin-top: 0; }
         
@@ -245,8 +317,117 @@ PREREQUISITES:
             margin-top: 1.5rem;
             padding-top: 1rem;
             border-top: 1px solid var(--muted-border-color);
+            gap: 1rem;
+            flex-wrap: wrap;
         }
         .save-bar .last-saved { font-size: 0.85rem; color: var(--muted-color); }
+        .edit-dirty-chip {
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.2rem 0.55rem;
+            background: var(--surface-muted);
+            color: var(--muted-color);
+        }
+        .edit-dirty-chip.dirty {
+            background: rgba(245, 158, 11, 0.2);
+            color: #92400e;
+        }
+
+        .batch-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0;
+            font-size: 0.85rem;
+            color: var(--muted-color);
+        }
+
+        .batch-toggle input {
+            margin: 0;
+        }
+
+        .queue-summary {
+            margin-top: 0.65rem;
+            font-size: 0.8rem;
+            color: var(--muted-color);
+        }
+
+        .workflow-assistant {
+            margin: 0.75rem 0 1rem 0;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 0.7rem 0.8rem;
+            background: var(--panel-background);
+        }
+
+        .workflow-assistant strong {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 0.92rem;
+        }
+
+        .workflow-assistant small {
+            color: var(--muted-color);
+            display: block;
+            margin-bottom: 0.35rem;
+        }
+
+        .editor-tools {
+            margin-top: 0.9rem;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .editor-tools details {
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            background: var(--panel-background);
+        }
+
+        .editor-tools summary {
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .autosave-indicator {
+            margin-top: 0.35rem;
+            font-size: 0.8rem;
+            color: var(--muted-color);
+        }
+
+        .diff-view {
+            max-height: 380px;
+            overflow: auto;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 0.6rem;
+            background: var(--panel-background);
+            font-family: "IBM Plex Mono", "Consolas", monospace;
+            font-size: 0.82rem;
+            white-space: pre-wrap;
+        }
+        .diff-line {
+            margin: 0;
+            padding: 0.08rem 0.2rem;
+            border-radius: 4px;
+        }
+        .diff-add {
+            background: rgba(22, 163, 74, 0.12);
+            color: #166534;
+        }
+        .diff-remove {
+            background: rgba(220, 38, 38, 0.12);
+            color: #991b1b;
+        }
+        .diff-same {
+            color: var(--muted-color);
+        }
+
+        code {
+            font-family: "IBM Plex Mono", "Consolas", monospace;
+        }
         
         .meta-info {
             font-size: 0.8rem;
@@ -262,6 +443,12 @@ PREREQUISITES:
             .status-success { background: #166534; color: #dcfce7; }
             .status-error { background: #991b1b; color: #fee2e2; }
             .status-info { background: #1e40af; color: #dbeafe; }
+            body {
+                background:
+                    radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.18), transparent 38%),
+                    radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.14), transparent 34%),
+                    linear-gradient(180deg, #0b1220 0%, #111827 100%);
+            }
         }
         
         /* Password field with toggle */
@@ -423,6 +610,14 @@ PREREQUISITES:
                         <span id="display-role" class="role-badge"></span>
                     </span>
                 </div>
+                <div class="header-controls">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select" onchange="setTheme(this.value)">
+                        <option value="default">Slate</option>
+                        <option value="forest">Forest</option>
+                        <option value="sunset">Sunset</option>
+                    </select>
+                </div>
             </header>
 
             <nav class="tab-nav">
@@ -451,11 +646,20 @@ PREREQUISITES:
 
             <!-- Editor Tab -->
             <div id="view-editor">
+                <details class="editor-guide">
+                    <summary>Editor Quick Guide</summary>
+                    <ol>
+                        <li>Load a page, edit fields, then save directly or stage changes with Batch Session Mode.</li>
+                        <li>Use <code>Ctrl/Cmd+S</code> to save/stage quickly. Use <code>Ctrl/Cmd+Shift+S</code> to save as draft.</li>
+                        <li>Import existing content from <code>.json</code>, <code>.tid</code>, markdown, text, or HTML.</li>
+                        <li>Publish only after staged changes are pushed and reviewed.</li>
+                    </ol>
+                </details>
                 <div class="page-selector">
                     <input type="text" id="pageId" placeholder="Enter Page ID (e.g., demo, blog-post)">
-                    <button onclick="loadEditor()" class="secondary">Load Page</button>
-                    <button onclick="loadPageList()" class="outline" style="margin-left: 0.5rem;">Browse Pages</button>
-                    <button onclick="showNewPageDialog()" class="contrast" style="margin-left: 0.5rem;">+ New Page</button>
+                    <button onclick="loadEditor()" class="secondary" title="Open this page in the editor">Open Page</button>
+                    <button onclick="loadPageList()" class="outline" style="margin-left: 0.5rem;" title="Browse pages you can access">Browse Pages</button>
+                    <button onclick="showNewPageDialog()" class="contrast" style="margin-left: 0.5rem;" title="Create a new page with optional template">+ Create Page</button>
                 </div>
                 
                 <!-- New Page Dialog -->
@@ -491,6 +695,7 @@ PREREQUISITES:
                 <!-- Page Browser -->
                 <div id="page-browser" class="hidden" style="margin-bottom: 1.5rem;">
                     <h4>Available Pages</h4>
+                    <input type="text" id="page-browser-filter" placeholder="Filter pages by title or id..." style="margin-bottom: 0.65rem;" oninput="filterPageBrowserList()">
                     <div id="page-list" style="display: grid; gap: 0.5rem; max-height: 300px; overflow-y: auto;"></div>
                     <div id="page-browser-status"></div>
                 </div>
@@ -503,16 +708,92 @@ PREREQUISITES:
                     <div id="content-status" style="margin: 1rem 0; padding: 0.75rem; background: #e7f3ff; border-left: 4px solid #2196F3; display: none;">
                         <strong id="status-text"></strong>
                     </div>
+                    <div id="workflow-assistant" class="workflow-assistant">
+                        <strong>Workflow Assistant</strong>
+                        <small>Load a page to see recommended next actions.</small>
+                        <div id="workflow-assistant-body"></div>
+                    </div>
                     
                     <div class="save-bar">
                         <span class="last-saved" id="last-saved"></span>
+                        <span id="edit-dirty-chip" class="edit-dirty-chip">No local edits</span>
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <label class="batch-toggle" for="batch-mode-toggle" title="Stage edits during this session, then push all at once">
+                                <input type="checkbox" id="batch-mode-toggle" onchange="setBatchModeEnabled(this.checked)">
+                                Batch Session Mode
+                            </label>
+                            <button onclick="triggerImportFileDialog()" id="import-btn" class="outline" title="Import JSON, .tid, markdown, HTML, or text into this form">
+                                Import File
+                            </button>
+                            <button onclick="pushAllChanges()" id="push-all-btn" class="secondary hidden">
+                                Push All Changes (0)
+                            </button>
                             <button onclick="saveContentAsDraft()" id="draft-btn" style="display: none;">Save as Draft</button>
                             <button onclick="saveContent()" id="save-btn">Save Changes</button>
                             <button onclick="publishContent()" id="publish-btn" class="contrast" style="display: none;">Publish</button>
                             <button onclick="deleteContent()" id="delete-btn" class="outline" style="color: var(--error); display: none;">Delete</button>
                         </div>
                     </div>
+                    <div id="queue-summary" class="queue-summary"></div>
+                    <div id="autosave-indicator" class="autosave-indicator"></div>
+                    <div class="editor-tools">
+                        <details>
+                            <summary>Internal Link Tools</summary>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                <select id="link-page-select" style="min-width:220px;">
+                                    <option value="">Select a page link...</option>
+                                </select>
+                                <button type="button" class="secondary" onclick="insertSelectedPageLink()">Insert [[page-id]]</button>
+                                <button type="button" class="outline" onclick="refreshLinkPageList()">Refresh Pages</button>
+                                <button type="button" class="outline" onclick="findBacklinks()">Find Backlinks</button>
+                            </div>
+                            <div id="backlinks-status" style="margin-top:0.5rem;"></div>
+                            <div id="backlinks-list" style="margin-top:0.5rem;"></div>
+                        </details>
+                        <details>
+                            <summary>Revision History</summary>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                <button type="button" class="secondary" onclick="loadRevisionHistory()">Load Revisions</button>
+                                <button type="button" class="outline" onclick="openDiffForLatestTwo()">Diff Latest Two</button>
+                            </div>
+                            <div id="revision-status" style="margin-top:0.5rem;"></div>
+                            <div id="revision-list" style="margin-top:0.5rem;"></div>
+                            <div id="revision-diff" class="diff-view" style="margin-top:0.6rem; display:none;"></div>
+                        </details>
+                        <details>
+                            <summary>Workflow + Watchlist</summary>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                <select id="workflow-status-select" style="min-width:180px;">
+                                    <option value="draft">Draft</option>
+                                    <option value="in_review">In Review</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="published">Published</option>
+                                </select>
+                                <input type="datetime-local" id="workflow-scheduled-for">
+                                <button type="button" class="secondary" onclick="updateWorkflowStatus()">Update Workflow</button>
+                                <button type="button" class="outline" onclick="runScheduledPublishNow()">Run Scheduled Publish</button>
+                            </div>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                <button type="button" class="outline" id="watch-toggle-btn" onclick="toggleWatchPage()">Watch Page</button>
+                                <button type="button" class="outline" onclick="loadWatchActivity()">Refresh Watch Activity</button>
+                            </div>
+                            <div id="workflow-status-panel" style="margin-top:0.5rem;"></div>
+                            <div id="watch-activity-list" style="margin-top:0.5rem;"></div>
+                        </details>
+                        <details>
+                            <summary>Reusable Blocks</summary>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                <select id="block-select" style="min-width:220px;">
+                                    <option value="">Select a reusable block...</option>
+                                </select>
+                                <button type="button" class="secondary" onclick="insertSelectedBlock()">Insert Block</button>
+                                <button type="button" class="outline" onclick="loadReusableBlocks()">Refresh Blocks</button>
+                            </div>
+                            <div id="blocks-status" style="margin-top:0.5rem;"></div>
+                        </details>
+                    </div>
+                    <input type="file" id="import-file-input" class="hidden" accept=".json,.tid,.md,.markdown,.txt,.html,.htm" onchange="handleImportFileChosen(event)">
                 </div>
                 
                 <div id="editor-status"></div>
@@ -642,7 +923,7 @@ PREREQUISITES:
                         <div id="passkeys-list-container"></div>
                     </div>
                     
-                    <button onclick="registerPasskey()" class="secondary">+ Register New Passkey</button>
+                    <button id="register-passkey-btn" onclick="registerPasskey()" class="secondary">+ Register New Passkey</button>
                     
                     <div id="passkey-status" style="margin-top: 1rem;"></div>
                     
@@ -707,13 +988,31 @@ PREREQUISITES:
         let CURRENT_SCHEMA = null;
         let CURRENT_CONTENT = null;
         let CURRENT_PAGE_ID = null;
+        let BATCH_MODE_ENABLED = false;
+        let PENDING_CHANGES = [];
+        let AUTO_STAGE_TIMER = null;
+        let AUTOSAVE_TIMER = null;
+        let LAST_FOCUSED_FIELD_ID = null;
+        let PAGE_CACHE = [];
+        let WATCHED_PAGES = [];
+        let BLOCK_CACHE = [];
+        let REVISION_CACHE = [];
+        let PAGE_BROWSER_ITEMS = [];
+        let PAGE_BROWSER_CAN_EDIT_ALL = false;
+        let HAS_LOCAL_CHANGES = false;
+        let EDITOR_BUSY = false;
+        let PASSKEY_ENV_READY = null;
 
         const STORAGE_KEYS = {
             SESSION: 'loon_session',
             LAST_PAGE: 'loon_last_page',
             POST_SETUP_NOTICE: 'loon_post_setup_notice',
             LAST_READINESS: 'loon_last_readiness',
-            FIRST_PAGE_WIZARD_DISMISSED: 'loon_first_page_wizard_dismissed'
+            FIRST_PAGE_WIZARD_DISMISSED: 'loon_first_page_wizard_dismissed',
+            THEME: 'loon_theme',
+            BATCH_MODE: 'loon_batch_mode',
+            PENDING_CHANGES: 'loon_pending_changes',
+            AUTOSAVE_PREFIX: 'loon_autosave_'
         };
         let ONBOARDING_TIMER = null;
         const VIEW_MODE = new URLSearchParams(window.location.search).get('view') || 'default';
@@ -722,6 +1021,8 @@ PREREQUISITES:
         // INITIALIZATION
         // =================================================================
         document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            initBatchMode();
             prefillRepoSuggestion();
             hydrateLastReadinessStamp();
 
@@ -784,10 +1085,785 @@ PREREQUISITES:
             document.addEventListener('keydown', e => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                     e.preventDefault();
-                    if (CURRENT_SCHEMA) saveContent();
+                    if (CURRENT_SCHEMA) handlePrimarySaveAction();
+                }
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+                    e.preventDefault();
+                    if (CURRENT_SCHEMA && SESSION && SESSION.role !== 'contributor') {
+                        saveContentAsDraft();
+                    }
                 }
             });
         });
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'default';
+            setTheme(savedTheme, false);
+        }
+
+        function setTheme(theme, persist = true) {
+            const normalized = ['default', 'forest', 'sunset'].includes(theme) ? theme : 'default';
+            if (normalized === 'default') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', normalized);
+            }
+
+            const select = document.getElementById('theme-select');
+            if (select) select.value = normalized;
+            if (persist) localStorage.setItem(STORAGE_KEYS.THEME, normalized);
+        }
+
+        function initBatchMode() {
+            BATCH_MODE_ENABLED = localStorage.getItem(STORAGE_KEYS.BATCH_MODE) === '1';
+            const rawQueue = localStorage.getItem(STORAGE_KEYS.PENDING_CHANGES);
+            if (rawQueue) {
+                try {
+                    const parsed = JSON.parse(rawQueue);
+                    if (Array.isArray(parsed)) {
+                        PENDING_CHANGES = parsed;
+                    }
+                } catch {
+                    PENDING_CHANGES = [];
+                }
+            }
+
+            const toggle = document.getElementById('batch-mode-toggle');
+            if (toggle) {
+                toggle.checked = BATCH_MODE_ENABLED;
+            }
+            updateBatchUi();
+        }
+
+        window.addEventListener('beforeunload', (event) => {
+            if (PENDING_CHANGES.length > 0 || HAS_LOCAL_CHANGES) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        });
+
+        function setEditorBusy(busy) {
+            EDITOR_BUSY = !!busy;
+            const ids = ['save-btn', 'draft-btn', 'publish-btn', 'push-all-btn', 'delete-btn', 'import-btn'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.disabled = EDITOR_BUSY;
+            });
+        }
+
+        function markEditorDirty(isDirty) {
+            HAS_LOCAL_CHANGES = !!isDirty;
+            const chip = document.getElementById('edit-dirty-chip');
+            if (!chip) return;
+            if (HAS_LOCAL_CHANGES) {
+                chip.textContent = 'Unsaved local edits';
+                chip.classList.add('dirty');
+            } else {
+                chip.textContent = 'No local edits';
+                chip.classList.remove('dirty');
+            }
+        }
+
+        function setBatchModeEnabled(enabled) {
+            BATCH_MODE_ENABLED = !!enabled;
+            localStorage.setItem(STORAGE_KEYS.BATCH_MODE, BATCH_MODE_ENABLED ? '1' : '0');
+            if (!BATCH_MODE_ENABLED && AUTO_STAGE_TIMER) {
+                clearTimeout(AUTO_STAGE_TIMER);
+                AUTO_STAGE_TIMER = null;
+            }
+            updateBatchUi();
+            if (BATCH_MODE_ENABLED) {
+                showStatus('editor-status', 'Batch Session Mode enabled. Changes are staged in your browser until you click Push All Changes.', 'info');
+            } else {
+                showStatus('editor-status', 'Batch Session Mode disabled. Save actions now commit immediately to GitHub.', 'info');
+            }
+        }
+
+        function persistPendingChanges() {
+            localStorage.setItem(STORAGE_KEYS.PENDING_CHANGES, JSON.stringify(PENDING_CHANGES));
+        }
+
+        function updateBatchUi() {
+            const pushBtn = document.getElementById('push-all-btn');
+            const toggle = document.getElementById('batch-mode-toggle');
+            const summary = document.getElementById('queue-summary');
+            const saveBtn = document.getElementById('save-btn');
+            const draftBtn = document.getElementById('draft-btn');
+            if (toggle) toggle.checked = BATCH_MODE_ENABLED;
+
+            if (!pushBtn) return;
+            pushBtn.textContent = `Push All Changes (${PENDING_CHANGES.length})`;
+
+            if (BATCH_MODE_ENABLED) {
+                pushBtn.classList.remove('hidden');
+            } else {
+                pushBtn.classList.add('hidden');
+            }
+
+            if (summary) {
+                if (!PENDING_CHANGES.length) {
+                    summary.textContent = BATCH_MODE_ENABLED
+                        ? 'No staged changes yet. Edit content to stage updates for this session.'
+                        : '';
+                } else {
+                    const pageCount = new Set(PENDING_CHANGES.map(item => item.pageId)).size;
+                    summary.textContent = `${PENDING_CHANGES.length} staged change(s) across ${pageCount} page(s). Push all before publishing.`;
+                }
+            }
+
+            if (saveBtn) {
+                saveBtn.textContent = BATCH_MODE_ENABLED ? 'Stage Change' : 'Save Changes';
+                saveBtn.title = BATCH_MODE_ENABLED
+                    ? 'Stage this page change in your browser queue'
+                    : 'Save and commit this change immediately';
+            }
+
+            if (draftBtn) {
+                draftBtn.textContent = BATCH_MODE_ENABLED ? 'Stage Draft' : 'Save as Draft';
+                draftBtn.title = BATCH_MODE_ENABLED
+                    ? 'Stage this draft change in your browser queue'
+                    : 'Save draft immediately';
+            }
+
+            renderWorkflowAssistant();
+        }
+
+        function getStagedLabel(saveAs) {
+            return saveAs === 'draft' ? 'draft' : 'live';
+        }
+
+        function getCurrentPageSaveMode() {
+            if (SESSION && SESSION.role === 'contributor') return 'draft';
+            return 'live';
+        }
+
+        function getQueueKey(pageId, mode) {
+            return `${pageId}::${mode}`;
+        }
+
+        function getQueuedChangeForPage(pageId, preferredMode = null) {
+            const mode = preferredMode || getCurrentPageSaveMode();
+            const key = getQueueKey(pageId, mode);
+            return PENDING_CHANGES.find(item => item.key === key) || null;
+        }
+
+        function hasQueuedChangeForCurrentPage() {
+            if (!CURRENT_PAGE_ID) return false;
+            return !!getQueuedChangeForPage(CURRENT_PAGE_ID);
+        }
+
+        function scheduleAutoStage() {
+            if (!BATCH_MODE_ENABLED || !CURRENT_PAGE_ID || !CURRENT_SCHEMA) return;
+            if (AUTO_STAGE_TIMER) clearTimeout(AUTO_STAGE_TIMER);
+            AUTO_STAGE_TIMER = setTimeout(() => {
+                const mode = getCurrentPageSaveMode();
+                stageCurrentContentChange(mode === 'draft' ? 'draft' : null, { silent: true });
+            }, 450);
+        }
+
+        function stageCurrentContentChange(saveAs = null, options = {}) {
+            const content = collectCurrentFormContent();
+            const mode = saveAs === 'draft' ? 'draft' : 'live';
+            const key = getQueueKey(CURRENT_PAGE_ID, mode);
+            const entry = {
+                key,
+                pageId: CURRENT_PAGE_ID,
+                saveAs: saveAs === 'draft' ? 'draft' : null,
+                content,
+                queuedAt: Date.now()
+            };
+
+            PENDING_CHANGES = PENDING_CHANGES.filter(item => item.key !== key);
+            PENDING_CHANGES.push(entry);
+            persistPendingChanges();
+            updateBatchUi();
+
+            CURRENT_CONTENT = content;
+            document.getElementById('last-saved').textContent = `Staged ${getStagedLabel(saveAs)} change at ${new Date().toLocaleTimeString()}`;
+            markEditorDirty(false);
+            if (!options.silent) {
+                showStatus('editor-status', `Change staged for ${CURRENT_PAGE_ID}. Click "Push All Changes" when ready.`, 'success');
+                setTimeout(() => hideStatus('editor-status'), 2500);
+            }
+        }
+
+        async function pushAllChanges() {
+            if (!PENDING_CHANGES.length) {
+                showStatus('editor-status', 'No staged changes to push.', 'info');
+                return;
+            }
+            if (EDITOR_BUSY) return;
+
+            setEditorBusy(true);
+            const queue = [...PENDING_CHANGES];
+            const total = queue.length;
+
+            try {
+                for (let i = 0; i < queue.length; i++) {
+                    const item = queue[i];
+                    showStatus('editor-status', `Pushing staged change ${i + 1}/${total} for "${item.pageId}"...`, 'info');
+                    await sendSaveRequest(item.pageId, item.content, item.saveAs);
+                    PENDING_CHANGES = PENDING_CHANGES.filter(change => change.key !== item.key);
+                    persistPendingChanges();
+                    updateBatchUi();
+                }
+
+                document.getElementById('last-saved').textContent = `Pushed ${total} staged change(s)`;
+                markEditorDirty(false);
+                showStatus('editor-status', `Pushed ${total} staged change(s) successfully.`, 'success');
+                setTimeout(() => hideStatus('editor-status'), 3000);
+            } catch (e) {
+                if (!handleSessionError(e)) {
+                    showStatus('editor-status', `Push failed: ${e.message}`, 'error');
+                }
+            } finally {
+                setEditorBusy(false);
+            }
+        }
+
+        function handlePrimarySaveAction() {
+            if (SESSION && SESSION.role === 'contributor') {
+                return saveContentAsDraft();
+            }
+            return saveContent();
+        }
+
+        function renderWorkflowAssistant() {
+            const body = document.getElementById('workflow-assistant-body');
+            if (!body) return;
+
+            const pageLoaded = !!CURRENT_PAGE_ID;
+            const queuedForPage = hasQueuedChangeForCurrentPage();
+            const totalQueued = PENDING_CHANGES.length;
+            const canPublish = SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor');
+
+            if (!SESSION) {
+                body.innerHTML = '<small>Log in to start editing.</small>';
+                return;
+            }
+
+            if (!pageLoaded) {
+                body.innerHTML = '<small>Next: Load a page or create a new page.</small>';
+                return;
+            }
+
+            const actions = [];
+            actions.push(`Role: <code>${escapeHtml(SESSION.role)}</code>`);
+            actions.push(`Mode: <code>${BATCH_MODE_ENABLED ? 'batch staging' : 'immediate commits'}</code>`);
+            actions.push(`Queued changes: <code>${totalQueued}</code>`);
+
+            if (BATCH_MODE_ENABLED && totalQueued > 0) {
+                actions.push('Recommended: Click <strong>Push All Changes</strong> before ending session.');
+            }
+
+            if (queuedForPage && canPublish) {
+                actions.push('Publish is blocked until staged changes for this page are pushed.');
+            } else if (!queuedForPage && canPublish) {
+                actions.push('This page is ready to publish after review.');
+            }
+
+            if (SESSION.role === 'contributor') {
+                actions.push('Contributors can stage/save drafts but cannot publish.');
+            }
+
+            body.innerHTML = `<small>${actions.join(' | ')}</small>`;
+        }
+
+        function getAutosaveKey(pageId) {
+            return `${STORAGE_KEYS.AUTOSAVE_PREFIX}${pageId}`;
+        }
+
+        function clearAutosaveForPage(pageId) {
+            if (!pageId) return;
+            localStorage.removeItem(getAutosaveKey(pageId));
+            updateAutosaveIndicator();
+        }
+
+        function updateAutosaveIndicator(message = '') {
+            const indicator = document.getElementById('autosave-indicator');
+            if (!indicator) return;
+            if (message) {
+                indicator.textContent = message;
+                return;
+            }
+            if (!CURRENT_PAGE_ID) {
+                indicator.textContent = '';
+                return;
+            }
+            const raw = localStorage.getItem(getAutosaveKey(CURRENT_PAGE_ID));
+            if (!raw) {
+                indicator.textContent = '';
+                return;
+            }
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed?.timestamp) {
+                    indicator.textContent = `Autosave snapshot: ${new Date(parsed.timestamp).toLocaleTimeString()}`;
+                } else {
+                    indicator.textContent = 'Autosave snapshot available';
+                }
+            } catch {
+                indicator.textContent = 'Autosave snapshot available';
+            }
+        }
+
+        function writeAutosaveSnapshot() {
+            if (!CURRENT_PAGE_ID || !CURRENT_SCHEMA) return;
+            const content = collectCurrentFormContent();
+            localStorage.setItem(getAutosaveKey(CURRENT_PAGE_ID), JSON.stringify({
+                timestamp: Date.now(),
+                content
+            }));
+            updateAutosaveIndicator(`Autosaved at ${new Date().toLocaleTimeString()}`);
+        }
+
+        function scheduleAutosave() {
+            if (!CURRENT_PAGE_ID || !CURRENT_SCHEMA) return;
+            if (AUTOSAVE_TIMER) clearTimeout(AUTOSAVE_TIMER);
+            AUTOSAVE_TIMER = setTimeout(() => {
+                writeAutosaveSnapshot();
+            }, 1500);
+        }
+
+        function maybeRestoreAutosave(pageId) {
+            const raw = localStorage.getItem(getAutosaveKey(pageId));
+            if (!raw) return false;
+            try {
+                const parsed = JSON.parse(raw);
+                if (!parsed?.content || typeof parsed.content !== 'object') return false;
+                const incoming = JSON.stringify(parsed.content || {});
+                const current = JSON.stringify(CURRENT_CONTENT || {});
+                if (incoming === current) return false;
+
+                const when = parsed.timestamp ? new Date(parsed.timestamp).toLocaleString() : 'recently';
+                if (confirm(`A local autosave snapshot from ${when} was found for this page. Restore it?`)) {
+                    CURRENT_CONTENT = { ...CURRENT_CONTENT, ...parsed.content };
+                    buildForm();
+                    markEditorDirty(true);
+                    showStatus('editor-status', 'Restored local autosave snapshot. Review and save when ready.', 'info');
+                    updateAutosaveIndicator(`Restored autosave from ${when}`);
+                    return true;
+                }
+            } catch {
+                return false;
+            }
+            return false;
+        }
+
+        async function refreshLinkPageList() {
+            const select = document.getElementById('link-page-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">Loading pages...</option>';
+            try {
+                const res = await fetch('/api/pages?minimal=true&limit=200', {
+                    headers: SESSION?.token ? { Authorization: `Bearer ${SESSION.token}` } : {}
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load pages');
+                PAGE_CACHE = (data.pages || []).map(p => p.pageId).filter(Boolean);
+                select.innerHTML = '<option value="">Select a page link...</option>' +
+                    PAGE_CACHE.map(pageId => `<option value="${escapeHtml(pageId)}">${escapeHtml(pageId)}</option>`).join('');
+            } catch (e) {
+                select.innerHTML = '<option value="">Unable to load pages</option>';
+            }
+        }
+
+        function insertSelectedPageLink() {
+            const select = document.getElementById('link-page-select');
+            if (!select || !select.value) {
+                showStatus('editor-status', 'Select a page link first.', 'error');
+                return;
+            }
+            if (!LAST_FOCUSED_FIELD_ID) {
+                showStatus('editor-status', 'Focus a text/textarea field first.', 'error');
+                return;
+            }
+            const input = document.getElementById(LAST_FOCUSED_FIELD_ID);
+            if (!input || typeof input.value !== 'string') {
+                showStatus('editor-status', 'Focused field does not support text insertion.', 'error');
+                return;
+            }
+
+            const token = `[[${select.value}]]`;
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? input.value.length;
+            input.value = `${input.value.slice(0, start)}${token}${input.value.slice(end)}`;
+            input.focus();
+            const nextPos = start + token.length;
+            input.setSelectionRange(nextPos, nextPos);
+            scheduleAutosave();
+            scheduleAutoStage();
+            showStatus('editor-status', `Inserted link ${token}`, 'success');
+        }
+
+        function collectTextContentStrings(payload) {
+            const results = [];
+            function walk(node) {
+                if (node === null || node === undefined) return;
+                if (typeof node === 'string') {
+                    results.push(node);
+                    return;
+                }
+                if (Array.isArray(node)) {
+                    node.forEach(walk);
+                    return;
+                }
+                if (typeof node === 'object') {
+                    Object.values(node).forEach(walk);
+                }
+            }
+            walk(payload);
+            return results;
+        }
+
+        async function findBacklinks() {
+            const statusEl = document.getElementById('backlinks-status');
+            const listEl = document.getElementById('backlinks-list');
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load a page first.', 'error');
+                return;
+            }
+            statusEl.textContent = 'Scanning pages for backlinks...';
+            listEl.innerHTML = '';
+
+            try {
+                if (!PAGE_CACHE.length) {
+                    await refreshLinkPageList();
+                }
+                const candidates = PAGE_CACHE.filter(id => id !== CURRENT_PAGE_ID).slice(0, 120);
+                const backlinks = [];
+                const needleWiki = `[[${CURRENT_PAGE_ID}]]`;
+                const needlePlain = CURRENT_PAGE_ID;
+
+                for (const pageId of candidates) {
+                    const res = await fetch(`/data/${pageId}/content.json`, { cache: 'no-store' });
+                    if (!res.ok) continue;
+                    const content = await res.json();
+                    const strings = collectTextContentStrings(content);
+                    const linked = strings.some(str => str.includes(needleWiki) || str.includes(needlePlain));
+                    if (linked) backlinks.push(pageId);
+                }
+
+                statusEl.textContent = `Found ${backlinks.length} backlink(s).`;
+                listEl.innerHTML = backlinks.length
+                    ? backlinks.map(id => `<div><code>${escapeHtml(id)}</code></div>`).join('')
+                    : '<small style="color: var(--muted-color);">No backlinks found.</small>';
+            } catch (e) {
+                statusEl.textContent = 'Backlink scan failed.';
+                listEl.innerHTML = `<small style="color: var(--error);">${escapeHtml(e.message)}</small>`;
+            }
+        }
+
+        async function loadRevisionHistory() {
+            const statusEl = document.getElementById('revision-status');
+            const listEl = document.getElementById('revision-list');
+            const diffEl = document.getElementById('revision-diff');
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load a page first.', 'error');
+                return;
+            }
+            statusEl.textContent = 'Loading revision history...';
+            listEl.innerHTML = '';
+            REVISION_CACHE = [];
+            if (diffEl) {
+                diffEl.style.display = 'none';
+                diffEl.innerHTML = '';
+            }
+
+            try {
+                const res = await fetch(`/api/history?pageId=${encodeURIComponent(CURRENT_PAGE_ID)}&limit=25`, {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load history');
+                const history = data.history || [];
+                REVISION_CACHE = history;
+                statusEl.textContent = `${history.length} revision(s) found.`;
+                listEl.innerHTML = history.length
+                    ? history.map(entry => `
+                        <div style="border:1px solid var(--panel-border); border-radius:6px; padding:0.5rem; margin-bottom:0.4rem;">
+                            <div><code>${escapeHtml(entry.sha.slice(0, 10))}</code> - ${escapeHtml(entry.message || '(no message)')}</div>
+                            <small style="color:var(--muted-color);">${entry.author ? escapeHtml(entry.author) : 'unknown'} | ${entry.date ? new Date(entry.date).toLocaleString() : '-'}</small>
+                            <div style="margin-top:0.35rem; display:flex; gap:0.35rem; flex-wrap:wrap;">
+                                ${(SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor'))
+                                    ? `<button type="button" class="outline" onclick="rollbackToRevision('${escapeHtml(entry.sha)}')">Rollback to This Revision</button>`
+                                    : ''}
+                                ${entry.url ? `<a href="${escapeHtml(entry.url)}" target="_blank" rel="noopener noreferrer" role="button" class="secondary">Open Commit</a>` : ''}
+                            </div>
+                        </div>
+                    `).join('')
+                    : '<small style="color: var(--muted-color);">No revision history available.</small>';
+            } catch (e) {
+                statusEl.textContent = 'Revision history failed to load.';
+                listEl.innerHTML = `<small style="color: var(--error);">${escapeHtml(e.message)}</small>`;
+            }
+        }
+
+        async function loadRevisionDiff(fromSha, toSha) {
+            const diffEl = document.getElementById('revision-diff');
+            if (!diffEl) return;
+            diffEl.style.display = 'block';
+            diffEl.innerHTML = 'Loading diff...';
+
+            try {
+                const query = new URLSearchParams({
+                    pageId: CURRENT_PAGE_ID,
+                    from: fromSha,
+                    to: toSha
+                });
+                const res = await fetch(`/api/revision-diff?${query.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load diff');
+
+                const summary = data.summary || {};
+                const rows = Array.isArray(data.diff) ? data.diff : [];
+                const html = rows.length
+                    ? rows.map(row => {
+                        const type = row.type === 'add' ? 'diff-add' : row.type === 'remove' ? 'diff-remove' : 'diff-same';
+                        const prefix = row.type === 'add' ? '+' : row.type === 'remove' ? '-' : ' ';
+                        return `<div class="diff-line ${type}">${escapeHtml(prefix)} ${escapeHtml(String(row.line ?? ''))}</div>`;
+                    }).join('')
+                    : '<small style="color: var(--muted-color);">No changes between selected revisions.</small>';
+
+                diffEl.innerHTML = `
+                    <div style="margin-bottom:0.5rem;">
+                        <strong>Diff ${escapeHtml(fromSha.slice(0, 10))}..${escapeHtml(toSha.slice(0, 10))}</strong><br>
+                        <small style="color:var(--muted-color);">
+                            +${summary.added || 0} / -${summary.removed || 0} / =${summary.unchanged || 0}
+                        </small>
+                    </div>
+                    ${html}
+                `;
+            } catch (e) {
+                diffEl.innerHTML = `<small style="color: var(--error);">Diff failed: ${escapeHtml(e.message)}</small>`;
+            }
+        }
+
+        async function openDiffForLatestTwo() {
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load a page first.', 'error');
+                return;
+            }
+            if (!REVISION_CACHE.length) {
+                await loadRevisionHistory();
+            }
+            if (REVISION_CACHE.length < 2) {
+                showStatus('editor-status', 'Need at least 2 revisions to show a diff.', 'error');
+                return;
+            }
+            const toSha = REVISION_CACHE[0].sha;
+            const fromSha = REVISION_CACHE[1].sha;
+            await loadRevisionDiff(fromSha, toSha);
+        }
+
+        async function rollbackToRevision(commitSha) {
+            if (!CURRENT_PAGE_ID) return;
+            if (!confirm(`Rollback "${CURRENT_PAGE_ID}" to revision ${commitSha.slice(0, 10)}?`)) return;
+
+            showStatus('editor-status', `Rolling back to ${commitSha.slice(0, 10)}...`, 'info');
+            try {
+                const res = await fetch('/api/rollback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ pageId: CURRENT_PAGE_ID, commitSha })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Rollback failed');
+                clearAutosaveForPage(CURRENT_PAGE_ID);
+                showStatus('editor-status', `Rollback complete. Commit: ${data.commit?.slice(0, 10) || 'unknown'}`, 'success');
+                await loadEditor();
+                await loadRevisionHistory();
+            } catch (e) {
+                showStatus('editor-status', `Rollback failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function runScheduledPublishNow() {
+            showStatus('editor-status', 'Running scheduled publish...', 'info');
+            try {
+                const res = await fetch('/api/scheduled-publish', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Scheduled publish failed');
+
+                const publishedCount = Array.isArray(data.published) ? data.published.length : 0;
+                const skippedCount = Array.isArray(data.skipped) ? data.skipped.length : 0;
+                showStatus('editor-status', `Scheduled publish complete: ${publishedCount} published, ${skippedCount} skipped.`, 'success');
+
+                if (CURRENT_PAGE_ID) {
+                    await loadEditor();
+                }
+            } catch (e) {
+                showStatus('editor-status', `Scheduled publish failed: ${e.message}`, 'error');
+            }
+        }
+
+        function hydrateWorkflowPanelFromContent() {
+            const panel = document.getElementById('workflow-status-panel');
+            const select = document.getElementById('workflow-status-select');
+            const scheduleInput = document.getElementById('workflow-scheduled-for');
+            if (!panel || !select) return;
+            const meta = CURRENT_CONTENT?._meta || {};
+            const status = meta.workflowStatus || meta.status || 'draft';
+            select.value = ['draft', 'in_review', 'approved', 'scheduled', 'published'].includes(status) ? status : 'draft';
+            if (scheduleInput) {
+                if (meta.scheduledFor) {
+                    const d = new Date(meta.scheduledFor);
+                    if (!Number.isNaN(d.getTime())) {
+                        scheduleInput.value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                    }
+                } else {
+                    scheduleInput.value = '';
+                }
+            }
+            panel.innerHTML = `<small>Current workflow: <code>${escapeHtml(status)}</code>${meta.scheduledFor ? ` | Scheduled for ${escapeHtml(meta.scheduledFor)}` : ''}</small>`;
+        }
+
+        async function updateWorkflowStatus() {
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load a page first.', 'error');
+                return;
+            }
+            const select = document.getElementById('workflow-status-select');
+            const scheduleInput = document.getElementById('workflow-scheduled-for');
+            const status = select?.value || 'draft';
+            const scheduledFor = scheduleInput?.value ? new Date(scheduleInput.value).toISOString() : null;
+
+            try {
+                const res = await fetch('/api/workflow', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        pageId: CURRENT_PAGE_ID,
+                        status,
+                        scheduledFor: status === 'scheduled' ? scheduledFor : null
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Workflow update failed');
+                if (!CURRENT_CONTENT._meta) CURRENT_CONTENT._meta = {};
+                CURRENT_CONTENT._meta.workflowStatus = status;
+                CURRENT_CONTENT._meta.scheduledFor = status === 'scheduled' ? scheduledFor : undefined;
+                hydrateWorkflowPanelFromContent();
+                showStatus('editor-status', `Workflow updated to ${status}`, 'success');
+                await loadRevisionHistory();
+            } catch (e) {
+                showStatus('editor-status', `Workflow update failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function loadWatchActivity() {
+            const panel = document.getElementById('watch-activity-list');
+            const toggleBtn = document.getElementById('watch-toggle-btn');
+            if (!panel || !toggleBtn) return;
+            try {
+                const res = await fetch('/api/watch', {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load watchlist');
+                WATCHED_PAGES = data.watchedPages || [];
+                const isWatching = CURRENT_PAGE_ID && WATCHED_PAGES.includes(CURRENT_PAGE_ID);
+                toggleBtn.textContent = isWatching ? 'Unwatch Page' : 'Watch Page';
+
+                const recent = data.recent || [];
+                panel.innerHTML = recent.length
+                    ? recent.slice(0, 10).map(item => `
+                        <div><small><code>${escapeHtml(item.pageId || '-')}</code> ${escapeHtml(item.action || 'activity')} by ${escapeHtml(item.username || 'unknown')} at ${item.timestamp ? new Date(item.timestamp).toLocaleString() : '-'}</small></div>
+                    `).join('')
+                    : '<small style="color:var(--muted-color);">No recent watched-page activity.</small>';
+            } catch (e) {
+                panel.innerHTML = `<small style="color:var(--error);">${escapeHtml(e.message)}</small>`;
+            }
+        }
+
+        async function toggleWatchPage() {
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load a page first.', 'error');
+                return;
+            }
+            const watching = WATCHED_PAGES.includes(CURRENT_PAGE_ID);
+            try {
+                const res = await fetch('/api/watch', {
+                    method: watching ? 'DELETE' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({ pageId: CURRENT_PAGE_ID })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Watch update failed');
+                await loadWatchActivity();
+                showStatus('editor-status', watching ? 'Page removed from watchlist' : 'Page added to watchlist', 'success');
+            } catch (e) {
+                showStatus('editor-status', `Watch update failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function loadReusableBlocks() {
+            const select = document.getElementById('block-select');
+            const status = document.getElementById('blocks-status');
+            if (!select || !status) return;
+            select.innerHTML = '<option value="">Loading blocks...</option>';
+            try {
+                const res = await fetch('/api/blocks', {
+                    headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load blocks');
+                BLOCK_CACHE = data.blocks || [];
+                select.innerHTML = '<option value="">Select a reusable block...</option>' +
+                    BLOCK_CACHE.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join('');
+                status.innerHTML = `<small>Loaded ${BLOCK_CACHE.length} block(s) from ${escapeHtml(data.source || 'unknown source')}.</small>`;
+            } catch (e) {
+                select.innerHTML = '<option value="">Unable to load blocks</option>';
+                status.innerHTML = `<small style="color:var(--error);">${escapeHtml(e.message)}</small>`;
+            }
+        }
+
+        function insertSelectedBlock() {
+            const select = document.getElementById('block-select');
+            if (!select || !select.value) {
+                showStatus('editor-status', 'Select a block first.', 'error');
+                return;
+            }
+            const block = BLOCK_CACHE.find(item => item.id === select.value);
+            if (!block) {
+                showStatus('editor-status', 'Block not found in cache.', 'error');
+                return;
+            }
+            if (!LAST_FOCUSED_FIELD_ID) {
+                showStatus('editor-status', 'Focus a text/textarea field first.', 'error');
+                return;
+            }
+            const input = document.getElementById(LAST_FOCUSED_FIELD_ID);
+            if (!input || typeof input.value !== 'string') {
+                showStatus('editor-status', 'Focused field does not support text insertion.', 'error');
+                return;
+            }
+            const snippet = `\n${block.content}\n`;
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? input.value.length;
+            input.value = `${input.value.slice(0, start)}${snippet}${input.value.slice(end)}`;
+            input.focus();
+            const nextPos = start + snippet.length;
+            input.setSelectionRange(nextPos, nextPos);
+            scheduleAutosave();
+            scheduleAutoStage();
+            showStatus('editor-status', `Inserted block "${block.label}"`, 'success');
+        }
 
         // =================================================================
         // AUTHENTICATION
@@ -879,6 +1955,61 @@ PREREQUISITES:
             return `${owner}/${repo}`;
         }
 
+        function getPasskeyEnvSuggestion() {
+            const host = window.location.hostname || '';
+            const isLocal = host === 'localhost' || host === '127.0.0.1';
+            const protocol = isLocal ? 'http:' : (window.location.protocol || 'https:');
+            const origin = `${protocol}//${host || 'localhost'}`;
+            return {
+                rpId: host || 'localhost',
+                rpOrigin: origin
+            };
+        }
+
+        async function checkPasskeyServerConfig() {
+            try {
+                const res = await fetch('/api/health', { cache: 'no-store' });
+                if (!res.ok) {
+                    PASSKEY_ENV_READY = null;
+                    return null;
+                }
+                const data = await res.json();
+                const checks = data?.checks || {};
+                const ready = !!checks.passkeys_ready;
+                PASSKEY_ENV_READY = ready;
+                return {
+                    ready,
+                    hasRpId: !!checks.passkeys_rp_id,
+                    hasRpOrigin: !!checks.passkeys_rp_origin
+                };
+            } catch {
+                PASSKEY_ENV_READY = null;
+                return null;
+            }
+        }
+
+        function showPasskeyOptionalStatus(config) {
+            const passkeyEnv = getPasskeyEnvSuggestion();
+            const registerBtn = document.getElementById('register-passkey-btn');
+            if (registerBtn) {
+                registerBtn.disabled = config?.ready === false;
+            }
+
+            if (config?.ready) {
+                showStatus('passkey-status', 'Passkeys are configured and optional. You can keep using password login, or register a passkey anytime.', 'info');
+                return;
+            }
+
+            if (config?.ready === false) {
+                const msg = [
+                    'Passkeys are optional and currently not configured for this deployment.',
+                    `To enable later: set RP_ID=${passkeyEnv.rpId} and RP_ORIGIN=${passkeyEnv.rpOrigin} in Cloudflare env vars, then redeploy.`,
+                    'Password login continues to work normally.'
+                ].join('\n');
+                showStatus('passkey-status', msg, 'info');
+            }
+        }
+
         async function copyGithubRepoSuggestion() {
             const suggestion = getRepoSuggestion();
             if (!suggestion) {
@@ -912,10 +2043,13 @@ PREREQUISITES:
         async function copyEnvTemplate() {
             const repo = getRepoSuggestion() || 'owner/repo';
             const setupToken = generateSecureToken(64);
+            const passkeyEnv = getPasskeyEnvSuggestion();
             const template = [
                 `GITHUB_REPO=${repo}`,
                 'GITHUB_TOKEN=<set-as-secret>',
                 `SETUP_TOKEN=${setupToken}`,
+                `RP_ID=${passkeyEnv.rpId}`,
+                `RP_ORIGIN=${passkeyEnv.rpOrigin}`,
                 'ENVIRONMENT=production'
             ].join('\n');
             try {
@@ -1056,6 +2190,14 @@ PREREQUISITES:
                     setupTokenConfigured ? 'SETUP_TOKEN is configured for first admin setup.' : 'Add SETUP_TOKEN as a Secret in Cloudflare Pages.',
                     setupTokenConfigured ? 'pass' : 'warn',
                     { label: 'Open Cloudflare Env Vars', url: 'https://dash.cloudflare.com/' }
+                ),
+                renderCheckItem(
+                    'Passkeys (RP_ID / RP_ORIGIN)',
+                    checks.passkeys_ready
+                        ? `Passkeys are configured (${checks.passkeys_rp_id ? 'RP_ID' : ''}${checks.passkeys_rp_id && checks.passkeys_rp_origin ? ', ' : ''}${checks.passkeys_rp_origin ? 'RP_ORIGIN' : ''}).`
+                        : 'Set RP_ID and RP_ORIGIN in Cloudflare env vars to enable passkeys in production.',
+                    checks.passkeys_ready ? 'pass' : 'warn',
+                    { label: 'Open Cloudflare Env Vars', url: 'https://dash.cloudflare.com/' }
                 )
             ];
             checksEl.innerHTML = rows.join('');
@@ -1080,9 +2222,11 @@ PREREQUISITES:
             if (setupRequired) {
                 steps.push(`<li>${setupTokenConfigured ? 'Step 2: Create first admin in the Initial Setup form on this page.' : 'Step 2: Add SETUP_TOKEN Secret in Cloudflare, redeploy, then return here.'}</li>`);
                 steps.push('<li>Step 3: Log in as admin, save a test page, then rotate/remove SETUP_TOKEN.</li>');
+                steps.push(`<li>${checks.passkeys_ready ? 'Step 4 complete: passkeys are ready for registration in Account tab.' : `Step 4 (recommended): set RP_ID=${escapeHtml(getPasskeyEnvSuggestion().rpId)} and RP_ORIGIN=${escapeHtml(getPasskeyEnvSuggestion().rpOrigin)} in Cloudflare, redeploy, then register a passkey in Account tab.`}</li>`);
             } else {
                 steps.push('<li>Step 2 complete: initial admin already exists.</li>');
                 steps.push('<li>Step 3: Log in and continue normal operations from LOON admin.</li>');
+                steps.push(`<li>${checks.passkeys_ready ? 'Step 4 complete: passkeys are ready for registration in Account tab.' : `Step 4 (recommended): set RP_ID=${escapeHtml(getPasskeyEnvSuggestion().rpId)} and RP_ORIGIN=${escapeHtml(getPasskeyEnvSuggestion().rpOrigin)} in Cloudflare, redeploy, then register a passkey in Account tab.`}</li>`);
             }
             stepsEl.innerHTML = steps.join('');
         }
@@ -1132,6 +2276,7 @@ PREREQUISITES:
             lines.push(`${checks.github_repo ? 'PASS' : 'FAIL'} GITHUB_REPO configured`);
             lines.push(`${checks.github_token ? 'PASS' : 'FAIL'} GITHUB_TOKEN configured`);
             lines.push(`${base.setupData?.setupTokenConfigured ? 'PASS' : 'WARN'} SETUP_TOKEN configured`);
+            lines.push(`${checks.passkeys_ready ? 'PASS' : 'WARN'} Passkeys RP_ID/RP_ORIGIN configured`);
             lines.push(`${base.setupData?.setupRequired ? 'ACTION' : 'PASS'} Initial setup ${base.setupData?.setupRequired ? 'required' : 'already complete'}`);
 
             if (SESSION?.token) {
@@ -1326,8 +2471,20 @@ PREREQUISITES:
             CURRENT_SCHEMA = null;
             CURRENT_CONTENT = null;
             CURRENT_PAGE_ID = null;
+            PENDING_CHANGES = [];
+            markEditorDirty(false);
+            if (AUTO_STAGE_TIMER) {
+                clearTimeout(AUTO_STAGE_TIMER);
+                AUTO_STAGE_TIMER = null;
+            }
+            if (AUTOSAVE_TIMER) {
+                clearTimeout(AUTOSAVE_TIMER);
+                AUTOSAVE_TIMER = null;
+            }
+            LAST_FOCUSED_FIELD_ID = null;
 
             localStorage.removeItem(STORAGE_KEYS.SESSION);
+            localStorage.removeItem(STORAGE_KEYS.PENDING_CHANGES);
             sessionStorage.removeItem(STORAGE_KEYS.SESSION);
 
             location.reload();
@@ -1357,6 +2514,7 @@ PREREQUISITES:
                 document.getElementById('post-setup-banner').classList.remove('hidden');
             }
 
+            updateBatchUi();
             maybeShowFirstPageWizard();
         }
 
@@ -1472,6 +2630,9 @@ PREREQUISITES:
                 
                 // Check passkey support
                 checkPasskeySupport();
+
+                const passkeyConfig = await checkPasskeyServerConfig();
+                showPasskeyOptionalStatus(passkeyConfig);
                 
                 // Load passkeys
                 await loadPasskeys();
@@ -1538,6 +2699,13 @@ PREREQUISITES:
         async function loginWithPasskey() {
             if (!checkPasskeySupport()) {
                 showError('login-error', 'Passkeys not supported in this browser');
+                return;
+            }
+
+            const passkeyConfig = await checkPasskeyServerConfig();
+            if (passkeyConfig?.ready === false) {
+                const passkeyEnv = getPasskeyEnvSuggestion();
+                showError('login-error', `Passkeys are not configured for this deployment yet. Set RP_ID=${passkeyEnv.rpId} and RP_ORIGIN=${passkeyEnv.rpOrigin} in Cloudflare, then redeploy.`);
                 return;
             }
             
@@ -1641,6 +2809,13 @@ PREREQUISITES:
         async function registerPasskey() {
             if (!checkPasskeySupport()) {
                 showStatus('passkey-status', 'Passkeys not supported in this browser', 'error');
+                return;
+            }
+
+            const passkeyConfig = await checkPasskeyServerConfig();
+            if (passkeyConfig?.ready === false) {
+                const passkeyEnv = getPasskeyEnvSuggestion();
+                showStatus('passkey-status', `Passkeys are optional and not configured yet. Set RP_ID=${passkeyEnv.rpId} and RP_ORIGIN=${passkeyEnv.rpOrigin} in Cloudflare, then redeploy to enable registration.`, 'error');
                 return;
             }
             
@@ -1934,8 +3109,21 @@ PREREQUISITES:
                 const contentRes = await fetch(`/data/${pageId}/content.json`);
                 CURRENT_CONTENT = contentRes.ok ? await contentRes.json() : {};
 
+                // If batch mode has staged content for this page, prefer staged state
+                const queued = getQueuedChangeForPage(pageId);
+                if (queued && queued.content) {
+                    CURRENT_CONTENT = { ...queued.content };
+                }
+
                 // Build form
                 buildForm();
+                markEditorDirty(false);
+                maybeRestoreAutosave(pageId);
+                refreshLinkPageList();
+                loadRevisionHistory();
+                hydrateWorkflowPanelFromContent();
+                loadWatchActivity();
+                loadReusableBlocks();
 
                 // Show editor
                 document.getElementById('editor-container').classList.remove('hidden');
@@ -1991,7 +3179,16 @@ PREREQUISITES:
                     document.getElementById('content-status').style.display = 'none';
                 }
 
-                hideStatus('editor-status');
+                if (queued) {
+                    document.getElementById('last-saved').textContent = `Loaded staged ${getStagedLabel(queued.saveAs)} change from this browser session`;
+                    showStatus('editor-status', `Loaded staged change for "${pageId}". Push all changes when ready.`, 'info');
+                    markEditorDirty(false);
+                } else {
+                    document.getElementById('last-saved').textContent = '';
+                }
+                updateBatchUi();
+                if (!queued) hideStatus('editor-status');
+                updateAutosaveIndicator();
 
             } catch (e) {
                 showStatus('editor-status', e.message, 'error');
@@ -2005,9 +3202,11 @@ PREREQUISITES:
         async function loadPageList() {
             const browser = document.getElementById('page-browser');
             const list = document.getElementById('page-list');
+            const filter = document.getElementById('page-browser-filter');
             
             browser.classList.remove('hidden');
             list.innerHTML = '<p>Loading pages...</p>';
+            if (filter) filter.value = '';
             
             try {
                 const headers = { };
@@ -2024,27 +3223,61 @@ PREREQUISITES:
                 
                 if (data.pages.length === 0) {
                     list.innerHTML = '<p style="color: var(--muted-color);">No pages found. Create a page by adding a folder to /data/ with schema.json</p>';
+                    PAGE_BROWSER_ITEMS = [];
                     return;
                 }
-                
-                const actionLabel = data.canEditAll ? 'Edit' : 'Open';
-                list.innerHTML = data.pages.map(page => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--muted-border-color); border-radius: 4px;">
-                        <div>
-                            <strong>${escapeHtml(page.title)}</strong>
-                            <span style="color: var(--muted-color); font-size: 0.85rem; margin-left: 0.5rem;">${escapeHtml(page.pageId)}</span>
-                            ${page.createdBy ? `<br><small style="color: var(--muted-color);">By ${escapeHtml(page.createdBy)}</small>` : ''}
-                        </div>
-                        <button onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem;">${actionLabel}</button>
-                    </div>
-                `).join('');
-                
-                const pageVerb = data.canEditAll ? 'edit' : 'view';
-                showStatus('page-browser-status', `Showing ${data.total} page(s) you can ${pageVerb}`, 'info');
+
+                PAGE_BROWSER_ITEMS = [...data.pages].sort((a, b) => {
+                    const left = String(a.title || a.pageId || '').toLowerCase();
+                    const right = String(b.title || b.pageId || '').toLowerCase();
+                    return left.localeCompare(right);
+                });
+                PAGE_BROWSER_CAN_EDIT_ALL = !!data.canEditAll;
+                renderPageBrowserList(PAGE_BROWSER_ITEMS);
+
+                const pageVerb = PAGE_BROWSER_CAN_EDIT_ALL ? 'edit' : 'view';
+                showStatus('page-browser-status', `Showing ${PAGE_BROWSER_ITEMS.length} page(s) you can ${pageVerb}`, 'info');
                 
             } catch (e) {
                 list.innerHTML = `<p style="color: var(--error);">${escapeHtml(e.message)}</p>`;
             }
+        }
+
+        function renderPageBrowserList(items) {
+            const list = document.getElementById('page-list');
+            if (!list) return;
+            if (!items.length) {
+                list.innerHTML = '<p style="color: var(--muted-color);">No pages match your filter.</p>';
+                return;
+            }
+
+            const actionLabel = PAGE_BROWSER_CAN_EDIT_ALL ? 'Edit' : 'Open';
+            list.innerHTML = items.map(page => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--muted-border-color); border-radius: 4px;">
+                    <div>
+                        <strong>${escapeHtml(page.title)}</strong>
+                        <span style="color: var(--muted-color); font-size: 0.85rem; margin-left: 0.5rem;">${escapeHtml(page.pageId)}</span>
+                        ${page.createdBy ? `<br><small style="color: var(--muted-color);">By ${escapeHtml(page.createdBy)}</small>` : ''}
+                    </div>
+                    <button onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem;">${actionLabel}</button>
+                </div>
+            `).join('');
+        }
+
+        function filterPageBrowserList() {
+            const filter = document.getElementById('page-browser-filter');
+            const query = String(filter?.value || '').trim().toLowerCase();
+            if (!query) {
+                renderPageBrowserList(PAGE_BROWSER_ITEMS);
+                return;
+            }
+
+            const filtered = PAGE_BROWSER_ITEMS.filter(page => {
+                const title = String(page.title || '').toLowerCase();
+                const id = String(page.pageId || '').toLowerCase();
+                return title.includes(query) || id.includes(query);
+            });
+            renderPageBrowserList(filtered);
         }
         
         function selectPage(pageId) {
@@ -2255,6 +3488,8 @@ PREREQUISITES:
                 document.getElementById('editor-form').innerHTML = '';
                 document.getElementById('editor-container').classList.add('hidden');
                 document.getElementById('content-meta').classList.add('hidden');
+                clearAutosaveForPage(CURRENT_PAGE_ID);
+                markEditorDirty(false);
                 
                 showStatus('editor-status', `Content deleted. Commit: ${data.commit.substring(0, 7)}`, 'success');
                 
@@ -2360,6 +3595,20 @@ PREREQUISITES:
                 if (field.placeholder) input.placeholder = field.placeholder;
                 if (field.required) input.required = true;
 
+                if (field.type !== 'image') {
+                    const changeEvent = field.type === 'checkbox' || field.type === 'select' ? 'change' : 'input';
+                    input.addEventListener(changeEvent, () => {
+                        markEditorDirty(true);
+                        scheduleAutoStage();
+                        scheduleAutosave();
+                    });
+                    if (field.type === 'textarea' || field.type === 'text' || field.type === 'url') {
+                        input.addEventListener('focus', () => {
+                            LAST_FOCUSED_FIELD_ID = input.id;
+                        });
+                    }
+                }
+
                 wrapper.appendChild(input);
 
                 // Description
@@ -2373,13 +3622,7 @@ PREREQUISITES:
             });
         }
 
-        async function saveContent() {
-            if (!CURRENT_SCHEMA || !CURRENT_PAGE_ID) {
-                showStatus('editor-status', 'No page loaded', 'error');
-                return;
-            }
-
-            // Gather form data
+        function collectCurrentFormContent() {
             const content = {};
             CURRENT_SCHEMA.fields.forEach(field => {
                 const input = document.getElementById(`field_${field.key}`);
@@ -2396,47 +3639,62 @@ PREREQUISITES:
                 }
             });
 
-            // Preserve existing metadata
-            if (CURRENT_CONTENT._meta) {
+            if (CURRENT_CONTENT && CURRENT_CONTENT._meta) {
                 content._meta = { ...CURRENT_CONTENT._meta };
             }
 
+            return content;
+        }
+
+        async function sendSaveRequest(pageId, content, saveAs = null) {
+            const payload = { pageId, content };
+            if (saveAs === 'draft') payload.saveAs = 'draft';
+
+            const res = await fetch('/api/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SESSION.token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (res.status === 401) throw new Error(data.error || 'Session expired');
+            if (!res.ok) throw new Error(data.error || 'Save failed');
+            clearAutosaveForPage(pageId);
+            return data;
+        }
+
+        async function saveContent() {
+            if (!CURRENT_SCHEMA || !CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'No page loaded', 'error');
+                return;
+            }
+
+            if (BATCH_MODE_ENABLED) {
+                stageCurrentContentChange();
+                return;
+            }
+            if (EDITOR_BUSY) return;
+
+            setEditorBusy(true);
+            const content = collectCurrentFormContent();
             showStatus('editor-status', 'Saving...', 'info');
 
             try {
-                const res = await fetch('/api/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SESSION.token}`
-                    },
-                    body: JSON.stringify({
-                        pageId: CURRENT_PAGE_ID,
-                        content: content
-                    })
-                });
-
-                const data = await res.json();
-
-                if (res.status === 401) {
-                    throw new Error(data.error || 'Session expired');
-                }
-                
-                if (!res.ok) {
-                    throw new Error(data.error || 'Save failed');
-                }
-
+                await sendSaveRequest(CURRENT_PAGE_ID, content);
                 CURRENT_CONTENT = content;
-                document.getElementById('last-saved').textContent = `Saved just now`;
+                document.getElementById('last-saved').textContent = 'Saved just now';
+                markEditorDirty(false);
                 showStatus('editor-status', 'Changes saved successfully', 'success');
-
-                // Clear status after delay
                 setTimeout(() => hideStatus('editor-status'), 3000);
-
             } catch (e) {
                 if (!handleSessionError(e)) {
                     showStatus('editor-status', `Save failed: ${e.message}`, 'error');
                 }
+            } finally {
+                setEditorBusy(false);
             }
         }
 
@@ -2446,68 +3704,31 @@ PREREQUISITES:
                 return;
             }
 
-            // Gather form data
-            const content = {};
-            CURRENT_SCHEMA.fields.forEach(field => {
-                const input = document.getElementById(`field_${field.key}`);
-                if (!input) return;
-
-                if (field.type === 'checkbox') {
-                    content[field.key] = input.checked;
-                } else if (field.type === 'number') {
-                    content[field.key] = input.value ? Number(input.value) : null;
-                } else if (field.type === 'image') {
-                    // Image type stores URL in hidden field or uses existing value
-                    content[field.key] = CURRENT_CONTENT[field.key] || '';
-                } else {
-                    content[field.key] = input.value;
-                }
-            });
-
-            // Preserve existing metadata
-            if (CURRENT_CONTENT._meta) {
-                content._meta = { ...CURRENT_CONTENT._meta };
+            if (BATCH_MODE_ENABLED) {
+                stageCurrentContentChange('draft');
+                updateContentStatus('draft');
+                return;
             }
+            if (EDITOR_BUSY) return;
 
+            setEditorBusy(true);
+            const content = collectCurrentFormContent();
             showStatus('editor-status', 'Saving as draft...', 'info');
 
             try {
-                const res = await fetch('/api/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SESSION.token}`
-                    },
-                    body: JSON.stringify({
-                        pageId: CURRENT_PAGE_ID,
-                        content: content,
-                        saveAs: 'draft'
-                    })
-                });
-
-                const data = await res.json();
-
-                if (res.status === 401) {
-                    throw new Error(data.error || 'Session expired');
-                }
-                
-                if (!res.ok) {
-                    throw new Error(data.error || 'Save as draft failed');
-                }
-
+                const data = await sendSaveRequest(CURRENT_PAGE_ID, content, 'draft');
                 CURRENT_CONTENT = content;
-                document.getElementById('last-saved').textContent = `Saved as draft just now`;
+                document.getElementById('last-saved').textContent = 'Saved as draft just now';
+                markEditorDirty(false);
                 showStatus('editor-status', 'Saved as draft (not yet published)', 'success');
-
-                // Update status display
                 updateContentStatus('draft', data.modifiedBy);
-
                 setTimeout(() => hideStatus('editor-status'), 3000);
-
             } catch (e) {
                 if (!handleSessionError(e)) {
                     showStatus('editor-status', `Draft save failed: ${e.message}`, 'error');
                 }
+            } finally {
+                setEditorBusy(false);
             }
         }
 
@@ -2523,8 +3744,15 @@ PREREQUISITES:
                 return;
             }
 
-            showStatus('editor-status', 'Publishing...', 'info');
+            if (hasQueuedChangeForCurrentPage()) {
+                showStatus('editor-status', 'Push staged changes for this page before publishing.', 'error');
+                return;
+            }
+            if (EDITOR_BUSY) return;
+            setEditorBusy(true);
 
+            showStatus('editor-status', 'Publishing...', 'info');
+            
             try {
                 const res = await fetch('/api/publish', {
                     method: 'POST',
@@ -2557,6 +3785,8 @@ PREREQUISITES:
                 if (!handleSessionError(e)) {
                     showStatus('editor-status', `Publish failed: ${e.message}`, 'error');
                 }
+            } finally {
+                setEditorBusy(false);
             }
         }
 
@@ -2574,6 +3804,152 @@ PREREQUISITES:
                 statusDiv.style.borderLeftColor = '#28a745';
                 statusText.innerHTML = `<span style="color: #155724;">[PUBLISHED] This content is published and live</span>`;
             }
+        }
+
+        function triggerImportFileDialog() {
+            if (!CURRENT_SCHEMA || !CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load a page before importing content.', 'error');
+                return;
+            }
+            const input = document.getElementById('import-file-input');
+            input.value = '';
+            input.click();
+        }
+
+        async function handleImportFileChosen(event) {
+            const file = event?.target?.files?.[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const imported = parseImportedFile(file.name, text);
+                const mapped = mapImportedDataToSchema(imported);
+                const keys = Object.keys(mapped);
+
+                if (!keys.length) {
+                    showStatus('editor-status', 'Import succeeded, but no matching schema fields were found.', 'info');
+                    return;
+                }
+
+                CURRENT_CONTENT = {
+                    ...(CURRENT_CONTENT || {}),
+                    ...mapped
+                };
+                buildForm();
+                markEditorDirty(true);
+                showStatus('editor-status', `Imported ${keys.length} field(s) from ${file.name}. Review and save.`, 'success');
+                scheduleAutoStage();
+            } catch (e) {
+                showStatus('editor-status', `Import failed: ${e.message}`, 'error');
+            }
+        }
+
+        function parseImportedFile(fileName, text) {
+            const lower = String(fileName || '').toLowerCase();
+            if (lower.endsWith('.json')) {
+                const parsed = JSON.parse(text);
+                if (parsed && typeof parsed === 'object' && parsed.content && typeof parsed.content === 'object') {
+                    return parsed.content;
+                }
+                if (parsed && typeof parsed === 'object') return parsed;
+                throw new Error('JSON import must be an object.');
+            }
+
+            if (lower.endsWith('.tid')) {
+                return parseTidFile(text);
+            }
+
+            if (lower.endsWith('.md') || lower.endsWith('.markdown')) {
+                return { content: text, body: text, markdown: text };
+            }
+
+            if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+                return { content: text, body: text, html: text };
+            }
+
+            return { content: text, body: text, text };
+        }
+
+        function parseTidFile(text) {
+            const lines = text.split(/\r?\n/);
+            const headers = {};
+            let index = 0;
+
+            while (index < lines.length) {
+                const line = lines[index];
+                if (!line.trim()) {
+                    index += 1;
+                    break;
+                }
+
+                const separator = line.indexOf(':');
+                if (separator > 0) {
+                    const key = line.slice(0, separator).trim();
+                    const value = line.slice(separator + 1).trim();
+                    headers[key] = value;
+                }
+                index += 1;
+            }
+
+            const body = lines.slice(index).join('\n').trim();
+            if (body && !headers.text) headers.text = body;
+
+            if (headers.tags) {
+                headers.tags = headers.tags
+                    .split(/\s+/)
+                    .map(tag => tag.trim())
+                    .filter(Boolean)
+                    .join(', ');
+            }
+
+            return headers;
+        }
+
+        function mapImportedDataToSchema(imported) {
+            const source = imported && typeof imported === 'object' ? imported : {};
+            const lowerMap = {};
+            Object.entries(source).forEach(([key, value]) => {
+                lowerMap[key.toLowerCase()] = value;
+            });
+
+            const aliases = {
+                title: ['title', 'name', 'headline'],
+                body: ['body', 'text', 'content', 'markdown', 'html', 'description'],
+                content: ['content', 'body', 'text', 'markdown', 'html', 'description'],
+                text: ['text', 'body', 'content', 'markdown', 'description'],
+                description: ['description', 'summary', 'body', 'content', 'text'],
+                tags: ['tags', 'categories', 'keywords']
+            };
+
+            const mapped = {};
+            for (const field of (CURRENT_SCHEMA?.fields || [])) {
+                const direct = source[field.key];
+                const lowerDirect = lowerMap[field.key.toLowerCase()];
+                let value = direct !== undefined ? direct : lowerDirect;
+
+                if (value === undefined) {
+                    const keys = aliases[field.key.toLowerCase()] || [field.key.toLowerCase()];
+                    for (const alias of keys) {
+                        if (lowerMap[alias] !== undefined) {
+                            value = lowerMap[alias];
+                            break;
+                        }
+                    }
+                }
+
+                if (value === undefined || value === null) continue;
+
+                if (field.type === 'checkbox') {
+                    mapped[field.key] = value === true || String(value).toLowerCase() === 'true';
+                } else if (field.type === 'number') {
+                    const numeric = Number(value);
+                    if (!Number.isNaN(numeric)) mapped[field.key] = numeric;
+                } else {
+                    mapped[field.key] = String(value);
+                }
+            }
+
+            return mapped;
         }
 
         async function uploadImageForField(fieldId) {
@@ -2629,6 +4005,8 @@ PREREQUISITES:
                         
                         // Update the hidden value
                         CURRENT_CONTENT[fieldId.replace('field_', '')] = data.url;
+                        markEditorDirty(true);
+                        scheduleAutoStage();
                     }
 
                     showStatus('editor-status', `Image uploaded: ${data.id}`, 'success');
@@ -3047,12 +4425,6 @@ PREREQUISITES:
 
         function hideError(elementId) {
             document.getElementById(elementId).classList.add('hidden');
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
         }
 
         function togglePassword() {

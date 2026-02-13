@@ -95,10 +95,11 @@ Symptoms:
 
 Actions:
 1. Confirm Pages KV binding exists in Production (`LOON_DB` or `KV`).
-2. If bindings are managed in `wrangler.toml`, verify `[[kv_namespaces]]` in the GitHub web editor and commit any fix.
-3. Redeploy.
-4. Recheck `/api/health`.
-5. Open `/admin/setup-check` and confirm the KV check reports `Ready`.
+2. If using browser-only deployment, fix binding directly in Cloudflare Dashboard (recommended source-of-truth for production).
+3. If using Wrangler-managed local config, verify `[[kv_namespaces]]` in `wrangler.local.toml` (or `wrangler.toml` when intentionally used) and ensure namespace IDs match this specific Cloudflare account/project.
+4. Redeploy.
+5. Recheck `/api/health`.
+6. Open `/admin/setup-check` and confirm the KV check reports `Ready`.
 
 ### First login/setup fails
 Actions:
