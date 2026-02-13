@@ -10,6 +10,7 @@
 
 import { handleCorsOptions } from './_cors.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
 
@@ -61,7 +62,7 @@ async function loadBlocksFromRepo(env) {
 
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
 

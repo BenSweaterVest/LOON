@@ -1,0 +1,8 @@
+{
+  "title": "Local Demo Overview",
+  "summary": "How to run LOON locally without cloud setup.",
+  "body": "## Purpose\nThis page explains the local demo flow.\n\n## Steps\n1. Start the demo server.\n2. Log in with demo credentials.\n3. Create and edit pages.\n\n## Notes\nChanges are stored locally in demo-data.",
+  "references": "docs/LOCAL_DEMO.md",
+  "version": "v1.0",
+  "status": "Draft"
+}

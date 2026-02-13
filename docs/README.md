@@ -5,6 +5,7 @@ Use this as the single entry point for project documentation.
 ## Start Here
 - Installation and first-run setup: `README.md`
 - Day-to-day operations: `OPERATIONS.md`
+- Local mode usage: `docs/LOCAL_MODE.md`
 - Browser-only diagnostics screen: `/admin/setup-check`
 
 ## Reference Docs

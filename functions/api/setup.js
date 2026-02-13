@@ -17,6 +17,7 @@
 import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { jsonResponse, logError } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 const CORS_OPTIONS = { methods: 'GET, POST, OPTIONS' };
 const RATE_LIMIT = { maxAttempts: 10, windowMs: 60000 };
@@ -113,7 +114,7 @@ async function adminExists(db) {
 
 export async function onRequestGet(context) {
     const { env, request } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse(
@@ -148,7 +149,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
     const { env, request } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);

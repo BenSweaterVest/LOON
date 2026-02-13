@@ -44,6 +44,7 @@
  */
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
+import { getKVBinding } from './_kv.js';
 
 /**
  * CORS options for this endpoint.
@@ -97,7 +98,7 @@ export async function onRequestGet(context) {
     /**
      * KV binding is required (LOON_DB preferred, KV fallback supported)
      */
-    kv_database: !!(env.LOON_DB || env.KV),
+    kv_database: !!getKVBinding(env),
 
     /**
      * Optional: Cloudflare Images (media uploads)

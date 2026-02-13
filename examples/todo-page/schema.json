@@ -1,0 +1,42 @@
+{
+  "title": "Task List",
+  "description": "Simple list of tasks, owners, and due dates.",
+  "fields": [
+    {
+      "key": "title",
+      "label": "List Title",
+      "type": "text",
+      "placeholder": "Weekly Priorities"
+    },
+    {
+      "key": "owner",
+      "label": "Primary Owner",
+      "type": "text",
+      "placeholder": "Team or person"
+    },
+    {
+      "key": "due_date",
+      "label": "Due Date",
+      "type": "text",
+      "placeholder": "YYYY-MM-DD"
+    },
+    {
+      "key": "status",
+      "label": "Overall Status",
+      "type": "select",
+      "options": ["Not Started", "In Progress", "Blocked", "Done"]
+    },
+    {
+      "key": "tasks",
+      "label": "Task List",
+      "type": "textarea",
+      "placeholder": "Use checkboxes or bullet lists"
+    },
+    {
+      "key": "notes",
+      "label": "Notes",
+      "type": "textarea",
+      "placeholder": "Dependencies, risks, or updates"
+    }
+  ]
+}

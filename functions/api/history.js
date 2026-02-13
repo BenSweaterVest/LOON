@@ -12,6 +12,7 @@
 
 import { handleCorsOptions } from './_cors.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
 
@@ -58,7 +59,7 @@ async function getCurrentContent(env, pageId) {
 
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);

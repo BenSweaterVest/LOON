@@ -184,6 +184,19 @@ PREREQUISITES:
         .status-success { background: #dcfce7; color: #166534; }
         .status-error { background: #fee2e2; color: #991b1b; }
         .status-info { background: #dbeafe; color: #1e40af; }
+        .local-mode-banner {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            border: 1px solid #fed7aa;
+            border-left: 4px solid #fb923c;
+            background: #fff7ed;
+            color: #9a3412;
+            margin-bottom: 1rem;
+        }
+        .local-mode-banner small {
+            display: block;
+            color: #b45309;
+        }
         .onboarding-card {
             max-width: 640px;
             margin: 1rem auto 2rem auto;
@@ -357,6 +370,277 @@ PREREQUISITES:
             background: var(--panel-background);
         }
 
+        .editor-top-fields {
+            display: grid;
+            gap: 0.75rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .editor-field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .editor-field-card {
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 0.65rem;
+            background: var(--panel-background);
+        }
+
+        .editor-field-card.invalid {
+            border-color: var(--error);
+            background: rgba(255, 0, 0, 0.05);
+        }
+
+        .editor-field-card.invalid input,
+        .editor-field-card.invalid textarea,
+        .editor-field-card.invalid select {
+            border-color: var(--error) !important;
+        }
+
+        .field-error-message {
+            color: var(--error);
+            font-size: 0.8rem;
+            margin-top: 0.35rem;
+            display: block;
+        }
+
+        .validation-summary {
+            padding: 1rem;
+            background: rgba(255, 0, 0, 0.08);
+            border: 1px solid var(--error);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            color: var(--error);
+        }
+
+        .validation-summary h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--error);
+        }
+
+        .validation-summary ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .validation-summary li {
+            margin-bottom: 0.25rem;
+        }
+
+        .import-preview-panel {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border: 1px dashed var(--panel-border);
+            border-radius: 6px;
+            background: var(--surface-muted);
+        }
+
+        .import-preview-panel h5 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        .import-preview-panel ul {
+            margin: 0.35rem 0 0.5rem 1.1rem;
+        }
+
+        .import-preview-panel code {
+            font-size: 0.85rem;
+        }
+
+        .editor-body-shell {
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            background: var(--panel-background);
+            padding: 0.85rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .editor-body-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 0.6rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .editor-body-title h5 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .editor-body-title small {
+            color: var(--muted-color);
+        }
+
+        .editor-body-tabs {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .editor-body-tabs button {
+            margin: 0;
+            padding: 0.35rem 0.75rem;
+        }
+
+        .editor-body-tabs .tab-active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .editor-body-actions {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .editor-body-actions button {
+            margin: 0;
+            padding: 0.35rem 0.75rem;
+        }
+
+        .command-palette {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 8vh 1rem 1rem;
+            z-index: 9998;
+        }
+
+        .command-palette.open {
+            display: flex;
+        }
+
+        .command-palette-panel {
+            width: min(720px, 92vw);
+            background: var(--background-color);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+            overflow: hidden;
+        }
+
+        .command-palette-input {
+            width: 100%;
+            padding: 0.75rem 0.9rem;
+            border: none;
+            border-bottom: 1px solid var(--panel-border);
+            border-radius: 12px 12px 0 0;
+            font-size: 1rem;
+            background: transparent;
+        }
+
+        .command-palette-input:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: -2px;
+        }
+
+        .command-palette-list {
+            max-height: 340px;
+            overflow: auto;
+        }
+
+        .command-palette-item {
+            padding: 0.6rem 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .command-palette-item small {
+            color: var(--muted-color);
+        }
+
+        .command-palette-item.active {
+            background: var(--muted-border-color);
+        }
+
+        .command-palette-empty {
+            padding: 0.9rem;
+            color: var(--muted-color);
+        }
+
+        .outline-list {
+            display: grid;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .outline-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .outline-item:hover {
+            background: var(--muted-border-color);
+        }
+
+        .outline-level-2 { margin-left: 0.75rem; }
+        .outline-level-3 { margin-left: 1.5rem; }
+
+        .undo-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.4rem;
+            background: var(--surface-muted);
+            border-radius: 6px;
+        }
+
+        .editor-body-panels {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        #primary-editor-slot textarea {
+            min-height: 340px;
+            font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+            line-height: 1.6;
+        }
+
+        #primary-preview {
+            min-height: 340px;
+            padding: 0.75rem;
+            background: var(--surface-muted);
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+            overflow: auto;
+        }
+
+        #primary-preview h1,
+        #primary-preview h2,
+        #primary-preview h3 {
+            margin-top: 0.8rem;
+        }
+
+        #primary-preview code {
+            background: rgba(148, 163, 184, 0.2);
+            padding: 0.1rem 0.25rem;
+            border-radius: 4px;
+        }
+
+        .editor-fields-collapsible summary {
+            cursor: pointer;
+            font-weight: 600;
+        }
+
         .editor-main-column .form-field textarea {
             min-height: 220px;
             font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
@@ -434,6 +718,12 @@ PREREQUISITES:
 
             .editor-sidebar-column {
                 position: static;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .editor-field-grid {
+                grid-template-columns: 1fr;
             }
         }
         
@@ -746,12 +1036,21 @@ PREREQUISITES:
                     </select>
                 </div>
             </header>
+            <div id="local-mode-banner" class="local-mode-banner hidden">
+                <strong>Local mode is active.</strong>
+                Changes are saved to the local <code>data/</code> folder on this machine.
+                <small>No GitHub publishing happens in local mode.</small>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+                    <button type="button" class="secondary" onclick="dismissLocalModeBanner()">Dismiss</button>
+                </div>
+            </div>
 
             <nav class="tab-nav">
                 <button onclick="switchTab('editor')" id="tab-editor" class="active">Content Editor</button>
                 <button onclick="switchTab('users')" id="tab-users" class="hidden">Manage Users</button>
                 <button onclick="switchTab('sessions')" id="tab-sessions" class="hidden">Sessions</button>
                 <button onclick="switchTab('audit')" id="tab-audit" class="hidden">Audit Log</button>
+                <button onclick="switchTab('health')" id="tab-health" class="hidden">Content Health</button>
                 <button onclick="switchTab('account')" id="tab-account">My Account</button>
                 <button onclick="logout()" class="logout-btn">Logout</button>
             </nav>
@@ -783,10 +1082,11 @@ PREREQUISITES:
                     </ol>
                 </details>
                 <div class="page-selector">
-                    <input type="text" id="pageId" placeholder="Enter Page ID (e.g., demo, blog-post)">
+                    <input type="text" id="pageId" placeholder="Enter Page ID (e.g., welcome, blog-post)">
                     <button onclick="loadEditor()" class="secondary" title="Open this page in the editor">Open Page</button>
                     <button onclick="loadPageList()" class="outline" style="margin-left: 0.5rem;" title="Browse pages you can access">Browse Pages</button>
                     <button onclick="showNewPageDialog()" class="contrast" style="margin-left: 0.5rem;" title="Create a new page with optional template">+ Create Page</button>
+                    <button id="duplicate-page-btn" onclick="showDuplicatePageDialog()" class="secondary" style="margin-left: 0.5rem; display: none;" title="Duplicate this page with all content and schema">Duplicate Page</button>
                 </div>
                 
                 <!-- New Page Dialog -->
@@ -795,8 +1095,8 @@ PREREQUISITES:
                     <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div class="form-field">
                             <label for="new-page-id">Page ID *</label>
-                            <input type="text" id="new-page-id" placeholder="e.g., my-page (lowercase, hyphens ok)" pattern="^[a-z0-9-]+$">
-                            <small style="color: var(--muted-color);">lowercase letters, numbers, hyphens only</small>
+                            <input type="text" id="new-page-id" placeholder="e.g., my-page (lowercase, hyphens or underscores ok)" pattern="^[a-z0-9_-]+$">
+                            <small style="color: var(--muted-color);">lowercase letters, numbers, hyphens, underscores</small>
                         </div>
                         <div class="form-field">
                             <label for="new-page-title">Page Title</label>
@@ -805,12 +1105,31 @@ PREREQUISITES:
                     </div>
                     <div class="form-field">
                         <label for="new-page-template">Template (optional)</label>
-                        <select id="new-page-template">
+                        <select id="new-page-template" onchange="updateTemplateHelp()">
                             <option value="">Blank Page</option>
+                            <option value="landing-page">Landing Page</option>
+                            <option value="announcement">Announcement</option>
                             <option value="blog-post">Blog Post</option>
+                            <option value="business-hours">Business Hours</option>
+                            <option value="class-workshop">Class or Workshop</option>
+                            <option value="contact-page">Contact Page</option>
                             <option value="directory-entry">Directory Entry</option>
+                            <option value="documentation-page">Documentation Page</option>
+                            <option value="event">Event</option>
                             <option value="faq">FAQ</option>
+                            <option value="food-truck">Food Truck</option>
+                            <option value="job-posting">Job Posting</option>
+                            <option value="menu-page">Menu Page</option>
+                            <option value="menu-pricing">Menu and Pricing</option>
+                            <option value="portfolio">Portfolio</option>
+                            <option value="product-service">Product or Service</option>
+                            <option value="property-listing">Property Listing</option>
+                            <option value="service-status">Service Status</option>
+                            <option value="team-profile">Team Profile</option>
+                            <option value="testimonial">Testimonial</option>
+                            <option value="todo-page">Task List</option>
                         </select>
+                        <small id="new-page-template-help" style="color: var(--muted-color);">Choose a template to prefill a schema suited to the page type.</small>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
                         <button onclick="createNewPage()" class="contrast">Create Page</button>
@@ -819,11 +1138,107 @@ PREREQUISITES:
                     <div id="new-page-status"></div>
                 </div>
                 
+                <!-- Duplicate Page Dialog -->
+                <div id="duplicate-page-dialog" class="hidden" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--muted-border-color); border-radius: 4px;">
+                    <h4>Duplicate Page</h4>
+                    <p style="color: var(--muted-color); font-size: 0.9rem;">Create a copy of the current page with all content and schema. The new page will be a draft.</p>
+                    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-field">
+                            <label for="dup-page-id">New Page ID *</label>
+                            <input type="text" id="dup-page-id" placeholder="e.g., my-copy (lowercase, hyphens or underscores ok)" pattern="^[a-z0-9_-]+$">
+                            <small style="color: var(--muted-color);">lowercase letters, numbers, hyphens, underscores</small>
+                        </div>
+                        <div class="form-field">
+                            <label for="dup-page-title">New Page Title</label>
+                            <input type="text" id="dup-page-title" placeholder="e.g., Copy of My Page">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="duplicatePage()" class="contrast">Create Duplicate</button>
+                        <button onclick="cancelDuplicatePage()" class="outline">Cancel</button>
+                    </div>
+                    <div id="duplicate-page-status"></div>
+                </div>
+                
                 <!-- Page Browser -->
                 <div id="page-browser" class="hidden" style="margin-bottom: 1.5rem;">
                     <h4>Available Pages</h4>
                     <input type="text" id="page-browser-filter" placeholder="Filter pages by title or id..." style="margin-bottom: 0.65rem;" oninput="filterPageBrowserList()">
-                    <div id="page-list" style="display: grid; gap: 0.5rem; max-height: 300px; overflow-y: auto;"></div>
+
+                    <details id="page-browser-advanced" style="margin-bottom: 0.75rem;">
+                        <summary style="cursor: pointer; font-weight: 500;">Advanced Filters</summary>
+                        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; padding: 0.75rem; background: var(--muted-border-color); border-radius: 4px;">
+                            <div class="form-field" style="margin-bottom: 0;">
+                                <label for="page-advanced-query" style="font-size: 0.9rem;">Text Query</label>
+                                <input type="text" id="page-advanced-query" placeholder="title, id, or content" style="font-size: 0.9rem;">
+                            </div>
+                            <div class="form-field" style="margin-bottom: 0;">
+                                <label for="page-advanced-status" style="font-size: 0.9rem;">Status</label>
+                                <select id="page-advanced-status" style="font-size: 0.9rem;">
+                                    <option value="">Any status</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="in_review">In Review</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="published">Published</option>
+                                </select>
+                            </div>
+                            <div class="form-field" style="margin-bottom: 0;">
+                                <label for="page-advanced-author" style="font-size: 0.9rem;">Author</label>
+                                <input type="text" id="page-advanced-author" placeholder="creator or editor" style="font-size: 0.9rem;">
+                            </div>
+                            <div class="form-field" style="margin-bottom: 0;">
+                                <label for="page-advanced-updated-from" style="font-size: 0.9rem;">Updated From</label>
+                                <input type="date" id="page-advanced-updated-from" style="font-size: 0.9rem;">
+                            </div>
+                            <div class="form-field" style="margin-bottom: 0;">
+                                <label for="page-advanced-updated-to" style="font-size: 0.9rem;">Updated To</label>
+                                <input type="date" id="page-advanced-updated-to" style="font-size: 0.9rem;">
+                            </div>
+                            <div class="form-field" style="margin-bottom: 0;">
+                                <label for="page-advanced-content" style="font-size: 0.9rem;">Content Search</label>
+                                <label style="font-size: 0.85rem; color: var(--muted-color);">
+                                    <input type="checkbox" id="page-advanced-content"> Include body content
+                                </label>
+                            </div>
+                            <div class="form-field" style="margin-bottom: 0;">
+                                <label for="page-advanced-limit" style="font-size: 0.9rem;">Result Limit</label>
+                                <input type="number" id="page-advanced-limit" value="60" min="1" max="500" style="font-size: 0.9rem;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <button type="button" class="secondary" onclick="applyAdvancedPageSearch()">Search</button>
+                            <button type="button" class="outline" onclick="resetAdvancedPageSearch()">Reset</button>
+                        </div>
+                    </details>
+                    
+                    <!-- Bulk Actions Panel -->
+                    <div id="bulk-actions-panel" style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: var(--muted-border-color); border-radius: 4px;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-size: 0.9rem; color: var(--muted-color);">
+                                <strong id="bulk-selected-count">0</strong> page(s) selected
+                            </span>
+                            <button type="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" onclick="bulkSelectAll()">Select All</button>
+                            <button type="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" onclick="bulkClearSelection()">Clear</button>
+                            <label id="bulk-dry-run-wrap" style="font-size: 0.85rem; color: var(--muted-color); display: none;">
+                                <input type="checkbox" id="bulk-dry-run">
+                                Dry run
+                            </label>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" class="secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="bulkPublishPages()">Publish Selected</button>
+                            <button type="button" class="secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="bulkUnpublishPages()">Unpublish Selected</button>
+                            <select id="bulk-workflow-status" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
+                                <option value="">Set Workflow Status...</option>
+                                <option value="draft">Draft</option>
+                                <option value="in_review">In Review</option>
+                                <option value="approved">Approved</option>
+                            </select>
+                            <button type="button" class="secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="bulkSetWorkflowStatus()">Update Status</button>
+                        </div>
+                    </div>
+                    
+                    <div id="page-list" style="display: grid; gap: 0.5rem; max-height: 400px; overflow-y: auto;"></div>
                     <div id="page-browser-status"></div>
                 </div>
                 
@@ -839,23 +1254,52 @@ PREREQUISITES:
                                 <div id="content-status" style="margin: 0 0 0.8rem 0; padding: 0.75rem; background: #e7f3ff; border-left: 4px solid #2196F3; display: none;">
                                     <strong id="status-text"></strong>
                                 </div>
-                                <div class="editor-format-toolbar">
-                                    <div class="editor-format-toolbar-header">
-                                        <span class="editor-format-toolbar-title">Formatting + Media</span>
-                                        <span class="editor-format-toolbar-note">Focus a text field before using these tools</span>
+                                <div id="editor-top-fields" class="editor-top-fields hidden"></div>
+                                <div id="editor-body-shell" class="editor-body-shell hidden">
+                                    <div class="editor-body-header">
+                                        <div class="editor-body-title">
+                                            <h5 id="primary-field-label">Main Content</h5>
+                                            <small id="primary-field-hint">Supports markdown formatting.</small>
+                                            <div id="content-stats" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted-color); display: none;">
+                                                <span id="word-count">Words: 0</span> • <span id="reading-time">Reading time: 0 min</span>
+                                            </div>
+                                        </div>
+                                        <div class="editor-body-tabs">
+                                            <button type="button" id="preview-tab-write" class="secondary tab-active" onclick="setPreviewMode('write')">Write</button>
+                                            <button type="button" id="preview-tab-preview" class="secondary" onclick="setPreviewMode('preview')">Preview</button>
+                                            <button type="button" id="preview-as-reader-btn" class="outline" onclick="previewAsReader()" title="Open this page as a reader would see it">Reader View</button>
+                                        </div>
+                                        <div class="editor-body-actions">
+                                            <button type="button" id="undo-btn" class="outline" onclick="undoLastChange()" title="Undo (Ctrl/Cmd+Z)">Undo</button>
+                                            <button type="button" id="redo-btn" class="outline" onclick="redoLastChange()" title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+                                            <button type="button" id="palette-btn" class="outline" onclick="openCommandPalette()" title="Command Palette (Ctrl/Cmd+K)">Command Palette</button>
+                                        </div>
                                     </div>
-                                    <div class="editor-format-toolbar-actions">
-                                        <button type="button" class="secondary" onclick="insertBoldText()">Bold</button>
-                                        <button type="button" class="secondary" onclick="insertItalicText()">Italic</button>
-                                        <button type="button" class="secondary" onclick="insertHeadingText()">Heading</button>
-                                        <button type="button" class="secondary" onclick="insertBulletList()">Bullet List</button>
-                                        <button type="button" class="secondary" onclick="insertNumberedList()">Numbered List</button>
-                                        <button type="button" class="secondary" onclick="insertLinkMarkdown()">Link</button>
-                                        <button type="button" class="secondary" onclick="insertImageMarkdownFromUrl()">Image URL</button>
-                                        <button type="button" class="contrast" onclick="uploadAndInsertImageMarkdown()">Upload + Insert Image</button>
+                                    <div class="editor-format-toolbar">
+                                        <div class="editor-format-toolbar-header">
+                                            <span class="editor-format-toolbar-title">Formatting + Media</span>
+                                            <span class="editor-format-toolbar-note">Focus a text field before using these tools</span>
+                                        </div>
+                                        <div class="editor-format-toolbar-actions">
+                                            <button type="button" class="secondary" onclick="insertBoldText()">Bold</button>
+                                            <button type="button" class="secondary" onclick="insertItalicText()">Italic</button>
+                                            <button type="button" class="secondary" onclick="insertHeadingText()">Heading</button>
+                                            <button type="button" class="secondary" onclick="insertBulletList()">Bullet List</button>
+                                            <button type="button" class="secondary" onclick="insertNumberedList()">Numbered List</button>
+                                            <button type="button" class="secondary" onclick="insertLinkMarkdown()">Link</button>
+                                            <button type="button" class="secondary" onclick="insertImageMarkdownFromUrl()">Image URL</button>
+                                            <button type="button" class="contrast" onclick="uploadAndInsertImageMarkdown()">Upload + Insert Image</button>
+                                        </div>
+                                    </div>
+                                    <div class="editor-body-panels">
+                                        <div id="primary-editor-slot"></div>
+                                        <div id="primary-preview" class="hidden"></div>
                                     </div>
                                 </div>
-                                <div id="editor-form"></div>
+                                <details class="editor-fields-collapsible" open>
+                                    <summary>Page Fields</summary>
+                                    <div id="editor-form" class="editor-field-grid"></div>
+                                </details>
                             </div>
                             <div class="editor-tools">
                                 <details open>
@@ -881,6 +1325,20 @@ PREREQUISITES:
                                     </div>
                                     <div id="backlinks-status" style="margin-top:0.5rem;"></div>
                                     <div id="backlinks-list" style="margin-top:0.5rem;"></div>
+                                </details>
+                                <details>
+                                    <summary>Document Outline</summary>
+                                    <div id="outline-status" style="margin-top:0.5rem; color: var(--muted-color);"></div>
+                                    <div id="outline-list" class="outline-list"></div>
+                                </details>
+                                <details>
+                                    <summary>Edit History</summary>
+                                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem;">
+                                        <button type="button" class="secondary" onclick="undoLastChange()">Undo</button>
+                                        <button type="button" class="secondary" onclick="redoLastChange()">Redo</button>
+                                        <button type="button" class="outline" onclick="clearUndoHistory()">Clear History</button>
+                                    </div>
+                                    <div id="undo-history-list" style="margin-top:0.6rem; display:grid; gap:0.4rem;"></div>
                                 </details>
                                 <details>
                                     <summary>Revision History</summary>
@@ -928,8 +1386,13 @@ PREREQUISITES:
                                         <button onclick="deleteContent()" id="delete-btn" class="outline" style="color: var(--error); display: none;">Delete</button>
                                     </div>
                                 </div>
+                                <div id="import-preview-panel" class="import-preview-panel hidden"></div>
                                 <div id="queue-summary" class="queue-summary"></div>
                                 <div id="autosave-indicator" class="autosave-indicator"></div>
+                                <details style="margin-top: 1rem;">
+                                    <summary style="cursor: pointer; font-weight: 500;">Autosave Snapshots</summary>
+                                    <div id="autosave-snapshots-list" style="margin-top: 0.75rem; max-height: 250px; overflow-y: auto;"></div>
+                                </details>
                             </div>
                             <div class="editor-side-panel">
                                 <h4>Workflow + Watchlist</h4>
@@ -962,7 +1425,7 @@ PREREQUISITES:
                             </div>
                         </aside>
                     </div>
-                    <input type="file" id="import-file-input" class="hidden" accept=".json,.tid,.md,.markdown,.txt,.html,.htm" onchange="handleImportFileChosen(event)">
+                    <input type="file" id="import-file-input" class="hidden" accept=".json,.tid,.md,.markdown,.txt,.html,.htm,.docx,.pdf,.rtf,.odt,.csv" onchange="handleImportFileChosen(event)">
                 </div>
                 
                 <div id="editor-status"></div>
@@ -1120,13 +1583,50 @@ PREREQUISITES:
                 <h3>Audit Log</h3>
                 <p style="color: var(--muted-color); margin-bottom: 1rem;">Track admin actions and content changes.</p>
                 
-                <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;">
+                <!-- Filters -->
+                <details style="margin-bottom: 1rem;">
+                    <summary style="cursor: pointer; font-weight: 500;">Filters</summary>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; margin-top: 1rem; padding: 1rem; background: var(--muted-border-color); border-radius: 4px;">
+                        <div class="form-field" style="margin-bottom: 0;">
+                            <label for="audit-filter-user" style="font-size: 0.9rem;">Filter by User</label>
+                            <input type="text" id="audit-filter-user" placeholder="username (optional)" style="font-size: 0.9rem;">
+                        </div>
+                        <div class="form-field" style="margin-bottom: 0;">
+                            <label for="audit-filter-action" style="font-size: 0.9rem;">Filter by Action</label>
+                            <select id="audit-filter-action" style="font-size: 0.9rem;">
+                                <option value="">All Actions</option>
+                                <option value="content_save">Content Save</option>
+                                <option value="content_delete">Content Delete</option>
+                                <option value="page_create">Page Create</option>
+                                <option value="login">Login</option>
+                                <option value="logout">Logout</option>
+                                <option value="user_create">User Create</option>
+                                <option value="user_delete">User Delete</option>
+                                <option value="password_change">Password Change</option>
+                                <option value="content_workflow_update">Workflow Update</option>
+                                <option value="content_scheduled_publish">Scheduled Publish</option>
+                            </select>
+                        </div>
+                        <div class="form-field" style="margin-bottom: 0;">
+                            <label for="audit-filter-date-from" style="font-size: 0.9rem;">From Date</label>
+                            <input type="date" id="audit-filter-date-from" style="font-size: 0.9rem;">
+                        </div>
+                        <div class="form-field" style="margin-bottom: 0;">
+                            <label for="audit-filter-date-to" style="font-size: 0.9rem;">To Date</label>
+                            <input type="date" id="audit-filter-date-to" style="font-size: 0.9rem;">
+                        </div>
+                    </div>
+                </details>
+                
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                     <input type="number" id="audit-limit" value="100" style="width: 80px;" placeholder="Limit">
-                    <button onclick="loadAuditLog()" class="secondary">Load</button>
+                    <button onclick="loadAuditLog()" class="secondary">Load Logs</button>
+                    <button onclick="applyAuditFilters()" class="secondary" title="Apply the filters above">Apply Filters</button>
                     <button onclick="downloadAuditLog()" class="outline">Download CSV</button>
                 </div>
                 
                 <div id="audit-loading" class="hidden" style="text-align: center; padding: 2rem; color: var(--muted-color);">Loading...</div>
+                <div id="audit-filter-status" style="margin-bottom: 0.75rem; color: var(--muted-color); font-size: 0.9rem;"></div>
                 
                 <table class="user-table" role="grid" id="audit-table" style="font-size: 0.9rem;">
                     <thead>
@@ -1142,13 +1642,65 @@ PREREQUISITES:
                 
                 <div id="audit-status"></div>
             </div>
+
+            <!-- Content Health Dashboard (Admin only) -->
+            <div id="view-health" class="hidden">
+                <h3>Content Health Dashboard</h3>
+                <p style="color: var(--muted-color); margin-bottom: 1rem;">Monitor content quality, draft status, and completeness across all pages.</p>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <button onclick="scanContentHealth()" class="secondary">Scan Health</button>
+                    <span id="health-scan-status" style="margin-left: 1rem; color: var(--muted-color);"></span>
+                </div>
+
+                <div id="health-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; display: none;">
+                    <div style="padding: 1rem; border: 1px solid var(--muted-border-color); border-radius: 4px;">
+                        <div style="color: var(--muted-color); font-size: 0.9rem;">Total Pages</div>
+                        <div style="font-size: 2rem; font-weight: bold;" id="health-total">0</div>
+                    </div>
+                    <div style="padding: 1rem; border: 1px solid var(--muted-border-color); border-radius: 4px;">
+                        <div style="color: var(--muted-color); font-size: 0.9rem;">Critical Issues</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #d32f2f;" id="health-critical">0</div>
+                    </div>
+                    <div style="padding: 1rem; border: 1px solid var(--muted-border-color); border-radius: 4px;">
+                        <div style="color: var(--muted-color); font-size: 0.9rem;">Warnings</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #f57c00;" id="health-warnings">0</div>
+                    </div>
+                    <div style="padding: 1rem; border: 1px solid var(--muted-border-color); border-radius: 4px;">
+                        <div style="color: var(--muted-color); font-size: 0.9rem;">Health Score</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #2e7d32;" id="health-score">0%</div>
+                    </div>
+                </div>
+
+                <div id="health-issues" style="display: none;">
+                    <h4 style="margin-bottom: 1rem;">Issues Found</h4>
+                    <div id="health-issues-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                </div>
+
+                <div id="health-no-issues" style="text-align: center; padding: 2rem; color: var(--muted-color); display: none;">
+                    <p style="font-size: 1.2rem;">All content looks healthy.</p>
+                </div>
+
+                <div id="health-loading" class="hidden" style="text-align: center; padding: 2rem; color: var(--muted-color);">Scanning content...</div>
+            </div>
         </div>
     </main>
+
+    <div id="command-palette" class="command-palette" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="command-palette-panel">
+            <input id="command-palette-input" class="command-palette-input" type="text" placeholder="Type a command or search..." autocomplete="off">
+            <div id="command-palette-list" class="command-palette-list"></div>
+        </div>
+    </div>
 
     <footer class="container" style="text-align: center; margin-top: 3rem; color: var(--muted-color);">
         <small>LOON Admin Panel</small>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.7.48/dist/zip.min.js"></script>
     <script>
         // =================================================================
         // STATE
@@ -1168,9 +1720,28 @@ PREREQUISITES:
         let REVISION_CACHE = [];
         let PAGE_BROWSER_ITEMS = [];
         let PAGE_BROWSER_CAN_EDIT_ALL = false;
+        let BULK_SELECTED_PAGES = new Set();
+        let AUDIT_LOG_DATA = [];
         let HAS_LOCAL_CHANGES = false;
         let EDITOR_BUSY = false;
         let PASSKEY_ENV_READY = null;
+        let LOCAL_MODE = false;
+        let PRIMARY_FIELD_KEY = null;
+        let PREVIEW_MODE = 'write';
+        let UNDO_STACK = [];
+        let REDO_STACK = [];
+        let UNDO_TIMER = null;
+        let UNDO_SUSPENDED = false;
+        let OUTLINE_TIMER = null;
+        let OUTLINE_ENTRIES = [];
+        let PAGE_CONTENT_CACHE = new Map();
+        let COMMAND_PALETTE_OPEN = false;
+        let COMMAND_PALETTE_INDEX = 0;
+        let COMMAND_PALETTE_RESULTS = [];
+        let PENDING_IMPORT = null;
+        const MAX_UNDO_STACK = 50;
+        const UNDO_DEBOUNCE_MS = 650;
+        let LAST_PAGE_QUERY = '';
 
         const STORAGE_KEYS = {
             SESSION: 'loon_session',
@@ -1178,6 +1749,7 @@ PREREQUISITES:
             POST_SETUP_NOTICE: 'loon_post_setup_notice',
             LAST_READINESS: 'loon_last_readiness',
             FIRST_PAGE_WIZARD_DISMISSED: 'loon_first_page_wizard_dismissed',
+            LOCAL_BANNER_DISMISSED: 'loon_local_banner_dismissed',
             THEME: 'loon_theme',
             BATCH_MODE: 'loon_batch_mode',
             PENDING_CHANGES: 'loon_pending_changes',
@@ -1185,6 +1757,10 @@ PREREQUISITES:
         };
         let ONBOARDING_TIMER = null;
         const VIEW_MODE = new URLSearchParams(window.location.search).get('view') || 'default';
+
+        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/build/pdf.worker.min.js';
+        }
 
         // =================================================================
         // INITIALIZATION
@@ -1194,6 +1770,7 @@ PREREQUISITES:
             initBatchMode();
             prefillRepoSuggestion();
             hydrateLastReadinessStamp();
+            updateLocalModeBanner();
 
             if (VIEW_MODE === 'setup-check') {
                 startOnboardingMonitor();
@@ -1261,7 +1838,26 @@ PREREQUISITES:
                         saveContentAsDraft();
                     }
                 }
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+                    if (COMMAND_PALETTE_OPEN) return;
+                    e.preventDefault();
+                    undoLastChange();
+                }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y' || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) {
+                    if (COMMAND_PALETTE_OPEN) return;
+                    e.preventDefault();
+                    redoLastChange();
+                }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+                    e.preventDefault();
+                    openCommandPalette();
+                }
+                if (COMMAND_PALETTE_OPEN) {
+                    handleCommandPaletteKeydown(e);
+                }
             });
+
+            initCommandPalette();
         });
 
         function initTheme() {
@@ -1280,6 +1876,40 @@ PREREQUISITES:
             const select = document.getElementById('theme-select');
             if (select) select.value = normalized;
             if (persist) localStorage.setItem(STORAGE_KEYS.THEME, normalized);
+        }
+
+        function updateLocalModeBanner() {
+            fetch('/api/health', { cache: 'no-store' })
+                .then(res => res.json())
+                .then(data => {
+                    LOCAL_MODE = !!data?.localMode;
+                    const banner = document.getElementById('local-mode-banner');
+                    const dismissed = localStorage.getItem(STORAGE_KEYS.LOCAL_BANNER_DISMISSED) === '1';
+                    if (banner) {
+                        if (LOCAL_MODE && !dismissed) {
+                            banner.classList.remove('hidden');
+                        } else {
+                            banner.classList.add('hidden');
+                        }
+                    }
+                    updateBulkDryRunVisibility();
+                })
+                .catch(() => {
+                    LOCAL_MODE = false;
+                    updateBulkDryRunVisibility();
+                });
+        }
+
+        function dismissLocalModeBanner() {
+            localStorage.setItem(STORAGE_KEYS.LOCAL_BANNER_DISMISSED, '1');
+            const banner = document.getElementById('local-mode-banner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        function updateBulkDryRunVisibility() {
+            const wrap = document.getElementById('bulk-dry-run-wrap');
+            if (!wrap) return;
+            wrap.style.display = LOCAL_MODE ? 'inline-flex' : 'none';
         }
 
         function initBatchMode() {
@@ -1544,8 +2174,11 @@ PREREQUISITES:
 
         function clearAutosaveForPage(pageId) {
             if (!pageId) return;
-            localStorage.removeItem(getAutosaveKey(pageId));
+            const key = getAutosaveKey(pageId);
+            localStorage.removeItem(key);
+            localStorage.removeItem(`${key}_history`);
             updateAutosaveIndicator();
+            updateAutosaveSnapshotsList();
         }
 
         function updateAutosaveIndicator(message = '') {
@@ -1579,11 +2212,30 @@ PREREQUISITES:
         function writeAutosaveSnapshot() {
             if (!CURRENT_PAGE_ID || !CURRENT_SCHEMA) return;
             const content = collectCurrentFormContent();
-            localStorage.setItem(getAutosaveKey(CURRENT_PAGE_ID), JSON.stringify({
+            const key = getAutosaveKey(CURRENT_PAGE_ID);
+            let snapshots = [];
+            
+            // Load existing snapshots
+            try {
+                const existing = localStorage.getItem(`${key}_history`);
+                if (existing) snapshots = JSON.parse(existing) || [];
+            } catch (e) {
+                snapshots = [];
+            }
+            
+            // Add new snapshot
+            snapshots.unshift({
                 timestamp: Date.now(),
                 content
-            }));
+            });
+            
+            // Keep only last 5 snapshots to avoid storage bloat
+            if (snapshots.length > 5) snapshots = snapshots.slice(0, 5);
+            
+            // Save history
+            localStorage.setItem(`${key}_history`, JSON.stringify(snapshots));
             updateAutosaveIndicator(`Autosaved at ${new Date().toLocaleTimeString()}`);
+            updateAutosaveSnapshotsList();
         }
 
         function scheduleAutosave() {
@@ -1595,28 +2247,106 @@ PREREQUISITES:
         }
 
         function maybeRestoreAutosave(pageId) {
-            const raw = localStorage.getItem(getAutosaveKey(pageId));
-            if (!raw) return false;
+            const key = getAutosaveKey(pageId);
+            let snapshots = [];
             try {
-                const parsed = JSON.parse(raw);
-                if (!parsed?.content || typeof parsed.content !== 'object') return false;
-                const incoming = JSON.stringify(parsed.content || {});
-                const current = JSON.stringify(CURRENT_CONTENT || {});
-                if (incoming === current) return false;
+                const existing = localStorage.getItem(`${key}_history`);
+                if (existing) snapshots = JSON.parse(existing) || [];
+            } catch (e) {
+                snapshots = [];
+            }
+            
+            if (snapshots.length === 0) return false;
+            
+            const latest = snapshots[0];
+            if (!latest?.content || typeof latest.content !== 'object') return false;
+            const incoming = JSON.stringify(latest.content || {});
+            const current = JSON.stringify(CURRENT_CONTENT || {});
+            if (incoming === current) return false;
 
-                const when = parsed.timestamp ? new Date(parsed.timestamp).toLocaleString() : 'recently';
-                if (confirm(`A local autosave snapshot from ${when} was found for this page. Restore it?`)) {
-                    CURRENT_CONTENT = { ...CURRENT_CONTENT, ...parsed.content };
-                    buildForm();
-                    markEditorDirty(true);
-                    showStatus('editor-status', 'Restored local autosave snapshot. Review and save when ready.', 'info');
-                    updateAutosaveIndicator(`Restored autosave from ${when}`);
-                    return true;
-                }
-            } catch {
-                return false;
+            const when = latest.timestamp ? new Date(latest.timestamp).toLocaleString() : 'recently';
+            if (confirm(`A local autosave snapshot from ${when} was found for this page. Restore it?`)) {
+                CURRENT_CONTENT = { ...CURRENT_CONTENT, ...latest.content };
+                buildForm();
+                markEditorDirty(true);
+                showStatus('editor-status', 'Restored local autosave snapshot. Review and save when ready.', 'info');
+                updateAutosaveIndicator(`Restored autosave from ${when}`);
+                return true;
             }
             return false;
+        }
+
+        /**
+         * Update the snapshots list display in the autosave snapshots panel
+         */
+        function updateAutosaveSnapshotsList() {
+            const list = document.getElementById('autosave-snapshots-list');
+            if (!list || !CURRENT_PAGE_ID) {
+                if (list) list.innerHTML = '';
+                return;
+            }
+            
+            const key = getAutosaveKey(CURRENT_PAGE_ID);
+            let snapshots = [];
+            try {
+                const existing = localStorage.getItem(`${key}_history`);
+                if (existing) snapshots = JSON.parse(existing) || [];
+            } catch (e) {
+                snapshots = [];
+            }
+            
+            if (snapshots.length === 0) {
+                list.innerHTML = '<small style="color: var(--muted-color);">No snapshots yet</small>';
+                return;
+            }
+            
+            list.innerHTML = snapshots.map((snap, idx) => {
+                const time = new Date(snap.timestamp);
+                const timeStr = time.toLocaleTimeString();
+                const dateStr = time.toLocaleDateString();
+                const isCurrent = idx === 0 ? ' (latest)' : '';
+                return `
+                    <div style="padding: 0.5rem; background: var(--code-background-color); border-radius: 4px; margin-bottom: 0.4rem; font-size: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>${dateStr} ${timeStr}${isCurrent}</span>
+                            <button type="button" class="secondary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="restoreAutosaveSnapshot(${idx})">Restore</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Restore content from a specific snapshot
+         */
+        function restoreAutosaveSnapshot(snapshotIdx) {
+            if (!CURRENT_PAGE_ID || snapshotIdx < 0) return;
+            
+            const key = getAutosaveKey(CURRENT_PAGE_ID);
+            let snapshots = [];
+            try {
+                const existing = localStorage.getItem(`${key}_history`);
+                if (existing) snapshots = JSON.parse(existing) || [];
+            } catch (e) {
+                snapshots = [];
+            }
+            
+            if (snapshotIdx >= snapshots.length) {
+                showStatus('editor-status', 'Snapshot not found', 'error');
+                return;
+            }
+            
+            const snap = snapshots[snapshotIdx];
+            const time = new Date(snap.timestamp).toLocaleTimeString();
+            
+            if (!confirm(`Restore snapshot from ${time}? Your current edits will be replaced.`)) {
+                return;
+            }
+            
+            CURRENT_CONTENT = { ...CURRENT_CONTENT, ...snap.content };
+            buildForm();
+            markEditorDirty(true);
+            showStatus('editor-status', `Restored snapshot from ${time}`, 'success');
         }
 
         async function refreshLinkPageList() {
@@ -1660,6 +2390,10 @@ PREREQUISITES:
             markEditorDirty(true);
             scheduleAutosave();
             scheduleAutoStage();
+            scheduleUndoSnapshot();
+            if (input.id === `field_${PRIMARY_FIELD_KEY}`) {
+                updatePrimaryPreview();
+            }
         }
 
         function wrapSelection(prefix, suffix, placeholder) {
@@ -2752,7 +3486,11 @@ PREREQUISITES:
                 document.getElementById('tab-users').classList.remove('hidden');
                 document.getElementById('tab-sessions').classList.remove('hidden');
                 document.getElementById('tab-audit').classList.remove('hidden');
+                document.getElementById('tab-health').classList.remove('hidden');
             }
+
+            // Apply role-based UI tailoring
+            applyRoleBasedUI();
 
             if (sessionStorage.getItem(STORAGE_KEYS.POST_SETUP_NOTICE) === '1') {
                 document.getElementById('post-setup-banner').classList.remove('hidden');
@@ -2760,6 +3498,7 @@ PREREQUISITES:
 
             updateBatchUi();
             maybeShowFirstPageWizard();
+            updateLocalModeBanner();
         }
 
         // =================================================================
@@ -2783,6 +3522,49 @@ PREREQUISITES:
                 loadSessions();
             } else if (tab === 'account') {
                 loadAccountInfo();
+            }
+        }
+
+        /**
+         * Apply role-based UI tailoring
+         * Hides/shows features based on user role
+         */
+        function applyRoleBasedUI() {
+            const role = SESSION?.role || 'contributor';
+            const isAdmin = role === 'admin';
+            const isEditor = role === 'editor';
+            const isContributor = role === 'contributor';
+
+            // Contributors can't use bulk actions (only editors and admins)
+            const bulkActionsPanel = document.getElementById('bulk-actions-panel');
+            if (bulkActionsPanel) {
+                bulkActionsPanel.style.display = (isAdmin || isEditor) ? 'block' : 'none';
+            }
+
+            // Contributors can't see/select bulk page checkboxes
+            const pageCheckboxes = document.querySelectorAll('input[type="checkbox"][onchange*="togglePageSelection"]');
+            pageCheckboxes.forEach(cb => {
+                cb.style.display = (isAdmin || isEditor) ? 'inline-block' : 'none';
+            });
+
+            // Disable workflow status for contributors
+            const workflowStatus = document.getElementById('workflow-status-select');
+            if (workflowStatus && isContributor) {
+                workflowStatus.disabled = true;
+                workflowStatus.style.opacity = '0.6';
+                workflowStatus.style.cursor = 'not-allowed';
+                workflowStatus.title = 'Admin or Editor only';
+            }
+
+            // Hide advanced publishing options for contributors
+            if (isContributor) {
+                // Hide schedule publish button if it exists
+                const scheduleBtn = document.querySelector('[onclick*="schedulePublish"], [id*="schedule"]');
+                if (scheduleBtn) scheduleBtn.style.display = 'none';
+
+                // Mark editor as simplified for assistive tech
+                const editor = document.getElementById('editor-container');
+                if (editor) editor.setAttribute('data-role', 'contributor');
             }
         }
 
@@ -2921,7 +3703,7 @@ PREREQUISITES:
             }
             
             container.innerHTML = passkeys.map(pk => `
-                <div style="padding: 1rem; background: var(--code-background-color); border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: between; align-items: center;">
+                <div style="padding: 1rem; background: var(--code-background-color); border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1;">
                         <strong>${escapeHtml(pk.name || 'Unnamed Passkey')}</strong><br>
                         <small style="color: var(--muted-color);">
@@ -3331,11 +4113,539 @@ PREREQUISITES:
         // =================================================================
         // CONTENT EDITOR
         // =================================================================
+        const PRIMARY_FIELD_PRIORITIES = ['body', 'content', 'text', 'markdown', 'html', 'description'];
+        const TOP_FIELD_KEYS = ['title', 'headline', 'name'];
+
+        function determinePrimaryFieldKey(schema) {
+            const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+            const textareas = fields.filter(field => field.type === 'textarea');
+            if (!textareas.length) return null;
+
+            const priority = textareas.find(field =>
+                PRIMARY_FIELD_PRIORITIES.includes(String(field.key || '').toLowerCase())
+            );
+            return (priority || textareas[0]).key || null;
+        }
+
+        function getFieldPlacement(field) {
+            const key = String(field.key || '').toLowerCase();
+            if (PRIMARY_FIELD_KEY && field.key === PRIMARY_FIELD_KEY) return 'primary';
+            if (TOP_FIELD_KEYS.includes(key)) return 'top';
+            return 'details';
+        }
+
+        function setPreviewMode(mode) {
+            PREVIEW_MODE = mode === 'preview' ? 'preview' : 'write';
+            const writeBtn = document.getElementById('preview-tab-write');
+            const previewBtn = document.getElementById('preview-tab-preview');
+            const previewEl = document.getElementById('primary-preview');
+            const editorSlot = document.getElementById('primary-editor-slot');
+
+            if (writeBtn && previewBtn) {
+                writeBtn.classList.toggle('tab-active', PREVIEW_MODE === 'write');
+                previewBtn.classList.toggle('tab-active', PREVIEW_MODE === 'preview');
+            }
+
+            if (previewEl && editorSlot) {
+                if (PREVIEW_MODE === 'preview') {
+                    previewEl.classList.remove('hidden');
+                    editorSlot.classList.add('hidden');
+                    updatePrimaryPreview(true);
+                } else {
+                    previewEl.classList.add('hidden');
+                    editorSlot.classList.remove('hidden');
+                }
+            }
+        }
+
+        function renderMarkdownPreview(text) {
+            if (window.marked && typeof window.marked.parse === 'function') {
+                return window.marked.parse(text || '', { breaks: true, gfm: true });
+            }
+            const escaped = escapeHtml(text || '').replace(/\n/g, '<br>');
+            return `<div>${escaped}</div>`;
+        }
+
+        function updatePrimaryPreview(force = false) {
+            if (PREVIEW_MODE !== 'preview' && !force) return;
+            const previewEl = document.getElementById('primary-preview');
+            if (!previewEl || !PRIMARY_FIELD_KEY) return;
+            const input = document.getElementById(`field_${PRIMARY_FIELD_KEY}`);
+            if (!input || typeof input.value !== 'string') return;
+            previewEl.innerHTML = renderMarkdownPreview(input.value);
+            updateContentStats(input.value);
+        }
+
+        /**
+         * Update word count and reading time display
+         */
+        function updateContentStats(text) {
+            const statsDiv = document.getElementById('content-stats');
+            if (!statsDiv) return;
+            
+            // Count words
+            const words = (text || '').trim().split(/\s+/).filter(w => w.length > 0).length;
+            
+            // Calculate reading time (avg 200 words per minute)
+            const readingTime = Math.ceil(words / 200) || 0;
+            
+            // Update display
+            document.getElementById('word-count').textContent = `Words: ${words}`;
+            document.getElementById('reading-time').textContent = `Reading time: ${readingTime} min`;
+            statsDiv.style.display = 'block';
+        }
+
+        function getPrimaryEditorInput() {
+            if (!PRIMARY_FIELD_KEY) return null;
+            return document.getElementById(`field_${PRIMARY_FIELD_KEY}`);
+        }
+
+        function scheduleUndoSnapshot() {
+            if (UNDO_SUSPENDED || !CURRENT_SCHEMA || !CURRENT_PAGE_ID) return;
+            if (UNDO_TIMER) clearTimeout(UNDO_TIMER);
+            UNDO_TIMER = setTimeout(() => {
+                pushUndoSnapshot();
+            }, UNDO_DEBOUNCE_MS);
+        }
+
+        function pushUndoSnapshot(options = {}) {
+            if (UNDO_SUSPENDED || !CURRENT_SCHEMA || !CURRENT_PAGE_ID) return;
+            const content = collectCurrentFormContent();
+            const serialized = JSON.stringify(content || {});
+            const last = UNDO_STACK[UNDO_STACK.length - 1];
+            if (!options.force && last && last.serialized === serialized) return;
+
+            UNDO_STACK.push({
+                pageId: CURRENT_PAGE_ID,
+                timestamp: Date.now(),
+                content,
+                serialized
+            });
+
+            if (UNDO_STACK.length > MAX_UNDO_STACK) {
+                UNDO_STACK.shift();
+            }
+
+            if (!options.keepRedo) {
+                REDO_STACK = [];
+            }
+
+            updateUndoRedoButtons();
+            renderUndoHistory();
+        }
+
+        function resetUndoStack() {
+            UNDO_STACK = [];
+            REDO_STACK = [];
+            pushUndoSnapshot({ force: true, keepRedo: true });
+            updateUndoRedoButtons();
+            renderUndoHistory();
+        }
+
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undo-btn');
+            const redoBtn = document.getElementById('redo-btn');
+            if (undoBtn) undoBtn.disabled = UNDO_STACK.length < 2;
+            if (redoBtn) redoBtn.disabled = REDO_STACK.length === 0;
+        }
+
+        function applyUndoSnapshot(entry) {
+            if (!entry || entry.pageId !== CURRENT_PAGE_ID) return;
+            UNDO_SUSPENDED = true;
+            CURRENT_CONTENT = { ...entry.content };
+            buildForm();
+            markEditorDirty(true);
+            const primaryInput = getPrimaryEditorInput();
+            if (primaryInput) {
+                updateContentStats(primaryInput.value);
+            }
+            updatePrimaryPreview(true);
+            renderDocumentOutline();
+            UNDO_SUSPENDED = false;
+        }
+
+        function undoLastChange() {
+            if (UNDO_STACK.length < 2) return;
+            const current = UNDO_STACK.pop();
+            REDO_STACK.push(current);
+            const previous = UNDO_STACK[UNDO_STACK.length - 1];
+            applyUndoSnapshot(previous);
+            updateUndoRedoButtons();
+            renderUndoHistory();
+        }
+
+        function redoLastChange() {
+            if (!REDO_STACK.length) return;
+            const entry = REDO_STACK.pop();
+            UNDO_STACK.push(entry);
+            applyUndoSnapshot(entry);
+            updateUndoRedoButtons();
+            renderUndoHistory();
+        }
+
+        function clearUndoHistory() {
+            if (!CURRENT_PAGE_ID) return;
+            if (!confirm('Clear edit history for this page? Undo and redo will reset.')) return;
+            resetUndoStack();
+        }
+
+        function restoreUndoSnapshot(index) {
+            if (index < 0 || index >= UNDO_STACK.length) return;
+            const tail = UNDO_STACK.splice(index + 1);
+            if (tail.length) {
+                REDO_STACK = tail.concat(REDO_STACK);
+            }
+            const target = UNDO_STACK[index];
+            applyUndoSnapshot(target);
+            updateUndoRedoButtons();
+            renderUndoHistory();
+        }
+
+        function renderUndoHistory() {
+            const list = document.getElementById('undo-history-list');
+            if (!list) return;
+            if (!UNDO_STACK.length) {
+                list.innerHTML = '<small style="color: var(--muted-color);">No edits yet</small>';
+                return;
+            }
+
+            const start = Math.max(0, UNDO_STACK.length - 8);
+            const items = UNDO_STACK.slice(start).map((entry, idx) => {
+                const actualIndex = start + idx;
+                const time = new Date(entry.timestamp).toLocaleTimeString();
+                const label = actualIndex === UNDO_STACK.length - 1 ? 'Current' : 'Snapshot';
+                return `
+                    <div class="undo-history-item">
+                        <span>${label} - ${time}</span>
+                        <button type="button" class="outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="restoreUndoSnapshot(${actualIndex})">Restore</button>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = items.join('');
+        }
+
+        function scheduleOutlineUpdate() {
+            if (OUTLINE_TIMER) clearTimeout(OUTLINE_TIMER);
+            OUTLINE_TIMER = setTimeout(() => {
+                renderDocumentOutline();
+            }, 300);
+        }
+
+        function renderDocumentOutline() {
+            const list = document.getElementById('outline-list');
+            const status = document.getElementById('outline-status');
+            const input = getPrimaryEditorInput();
+            if (!list || !status) return;
+            if (!input) {
+                list.innerHTML = '';
+                status.textContent = 'No primary text field available.';
+                return;
+            }
+
+            const text = String(input.value || '');
+            const lines = text.split('\n');
+            let cursor = 0;
+            OUTLINE_ENTRIES = [];
+
+            lines.forEach((line, idx) => {
+                const match = line.match(/^(#{1,3})\s+(.+)$/);
+                if (match) {
+                    const level = match[1].length;
+                    const title = match[2].trim();
+                    OUTLINE_ENTRIES.push({
+                        level,
+                        title,
+                        position: cursor,
+                        line: idx + 1
+                    });
+                }
+                cursor += line.length + 1;
+            });
+
+            if (!OUTLINE_ENTRIES.length) {
+                list.innerHTML = '';
+                status.textContent = 'No headings found. Use #, ##, or ### to build an outline.';
+                return;
+            }
+
+            status.textContent = `${OUTLINE_ENTRIES.length} heading(s) found.`;
+            list.innerHTML = OUTLINE_ENTRIES.map((entry, index) => {
+                const levelClass = entry.level === 2 ? 'outline-level-2' : entry.level === 3 ? 'outline-level-3' : '';
+                return `
+                    <div class="outline-item ${levelClass}" onclick="jumpToOutlineEntry(${index})">
+                        <strong>${escapeHtml(entry.title)}</strong>
+                        <small>Line ${entry.line}</small>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function jumpToOutlineEntry(index) {
+            const entry = OUTLINE_ENTRIES[index];
+            const input = getPrimaryEditorInput();
+            if (!entry || !input) return;
+            input.focus();
+            input.setSelectionRange(entry.position, entry.position);
+        }
+
+        function initCommandPalette() {
+            const palette = document.getElementById('command-palette');
+            const input = document.getElementById('command-palette-input');
+            if (!palette || !input) return;
+
+            input.addEventListener('input', () => {
+                renderCommandPaletteList(input.value);
+            });
+
+            palette.addEventListener('click', event => {
+                if (event.target === palette) {
+                    closeCommandPalette();
+                }
+            });
+        }
+
+        function getPaletteStorageKey(pageId) {
+            const key = pageId ? `page:${pageId}` : 'global';
+            return `loon_palette_recents:${key}`;
+        }
+
+        function getRecentPaletteCommands(pageId) {
+            const key = getPaletteStorageKey(pageId);
+            const raw = localStorage.getItem(key);
+            if (!raw) return [];
+            try {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function addRecentPaletteCommand(label) {
+            const key = getPaletteStorageKey(CURRENT_PAGE_ID);
+            const existing = getRecentPaletteCommands(CURRENT_PAGE_ID);
+            const next = [label, ...existing.filter(item => item !== label)].slice(0, 6);
+            localStorage.setItem(key, JSON.stringify(next));
+        }
+
+        function openCommandPalette() {
+            const palette = document.getElementById('command-palette');
+            const input = document.getElementById('command-palette-input');
+            if (!palette || !input) return;
+            COMMAND_PALETTE_OPEN = true;
+            palette.classList.add('open');
+            palette.setAttribute('aria-hidden', 'false');
+            input.value = '';
+            renderCommandPaletteList('');
+            setTimeout(() => input.focus(), 0);
+        }
+
+        function closeCommandPalette() {
+            const palette = document.getElementById('command-palette');
+            if (!palette) return;
+            COMMAND_PALETTE_OPEN = false;
+            palette.classList.remove('open');
+            palette.setAttribute('aria-hidden', 'true');
+        }
+
+        function handleCommandPaletteKeydown(event) {
+            const input = document.getElementById('command-palette-input');
+            if (!COMMAND_PALETTE_OPEN || !input) return;
+
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeCommandPalette();
+                return;
+            }
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                COMMAND_PALETTE_INDEX = Math.min(COMMAND_PALETTE_INDEX + 1, COMMAND_PALETTE_RESULTS.length - 1);
+                updateCommandPaletteActive();
+                return;
+            }
+
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                COMMAND_PALETTE_INDEX = Math.max(COMMAND_PALETTE_INDEX - 1, 0);
+                updateCommandPaletteActive();
+                return;
+            }
+
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                executeCommandPaletteAction(COMMAND_PALETTE_INDEX);
+            }
+        }
+
+        function getCommandPaletteActions() {
+            const hasPage = !!CURRENT_PAGE_ID && !!CURRENT_SCHEMA;
+            const canPublish = SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor');
+            const actions = [
+                {
+                    label: 'Open Page',
+                    detail: 'Focus the Page ID input',
+                    run: () => document.getElementById('pageId')?.focus()
+                },
+                {
+                    label: 'Browse Pages',
+                    detail: 'Open page browser',
+                    run: () => loadPageList()
+                },
+                {
+                    label: 'Create New Page',
+                    detail: 'Open new page dialog',
+                    run: () => showNewPageDialog()
+                },
+                {
+                    label: 'Save Changes',
+                    detail: 'Save or stage current page',
+                    when: () => hasPage,
+                    run: () => handlePrimarySaveAction()
+                },
+                {
+                    label: 'Save Draft',
+                    detail: 'Save as draft',
+                    when: () => hasPage && SESSION && SESSION.role !== 'contributor',
+                    run: () => saveContentAsDraft()
+                },
+                {
+                    label: 'Publish Page',
+                    detail: 'Publish current page',
+                    when: () => hasPage && canPublish,
+                    run: () => publishContent()
+                },
+                {
+                    label: 'Toggle Preview',
+                    detail: PREVIEW_MODE === 'preview' ? 'Switch to write mode' : 'Switch to preview mode',
+                    when: () => hasPage && PRIMARY_FIELD_KEY,
+                    run: () => setPreviewMode(PREVIEW_MODE === 'preview' ? 'write' : 'preview')
+                },
+                {
+                    label: 'Reader View',
+                    detail: 'Open public view of current page',
+                    when: () => hasPage,
+                    run: () => previewAsReader()
+                },
+                {
+                    label: 'Toggle Batch Mode',
+                    detail: BATCH_MODE_ENABLED ? 'Disable batch staging' : 'Enable batch staging',
+                    when: () => !!SESSION,
+                    run: () => setBatchModeEnabled(!BATCH_MODE_ENABLED)
+                },
+                {
+                    label: 'Content Health Dashboard',
+                    detail: 'Switch to health tab',
+                    when: () => SESSION && SESSION.role === 'admin',
+                    run: () => switchTab('health')
+                }
+            ].filter(action => !action.when || action.when());
+
+            const recentLabels = getRecentPaletteCommands(CURRENT_PAGE_ID);
+            if (!recentLabels.length) return actions;
+
+            const actionMap = new Map(actions.map(action => [action.label, action]));
+            const recentActions = recentLabels
+                .map(label => actionMap.get(label))
+                .filter(Boolean)
+                .map(action => ({
+                    ...action,
+                    detail: action.detail ? `Recent: ${action.detail}` : 'Recent command'
+                }));
+
+            const remaining = actions.filter(action => !recentLabels.includes(action.label));
+            return [...recentActions, ...remaining];
+        }
+
+        function renderCommandPaletteList(query) {
+            const list = document.getElementById('command-palette-list');
+            if (!list) return;
+            const normalized = String(query || '').trim().toLowerCase();
+            const actions = getCommandPaletteActions();
+            COMMAND_PALETTE_RESULTS = actions.filter(action => {
+                if (!normalized) return true;
+                const haystack = `${action.label} ${action.detail || ''}`.toLowerCase();
+                return haystack.includes(normalized);
+            });
+
+            COMMAND_PALETTE_INDEX = 0;
+
+            if (!COMMAND_PALETTE_RESULTS.length) {
+                list.innerHTML = '<div class="command-palette-empty">No commands found.</div>';
+                COMMAND_PALETTE_INDEX = 0;
+                return;
+            }
+
+            COMMAND_PALETTE_INDEX = Math.min(COMMAND_PALETTE_INDEX, COMMAND_PALETTE_RESULTS.length - 1);
+            list.innerHTML = COMMAND_PALETTE_RESULTS.map((action, idx) => `
+                <div class="command-palette-item ${idx === COMMAND_PALETTE_INDEX ? 'active' : ''}" onclick="executeCommandPaletteAction(${idx})">
+                    <div>
+                        <strong>${escapeHtml(action.label)}</strong>
+                        ${action.detail ? `<div><small>${escapeHtml(action.detail)}</small></div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateCommandPaletteActive() {
+            const items = document.querySelectorAll('.command-palette-item');
+            items.forEach((item, idx) => {
+                item.classList.toggle('active', idx === COMMAND_PALETTE_INDEX);
+            });
+        }
+
+        function executeCommandPaletteAction(index) {
+            const action = COMMAND_PALETTE_RESULTS[index];
+            if (!action) return;
+            closeCommandPalette();
+            addRecentPaletteCommand(action.label);
+            action.run();
+        }
+
+        /**
+         * Show a live preview of the page as readers will see it
+         */
+        async function previewAsReader() {
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load or create a page first', 'error');
+                return;
+            }
+
+            // First, save current changes so preview is up-to-date
+            showStatus('editor-status', 'Preparing preview...', 'info');
+            
+            try {
+                // Check if we have unsaved changes
+                const hasDirty = HAS_LOCAL_CHANGES || hasQueuedChangeForCurrentPage();
+                
+                if (hasDirty) {
+                    const proceed = confirm('You have unsaved changes. Save them first before previewing?');
+                    if (proceed) {
+                        // quietly save without showing dialog
+                        await saveContent();
+                    }
+                }
+                
+                // Open the public page in a new tab
+                const url = `${window.location.origin}/index.html?page=${encodeURIComponent(CURRENT_PAGE_ID)}`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+                showStatus('editor-status', 'Preview opened in new tab', 'success');
+                
+            } catch (e) {
+                showStatus('editor-status', `Preview failed: ${e.message}`, 'error');
+            }
+        }
+
         async function loadEditor() {
             const pageId = document.getElementById('pageId').value.trim().toLowerCase();
             
             if (!pageId) {
                 showStatus('editor-status', 'Please enter a Page ID', 'error');
+                return;
+            }
+            if (!/^[a-z0-9_-]+$/.test(pageId)) {
+                showStatus('editor-status', 'Page ID must use lowercase letters, numbers, hyphens, or underscores.', 'error');
                 return;
             }
 
@@ -3377,6 +4687,13 @@ PREREQUISITES:
             buildForm();
             markEditorDirty(false);
             maybeRestoreAutosave(pageId);
+            resetUndoStack();
+            const primaryInput = getPrimaryEditorInput();
+            if (primaryInput) {
+                updateContentStats(primaryInput.value);
+                renderDocumentOutline();
+            }
+            updateAutosaveSnapshotsList();
             refreshLinkPageList();
             loadRevisionHistory();
             hydrateWorkflowPanelFromContent();
@@ -3407,6 +4724,14 @@ PREREQUISITES:
                 deleteBtn.style.display = 'inline-block';
             } else {
                 deleteBtn.style.display = 'none';
+            }
+
+            // Show duplicate button for admins, editors, and contributors (clone own work)
+            const duplicateBtn = document.getElementById('duplicate-page-btn');
+            if (SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor' || SESSION.role === 'contributor')) {
+                duplicateBtn.style.display = 'inline-block';
+            } else {
+                duplicateBtn.style.display = 'none';
             }
 
             // Show draft/publish buttons based on role
@@ -3445,6 +4770,7 @@ PREREQUISITES:
                 document.getElementById('last-saved').textContent = '';
             }
             updateBatchUi();
+            applyRoleBasedUI();
             if (!queued) hideStatus('editor-status');
             updateAutosaveIndicator();
         }
@@ -3460,6 +4786,8 @@ PREREQUISITES:
             browser.classList.remove('hidden');
             list.innerHTML = '<p>Loading pages...</p>';
             if (filter) filter.value = '';
+            PAGE_CONTENT_CACHE.clear();
+            resetAdvancedPageSearch(true);
             
             try {
                 const headers = { };
@@ -3505,32 +4833,198 @@ PREREQUISITES:
             }
 
             const actionLabel = PAGE_BROWSER_CAN_EDIT_ALL ? 'Edit' : 'Open';
-            list.innerHTML = items.map(page => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--muted-border-color); border-radius: 4px;">
-                    <div>
-                        <strong>${escapeHtml(page.title)}</strong>
-                        <span style="color: var(--muted-color); font-size: 0.85rem; margin-left: 0.5rem;">${escapeHtml(page.pageId)}</span>
-                        ${page.createdBy ? `<br><small style="color: var(--muted-color);">By ${escapeHtml(page.createdBy)}</small>` : ''}
+            list.innerHTML = items.map(page => {
+                const isSelected = BULK_SELECTED_PAGES.has(page.pageId);
+                const highlight = LAST_PAGE_QUERY ? String(LAST_PAGE_QUERY).trim().toLowerCase() : '';
+                const displayTitle = highlight ? highlightMatch(page.title || page.pageId, highlight) : escapeHtml(page.title || page.pageId);
+                const displayId = highlight ? highlightMatch(page.pageId, highlight) : escapeHtml(page.pageId);
+                const displayAuthor = page.createdBy
+                    ? (highlight ? highlightMatch(page.createdBy, highlight) : escapeHtml(page.createdBy))
+                    : '';
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: ${isSelected ? 'var(--primary)' : 'var(--muted-border-color)'}; border-radius: 4px; color: ${isSelected ? 'white' : 'inherit'};">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="togglePageSelection('${escapeHtml(page.pageId)}')" style="cursor: pointer;">
+                            <div>
+                                <strong>${displayTitle}</strong>
+                                <span style="color: ${isSelected ? 'rgba(255,255,255,0.8)' : 'var(--muted-color)'}; font-size: 0.85rem; margin-left: 0.5rem;">${displayId}</span>
+                                ${displayAuthor ? `<br><small style="color: ${isSelected ? 'rgba(255,255,255,0.8)' : 'var(--muted-color)'};">By ${displayAuthor}</small>` : ''}
+                            </div>
+                        </div>
+                        <button onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem; ${isSelected ? 'display: none;' : ''}">${actionLabel}</button>
                     </div>
-                    <button onclick="selectPage('${escapeHtml(page.pageId)}')" class="outline" style="padding: 0.25rem 0.75rem;">${actionLabel}</button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+            
+            updateBulkActionsPanel();
+            applyRoleBasedUI();
         }
 
-        function filterPageBrowserList() {
+        function getAdvancedPageSearchCriteria() {
+            const limitRaw = parseInt(document.getElementById('page-advanced-limit')?.value || '60', 10);
+            const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 60;
+            return {
+                query: String(document.getElementById('page-advanced-query')?.value || '').trim().toLowerCase(),
+                status: String(document.getElementById('page-advanced-status')?.value || '').trim().toLowerCase(),
+                author: String(document.getElementById('page-advanced-author')?.value || '').trim().toLowerCase(),
+                updatedFrom: document.getElementById('page-advanced-updated-from')?.value || '',
+                updatedTo: document.getElementById('page-advanced-updated-to')?.value || '',
+                includeContent: !!document.getElementById('page-advanced-content')?.checked,
+                limit
+            };
+        }
+
+        function resetAdvancedPageSearch(silent = false) {
+            const inputs = [
+                'page-advanced-query',
+                'page-advanced-status',
+                'page-advanced-author',
+                'page-advanced-updated-from',
+                'page-advanced-updated-to',
+                'page-advanced-content',
+                'page-advanced-limit'
+            ];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.type === 'checkbox') {
+                    el.checked = false;
+                } else if (el.type === 'number') {
+                    el.value = '60';
+                } else {
+                    el.value = '';
+                }
+            });
+
+            if (!silent) {
+                filterPageBrowserList();
+            }
+        }
+
+        function applyAdvancedPageSearch() {
+            applyPageBrowserFilters({ forceContent: true });
+        }
+
+        async function filterPageBrowserList() {
+            await applyPageBrowserFilters();
+        }
+
+        async function applyPageBrowserFilters(options = {}) {
             const filter = document.getElementById('page-browser-filter');
-            const query = String(filter?.value || '').trim().toLowerCase();
-            if (!query) {
-                renderPageBrowserList(PAGE_BROWSER_ITEMS);
+            const simpleQuery = String(filter?.value || '').trim().toLowerCase();
+            const advanced = getAdvancedPageSearchCriteria();
+            const combinedQuery = [simpleQuery, advanced.query].filter(Boolean).join(' ').trim();
+            const advancedActive = !!(advanced.query || advanced.status || advanced.author || advanced.updatedFrom || advanced.updatedTo || advanced.includeContent || options.forceContent);
+            const resultLimit = advancedActive ? advanced.limit : PAGE_BROWSER_ITEMS.length;
+            LAST_PAGE_QUERY = combinedQuery;
+
+            let filtered = PAGE_BROWSER_ITEMS.filter(page => {
+                const title = String(page.title || '').toLowerCase();
+                const id = String(page.pageId || '').toLowerCase();
+                const matchesQuery = !combinedQuery || title.includes(combinedQuery) || id.includes(combinedQuery);
+
+                let matchesAuthor = true;
+                if (advanced.author) {
+                    const createdBy = String(page.createdBy || '').toLowerCase();
+                    matchesAuthor = createdBy.includes(advanced.author);
+                }
+
+                let matchesUpdated = true;
+                if (advanced.updatedFrom || advanced.updatedTo) {
+                    const lastModified = page.lastModified ? new Date(page.lastModified) : null;
+                    if (!lastModified || Number.isNaN(lastModified.getTime())) {
+                        matchesUpdated = false;
+                    } else {
+                        if (advanced.updatedFrom) {
+                            matchesUpdated = matchesUpdated && lastModified >= new Date(advanced.updatedFrom);
+                        }
+                        if (advanced.updatedTo) {
+                            const endDate = new Date(advanced.updatedTo);
+                            endDate.setHours(23, 59, 59, 999);
+                            matchesUpdated = matchesUpdated && lastModified <= endDate;
+                        }
+                    }
+                }
+
+                return matchesQuery && matchesAuthor && matchesUpdated;
+            });
+
+            const needsContent = !!advanced.status || advanced.includeContent || options.forceContent;
+            if (!needsContent) {
+                renderPageBrowserList(filtered.slice(0, resultLimit));
                 return;
             }
 
-            const filtered = PAGE_BROWSER_ITEMS.filter(page => {
-                const title = String(page.title || '').toLowerCase();
-                const id = String(page.pageId || '').toLowerCase();
-                return title.includes(query) || id.includes(query);
-            });
-            renderPageBrowserList(filtered);
+            showStatus('page-browser-status', 'Searching content...', 'info');
+            const results = [];
+            for (const page of filtered) {
+                if (results.length >= resultLimit) break;
+                const contentPack = await fetchPageContentForSearch(page.pageId);
+                if (!contentPack) continue;
+
+                const { content, text } = contentPack;
+                let matchesStatus = true;
+                if (advanced.status) {
+                    const status = String(content?._meta?.workflowStatus || content?._meta?.status || '').toLowerCase();
+                    matchesStatus = status === advanced.status;
+                }
+
+                let matchesAuthor = true;
+                if (advanced.author) {
+                    const createdBy = String(page.createdBy || '').toLowerCase();
+                    const modifiedBy = String(content?._meta?.modifiedBy || '').toLowerCase();
+                    matchesAuthor = createdBy.includes(advanced.author) || modifiedBy.includes(advanced.author);
+                }
+
+                let matchesContent = true;
+                if (advanced.includeContent && combinedQuery) {
+                    matchesContent = text.includes(combinedQuery);
+                }
+
+                if (matchesStatus && matchesAuthor && matchesContent) {
+                    results.push(page);
+                }
+            }
+
+            renderPageBrowserList(results);
+            showStatus('page-browser-status', `Advanced search returned ${results.length} page(s).`, 'info');
+        }
+
+        async function fetchPageContentForSearch(pageId) {
+            if (PAGE_CONTENT_CACHE.has(pageId)) {
+                return PAGE_CONTENT_CACHE.get(pageId);
+            }
+
+            try {
+                const res = await fetch(`/data/${pageId}/content.json`);
+                if (!res.ok) return null;
+                const content = await res.json();
+                const text = collectSearchText(content);
+                const pack = { content, text };
+                PAGE_CONTENT_CACHE.set(pageId, pack);
+                return pack;
+            } catch {
+                return null;
+            }
+        }
+
+        function collectSearchText(content) {
+            const parts = [];
+            const visit = value => {
+                if (typeof value === 'string') {
+                    parts.push(value);
+                } else if (Array.isArray(value)) {
+                    value.forEach(visit);
+                } else if (value && typeof value === 'object') {
+                    Object.keys(value).forEach(key => {
+                        if (key === '_meta') return;
+                        visit(value[key]);
+                    });
+                }
+            };
+
+            visit(content);
+            return parts.join(' ').toLowerCase();
         }
         
         function selectPage(pageId) {
@@ -3538,18 +5032,243 @@ PREREQUISITES:
             document.getElementById('page-browser').classList.add('hidden');
             loadEditor();
         }
+
+        /**
+         * Bulk Actions: Toggle page selection
+         */
+        function togglePageSelection(pageId) {
+            if (BULK_SELECTED_PAGES.has(pageId)) {
+                BULK_SELECTED_PAGES.delete(pageId);
+            } else {
+                BULK_SELECTED_PAGES.add(pageId);
+            }
+            renderPageBrowserList(PAGE_BROWSER_ITEMS);
+        }
+
+        /**
+         * Update bulk actions panel visibility and count
+         */
+        function updateBulkActionsPanel() {
+            const panel = document.getElementById('bulk-actions-panel');
+            const count = document.getElementById('bulk-selected-count');
+            if (!panel || !count) return;
+
+            const selected = BULK_SELECTED_PAGES.size;
+            count.textContent = selected;
+            panel.style.display = selected > 0 ? 'block' : 'none';
+        }
+
+        /**
+         * Bulk select all visible pages
+         */
+        function bulkSelectAll() {
+            PAGE_BROWSER_ITEMS.forEach(page => BULK_SELECTED_PAGES.add(page.pageId));
+            renderPageBrowserList(PAGE_BROWSER_ITEMS);
+        }
+
+        /**
+         * Clear bulk selection
+         */
+        function bulkClearSelection() {
+            BULK_SELECTED_PAGES.clear();
+            renderPageBrowserList(PAGE_BROWSER_ITEMS);
+        }
+
+        /**
+         * Bulk publish selected pages
+         */
+        async function bulkPublishPages() {
+            return runBulkPublish('publish');
+        }
+
+        /**
+         * Bulk unpublish selected pages
+         */
+        async function bulkUnpublishPages() {
+            return runBulkPublish('unpublish');
+        }
+
+        async function runBulkPublish(action) {
+            if (BULK_SELECTED_PAGES.size === 0) {
+                showStatus('page-browser-status', 'Select pages first', 'error');
+                return;
+            }
+
+            const count = BULK_SELECTED_PAGES.size;
+            const verb = action === 'unpublish' ? 'Unpublish' : 'Publish';
+            const dryRun = LOCAL_MODE && document.getElementById('bulk-dry-run')?.checked;
+            if (!dryRun && !confirm(`${verb} ${count} page(s)?`)) return;
+
+            showStatus('page-browser-status', `${verb}ing ${count} page(s)...`, 'info');
+
+            if (LOCAL_MODE) {
+                try {
+                    const res = await fetch('/api/bulk-publish', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SESSION.token}`
+                        },
+                        body: JSON.stringify({
+                            pageIds: Array.from(BULK_SELECTED_PAGES),
+                            action,
+                            dryRun
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Bulk publish failed');
+
+                    const results = Array.isArray(data.results) ? data.results : [];
+                    const failed = results.filter(item => !item.ok).length;
+                    const success = results.filter(item => item.ok).length;
+
+                    if (!dryRun) {
+                        BULK_SELECTED_PAGES.clear();
+                        renderPageBrowserList(PAGE_BROWSER_ITEMS);
+                    }
+
+                    const suffix = failed > 0 ? `. ${failed} failed.` : '';
+                    const prefix = dryRun ? 'Dry run complete.' : `${verb}ed ${success} page(s)`;
+                    showStatus('page-browser-status', `${prefix}${suffix}`, success > 0 ? 'success' : 'error');
+                    return;
+                } catch (e) {
+                    showStatus('page-browser-status', e.message, 'error');
+                    return;
+                }
+            }
+
+            let success = 0;
+            let failed = 0;
+            for (const pageId of BULK_SELECTED_PAGES) {
+                try {
+                    const res = await fetch('/api/publish', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SESSION.token}`
+                        },
+                        body: JSON.stringify({ pageId, action })
+                    });
+                    if (res.ok) {
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch {
+                    failed++;
+                }
+            }
+
+            BULK_SELECTED_PAGES.clear();
+            renderPageBrowserList(PAGE_BROWSER_ITEMS);
+            showStatus('page-browser-status', `${verb}ed ${success} page(s)${failed > 0 ? `. ${failed} failed.` : ''}`, success > 0 ? 'success' : 'error');
+        }
+
+        /**
+         * Bulk set workflow status
+         */
+        async function bulkSetWorkflowStatus() {
+            const status = document.getElementById('bulk-workflow-status')?.value;
+            if (!status || BULK_SELECTED_PAGES.size === 0) {
+                showStatus('page-browser-status', 'Select pages and status first', 'error');
+                return;
+            }
+
+            const count = BULK_SELECTED_PAGES.size;
+            if (!confirm(`Change ${count} page(s) to "${status}"?`)) return;
+
+            showStatus('page-browser-status', `Updating ${count} page(s)...`, 'info');
+            let success = 0;
+            let failed = 0;
+
+            for (const pageId of BULK_SELECTED_PAGES) {
+                try {
+                    const res = await fetch('/api/workflow', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SESSION.token}`
+                        },
+                        body: JSON.stringify({
+                            pageId,
+                            status,
+                            scheduledFor: null
+                        })
+                    });
+
+                    if (res.ok) {
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch (e) {
+                    failed++;
+                }
+            }
+
+            BULK_SELECTED_PAGES.clear();
+            document.getElementById('bulk-workflow-status').value = '';
+            renderPageBrowserList(PAGE_BROWSER_ITEMS);
+            showStatus('page-browser-status', `Updated ${success} page(s)${failed > 0 ? `. ${failed} failed.` : ''}`, success > 0 ? 'success' : 'error');
+        }
         
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
+        function escapeRegExp(value) {
+            return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function highlightMatch(text, query) {
+            const raw = String(text || '');
+            const safeQuery = escapeRegExp(query);
+            if (!safeQuery) return escapeHtml(raw);
+            const regex = new RegExp(safeQuery, 'ig');
+            return escapeHtml(raw).replace(regex, match => `<mark>${match}</mark>`);
+        }
+
         // =================================================================
         // NEW PAGE CREATION
         // =================================================================
+        const TEMPLATE_HELP = {
+            '': 'Start with a blank page and add fields as needed.',
+            'landing-page': 'Hero, intro, calls to action, and section blocks for a homepage or campaign.',
+            'announcement': 'Short notice with urgency, dates, and a call to action.',
+            'blog-post': 'Title, summary, body, tags, and publication status.',
+            'business-hours': 'Operating hours, status, and contact details.',
+            'class-workshop': 'Class details, schedule, pricing, and registration link.',
+            'contact-page': 'Organization contact info, address, and links.',
+            'directory-entry': 'Listing-style entry with summary and contact fields.',
+            'documentation-page': 'Doc title, summary, main body, and reference links.',
+            'event': 'Event details, timing, location, and registration.',
+            'faq': 'Question, answer, keywords, and order for a help entry.',
+            'food-truck': 'Location, hours, status, and menu link for a mobile vendor.',
+            'job-posting': 'Role details, requirements, and how to apply.',
+            'menu-page': 'Menu sections and items for an easy-to-scan list.',
+            'menu-pricing': 'Services or items with prices and specials.',
+            'portfolio': 'Project details, images, and links.',
+            'product-service': 'Offering description, pricing, and call to action.',
+            'property-listing': 'Listing details, features, and contact info.',
+            'service-status': 'Service status, incident details, and updates.',
+            'team-profile': 'Bio, role, and contact info for a person.',
+            'testimonial': 'Quote, author details, and rating.',
+            'todo-page': 'Task list with owners, dates, and status.'
+        };
+
+        function updateTemplateHelp() {
+            const select = document.getElementById('new-page-template');
+            const help = document.getElementById('new-page-template-help');
+            if (!select || !help) return;
+            const value = select.value || '';
+            help.textContent = TEMPLATE_HELP[value] || TEMPLATE_HELP[''];
+        }
+
         function showNewPageDialog() {
             document.getElementById('new-page-dialog').classList.remove('hidden');
             document.getElementById('page-browser').classList.add('hidden');
+            updateTemplateHelp();
             document.getElementById('new-page-id').focus();
         }
         
@@ -3558,6 +5277,7 @@ PREREQUISITES:
             document.getElementById('new-page-id').value = '';
             document.getElementById('new-page-title').value = '';
             document.getElementById('new-page-template').value = '';
+            updateTemplateHelp();
             document.getElementById('new-page-status').innerHTML = '';
         }
         
@@ -3573,8 +5293,8 @@ PREREQUISITES:
                 return;
             }
             
-            if (!/^[a-z0-9-]+$/.test(pageId)) {
-                statusDiv.innerHTML = '<p style="color: var(--error);">Page ID must contain only lowercase letters, numbers, and hyphens</p>';
+            if (!/^[a-z0-9_-]+$/.test(pageId)) {
+                statusDiv.innerHTML = '<p style="color: var(--error);">Page ID must contain only lowercase letters, numbers, hyphens, and underscores</p>';
                 return;
             }
             
@@ -3623,6 +5343,138 @@ PREREQUISITES:
                     } else {
                         loadEditor();
                     }
+                }, 1000);
+                
+            } catch (e) {
+                statusDiv.innerHTML = `<p style="color: var(--error);">Error: ${escapeHtml(e.message)}</p>`;
+            }
+        }
+
+        /**
+         * Show duplicate page dialog
+         */
+        function showDuplicatePageDialog() {
+            if (!CURRENT_PAGE_ID) {
+                showStatus('editor-status', 'Load a page first', 'error');
+                return;
+            }
+            document.getElementById('duplicate-page-dialog').classList.remove('hidden');
+            document.getElementById('dup-page-id').focus();
+            document.getElementById('dup-page-title').value = (CURRENT_SCHEMA?.title || CURRENT_PAGE_ID) + ' (Copy)';
+        }
+        
+        /**
+         * Cancel duplicate page dialog
+         */
+        function cancelDuplicatePage() {
+            document.getElementById('duplicate-page-dialog').classList.add('hidden');
+            document.getElementById('dup-page-id').value = '';
+            document.getElementById('dup-page-title').value = '';
+            document.getElementById('duplicate-page-status').innerHTML = '';
+        }
+        
+        /**
+         * Duplicate the current page
+         */
+        async function duplicatePage() {
+            const newPageId = document.getElementById('dup-page-id').value.trim().toLowerCase();
+            const newTitle = document.getElementById('dup-page-title').value.trim() || newPageId;
+            const statusDiv = document.getElementById('duplicate-page-status');
+            
+            // Validation
+            if (!newPageId) {
+                statusDiv.innerHTML = '<p style="color: var(--error);">New Page ID is required</p>';
+                return;
+            }
+            
+            if (!/^[a-z0-9_-]+$/.test(newPageId)) {
+                statusDiv.innerHTML = '<p style="color: var(--error);">Page ID must contain only lowercase letters, numbers, hyphens, and underscores</p>';
+                return;
+            }
+            
+            if (newPageId === CURRENT_PAGE_ID) {
+                statusDiv.innerHTML = '<p style="color: var(--error);">New Page ID must be different from the original</p>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<p>Duplicating page...</p>';
+            
+            try {
+                // Create the new page with same schema
+                const createRes = await fetch('/api/pages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        pageId: newPageId,
+                        title: newTitle,
+                        schema: CURRENT_SCHEMA
+                    })
+                });
+                
+                const createData = await createRes.json();
+                
+                if (!createRes.ok) {
+                    throw new Error(createData.error || 'Failed to create duplicate page');
+                }
+                
+                // Now save the content to the new page
+                const contentToSave = { ...CURRENT_CONTENT };
+                if (contentToSave._meta) {
+                    contentToSave._meta = {
+                        ...contentToSave._meta,
+                        createdBy: SESSION.username,
+                        created: new Date().toISOString(),
+                        modifiedBy: SESSION.username,
+                        lastModified: new Date().toISOString(),
+                        status: 'draft',
+                        workflowStatus: 'draft'
+                    };
+                } else {
+                    contentToSave._meta = {
+                        createdBy: SESSION.username,
+                        created: new Date().toISOString(),
+                        modifiedBy: SESSION.username,
+                        lastModified: new Date().toISOString(),
+                        status: 'draft',
+                        workflowStatus: 'draft'
+                    };
+                }
+                
+                const saveRes = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: JSON.stringify({
+                        pageId: newPageId,
+                        content: contentToSave
+                    })
+                });
+                
+                const saveData = await saveRes.json();
+                
+                if (!saveRes.ok) {
+                    throw new Error(saveData.error || 'Failed to save duplicated content');
+                }
+                
+                // Success! Load the new page
+                statusDiv.innerHTML = '<p style="color: var(--success);">Page duplicated! Loading new page...</p>';
+                
+                setTimeout(() => {
+                    cancelDuplicatePage();
+                    document.getElementById('pageId').value = newPageId;
+                    
+                    // Load the newly created page
+                    CURRENT_PAGE_ID = newPageId;
+                    CURRENT_SCHEMA = createData.schema || CURRENT_SCHEMA;
+                    CURRENT_CONTENT = contentToSave;
+                    localStorage.setItem(STORAGE_KEYS.LAST_PAGE, newPageId);
+                    renderLoadedPage(newPageId, null);
+                    showStatus('editor-status', `Page "${newPageId}" created as a duplicate. It's in draft status.`, 'success');
                 }, 1000);
                 
             } catch (e) {
@@ -3760,7 +5612,8 @@ PREREQUISITES:
                 clearAutosaveForPage(CURRENT_PAGE_ID);
                 markEditorDirty(false);
                 
-                showStatus('editor-status', `Content deleted. Commit: ${data.commit.substring(0, 7)}`, 'success');
+                const commitLabel = data.commit ? data.commit.substring(0, 7) : 'local';
+                showStatus('editor-status', `Content deleted. Commit: ${commitLabel}`, 'success');
                 
                 // Refresh page list if visible
                 const browser = document.getElementById('page-browser');
@@ -3775,16 +5628,31 @@ PREREQUISITES:
 
         function buildForm() {
             const container = document.getElementById('editor-form');
+            const topContainer = document.getElementById('editor-top-fields');
+            const primarySlot = document.getElementById('primary-editor-slot');
+            const bodyShell = document.getElementById('editor-body-shell');
+            const previewEl = document.getElementById('primary-preview');
+            const primaryLabel = document.getElementById('primary-field-label');
+            const primaryHint = document.getElementById('primary-field-hint');
+
             container.innerHTML = '';
+            if (topContainer) topContainer.innerHTML = '';
+            if (primarySlot) primarySlot.innerHTML = '';
+            if (previewEl) previewEl.innerHTML = '';
 
             if (!CURRENT_SCHEMA || !CURRENT_SCHEMA.fields) {
                 container.innerHTML = '<p>Invalid schema: no fields defined</p>';
                 return;
             }
 
+            PRIMARY_FIELD_KEY = determinePrimaryFieldKey(CURRENT_SCHEMA);
+
+            let hasPrimaryField = false;
+            let hasTopFields = false;
+
             CURRENT_SCHEMA.fields.forEach(field => {
                 const wrapper = document.createElement('div');
-                wrapper.className = 'form-field';
+                wrapper.className = 'form-field editor-field-card';
 
                 // Label
                 const label = document.createElement('label');
@@ -3870,10 +5738,27 @@ PREREQUISITES:
                         markEditorDirty(true);
                         scheduleAutoStage();
                         scheduleAutosave();
+                        scheduleUndoSnapshot();
+                        if (field.key === PRIMARY_FIELD_KEY) {
+                            updatePrimaryPreview();
+                            updateContentStats(input.value);
+                            scheduleOutlineUpdate();
+                        }
                     });
                     if (field.type === 'textarea' || field.type === 'text' || field.type === 'url') {
                         input.addEventListener('focus', () => {
                             LAST_FOCUSED_FIELD_ID = input.id;
+                        });
+                    }
+                    if (field.type === 'textarea') {
+                        input.addEventListener('paste', (event) => {
+                            handleImagePaste(event, input);
+                        });
+                        input.addEventListener('dragover', (event) => {
+                            handleImageDragOver(event);
+                        });
+                        input.addEventListener('drop', (event) => {
+                            handleImageDrop(event, input);
                         });
                     }
                 }
@@ -3882,7 +5767,7 @@ PREREQUISITES:
 
                 // Description
                 const autoHint = field.type === 'textarea'
-                    ? 'Supports markdown formatting. Use "Formatting + Media" tools below for quick insert.'
+                    ? 'Supports markdown formatting. Paste an image to upload automatically. Use "Formatting + Media" tools below for quick insert.'
                     : field.type === 'image'
                         ? 'Upload image here for this field. For inline body images, use "Formatting + Media > Upload + Insert Image".'
                         : '';
@@ -3895,8 +5780,33 @@ PREREQUISITES:
                     wrapper.appendChild(desc);
                 }
 
-                container.appendChild(wrapper);
+                const placement = getFieldPlacement(field);
+                if (placement === 'primary' && primarySlot) {
+                    hasPrimaryField = true;
+                    if (primaryLabel) primaryLabel.textContent = field.label || field.key || 'Main Content';
+                    if (primaryHint) {
+                        primaryHint.textContent = descriptionText || 'Supports markdown formatting.';
+                    }
+                    primarySlot.appendChild(wrapper);
+                } else if (placement === 'top' && topContainer) {
+                    hasTopFields = true;
+                    topContainer.appendChild(wrapper);
+                } else {
+                    container.appendChild(wrapper);
+                }
             });
+
+            if (bodyShell) {
+                bodyShell.classList.toggle('hidden', !hasPrimaryField);
+            }
+            if (topContainer) {
+                topContainer.classList.toggle('hidden', !hasTopFields);
+            }
+
+            if (!hasPrimaryField) {
+                PREVIEW_MODE = 'write';
+            }
+            setPreviewMode(PREVIEW_MODE);
         }
 
         function collectCurrentFormContent() {
@@ -3943,9 +5853,110 @@ PREREQUISITES:
             return data;
         }
 
+        /**
+         * Validate form fields and return any errors
+         */
+        function validateFormFields() {
+            const errors = [];
+            
+            if (!CURRENT_SCHEMA || !CURRENT_SCHEMA.fields) {
+                return errors;
+            }
+            
+            // Clear previous validation highlights
+            document.querySelectorAll('.editor-field-card.invalid').forEach(el => {
+                el.classList.remove('invalid');
+                const msg = el.querySelector('.field-error-message');
+                if (msg) msg.remove();
+            });
+            
+            // Check each field
+            CURRENT_SCHEMA.fields.forEach(field => {
+                const input = document.getElementById(`field_${field.key}`);
+                if (!input) return;
+                
+                const value = field.type === 'checkbox' ? input.checked : input.value;
+                const fieldLabel = field.label || field.key;
+                let fieldError = null;
+                
+                // Check required
+                if (field.required) {
+                    if (field.type === 'checkbox') {
+                        if (!value) {
+                            fieldError = `${fieldLabel} is required (must be checked)`;
+                        }
+                    } else {
+                        if (!value || String(value).trim() === '') {
+                            fieldError = `${fieldLabel} is required`;
+                        }
+                    }
+                }
+                
+                // Check pattern if present
+                if (!fieldError && field.pattern && value && field.type !== 'checkbox') {
+                    let pattern;
+                    try {
+                        pattern = new RegExp(`^${field.pattern}$`);
+                    } catch {
+                        fieldError = `${fieldLabel} has an invalid pattern.`;
+                        pattern = null;
+                    }
+                    if (pattern && !pattern.test(String(value))) {
+                        fieldError = `${fieldLabel} format is invalid (pattern: ${field.pattern})`;
+                    }
+                }
+                
+                // Add error message to field
+                if (fieldError) {
+                    errors.push(fieldError);
+                    let wrapper = input.parentElement;
+                    if (!wrapper.classList.contains('editor-field-card')) {
+                        wrapper = input.parentElement.parentElement;
+                    }
+                    wrapper.classList.add('invalid');
+                    const msg = document.createElement('span');
+                    msg.className = 'field-error-message';
+                    msg.textContent = fieldError;
+                    wrapper.appendChild(msg);
+                }
+            });
+            
+            return errors;
+        }
+
+        /**
+         * Show validation summary dialog
+         */
+        function showValidationErrors(errors) {
+            if (errors.length === 0) return false;
+            
+            const summary = document.createElement('div');
+            summary.className = 'validation-summary';
+            summary.innerHTML = `
+                <h4>Please fix these validation errors:</h4>
+                <ul>${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>
+            `;
+            
+            const editor = document.getElementById('editor-container');
+            if (editor) {
+                editor.insertBefore(summary, editor.firstChild);
+                setTimeout(() => summary.remove(), 8000);
+            }
+            
+            return true;
+        }
+
         async function saveContent() {
             if (!CURRENT_SCHEMA || !CURRENT_PAGE_ID) {
                 showStatus('editor-status', 'No page loaded', 'error');
+                return;
+            }
+
+            // Validate before saving
+            const validationErrors = validateFormFields();
+            if (validationErrors.length > 0) {
+                showValidationErrors(validationErrors);
+                showStatus('editor-status', `Validation failed: ${validationErrors.length} error(s)`, 'error');
                 return;
             }
 
@@ -4021,6 +6032,15 @@ PREREQUISITES:
                 return;
             }
 
+            // Check for validation errors - warn but allow override
+            const validationErrors = validateFormFields();
+            if (validationErrors.length > 0) {
+                showValidationErrors(validationErrors);
+                if (!confirm(`There are ${validationErrors.length} validation error(s). Publish anyway?`)) {
+                    return;
+                }
+            }
+
             if (hasQueuedChangeForCurrentPage()) {
                 showStatus('editor-status', 'Push staged changes for this page before publishing.', 'error');
                 return;
@@ -4093,13 +6113,85 @@ PREREQUISITES:
             input.click();
         }
 
+        function formatImportPreviewValue(value) {
+            if (value === null || value === undefined) return '';
+            let text = '';
+            if (typeof value === 'string') {
+                text = value;
+            } else {
+                try {
+                    text = JSON.stringify(value);
+                } catch {
+                    text = String(value);
+                }
+            }
+            if (text.length > 160) {
+                return `${text.slice(0, 160)}...`;
+            }
+            return text;
+        }
+
+        function renderImportPreview(preview) {
+            const panel = document.getElementById('import-preview-panel');
+            if (!panel) return;
+            const keys = preview?.keys || [];
+            const mapped = preview?.mapped || {};
+            const rows = keys.map(key => {
+                const value = formatImportPreviewValue(mapped[key]);
+                return `<li><strong>${escapeHtml(key)}</strong>: <code>${escapeHtml(value)}</code></li>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <h5>Import Preview</h5>
+                <small>File: ${escapeHtml(preview.fileName || 'unknown')}</small>
+                ${rows ? `<ul>${rows}</ul>` : '<small>No fields will be imported.</small>'}
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+                    <button type="button" class="secondary" onclick="applyImportPreview()">Apply Import</button>
+                    <button type="button" class="outline" onclick="clearImportPreview()">Cancel</button>
+                </div>
+            `;
+            panel.classList.remove('hidden');
+        }
+
+        function clearImportPreview() {
+            PENDING_IMPORT = null;
+            const panel = document.getElementById('import-preview-panel');
+            if (panel) {
+                panel.innerHTML = '';
+                panel.classList.add('hidden');
+            }
+        }
+
+        function applyImportPreview() {
+            if (!PENDING_IMPORT || !PENDING_IMPORT.mapped) return;
+            const keys = Object.keys(PENDING_IMPORT.mapped);
+            if (!keys.length) {
+                showStatus('editor-status', 'Import preview has no mapped fields.', 'info');
+                clearImportPreview();
+                return;
+            }
+
+            CURRENT_CONTENT = {
+                ...(CURRENT_CONTENT || {}),
+                ...PENDING_IMPORT.mapped
+            };
+            buildForm();
+            markEditorDirty(true);
+            showStatus('editor-status', `Imported ${keys.length} field(s). Review and save.`, 'success');
+            scheduleAutoStage();
+            clearImportPreview();
+        }
+
         async function handleImportFileChosen(event) {
             const file = event?.target?.files?.[0];
             if (!file) return;
 
             try {
-                const text = await file.text();
-                const imported = parseImportedFile(file.name, text);
+                const lowerName = String(file.name || '').toLowerCase();
+                const needsBinary = lowerName.endsWith('.docx') || lowerName.endsWith('.pdf') || lowerName.endsWith('.odt');
+                const text = needsBinary ? null : await file.text();
+                const buffer = needsBinary ? await file.arrayBuffer() : null;
+                const imported = await parseImportedFile(file.name, text, buffer);
                 const mapped = mapImportedDataToSchema(imported);
                 const keys = Object.keys(mapped);
 
@@ -4107,21 +6199,19 @@ PREREQUISITES:
                     showStatus('editor-status', 'Import succeeded, but no matching schema fields were found.', 'info');
                     return;
                 }
-
-                CURRENT_CONTENT = {
-                    ...(CURRENT_CONTENT || {}),
-                    ...mapped
+                PENDING_IMPORT = {
+                    fileName: file.name,
+                    mapped,
+                    keys
                 };
-                buildForm();
-                markEditorDirty(true);
-                showStatus('editor-status', `Imported ${keys.length} field(s) from ${file.name}. Review and save.`, 'success');
-                scheduleAutoStage();
+                renderImportPreview(PENDING_IMPORT);
+                showStatus('editor-status', `Import ready: ${keys.length} field(s) detected. Review the preview before applying.`, 'info');
             } catch (e) {
                 showStatus('editor-status', `Import failed: ${e.message}`, 'error');
             }
         }
 
-        function parseImportedFile(fileName, text) {
+        async function parseImportedFile(fileName, text, buffer) {
             const lower = String(fileName || '').toLowerCase();
             if (lower.endsWith('.json')) {
                 const parsed = JSON.parse(text);
@@ -4144,7 +6234,37 @@ PREREQUISITES:
                 return { content: text, body: text, html: text };
             }
 
+            if (lower.endsWith('.docx')) {
+                const extracted = await extractDocxText(buffer);
+                return { __importedText: extracted, title: getFileTitleHint(fileName) };
+            }
+
+            if (lower.endsWith('.pdf')) {
+                const extracted = await extractPdfText(buffer);
+                return { __importedText: extracted, title: getFileTitleHint(fileName) };
+            }
+
+            if (lower.endsWith('.rtf')) {
+                const extracted = extractRtfText(text);
+                return { __importedText: extracted, title: getFileTitleHint(fileName) };
+            }
+
+            if (lower.endsWith('.odt')) {
+                const extracted = await extractOdtText(buffer);
+                return { __importedText: extracted, title: getFileTitleHint(fileName) };
+            }
+
+            if (lower.endsWith('.csv')) {
+                const markdownTable = csvToMarkdown(text);
+                return { __importedText: markdownTable, title: getFileTitleHint(fileName) };
+            }
+
             return { content: text, body: text, text };
+        }
+
+        function getFileTitleHint(fileName) {
+            const raw = String(fileName || '').replace(/\.[^.]+$/, '');
+            return raw || 'Imported Document';
         }
 
         function parseTidFile(text) {
@@ -4182,12 +6302,141 @@ PREREQUISITES:
             return headers;
         }
 
+        async function extractDocxText(buffer) {
+            if (!buffer || !window.mammoth || typeof window.mammoth.extractRawText !== 'function') {
+                throw new Error('DOCX import requires mammoth.js (not available).');
+            }
+            const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+            return String(result?.value || '').trim();
+        }
+
+        async function extractPdfText(buffer) {
+            if (!buffer || !window.pdfjsLib) {
+                throw new Error('PDF import requires pdf.js (not available).');
+            }
+            const loadingTask = window.pdfjsLib.getDocument({ data: buffer });
+            const pdf = await loadingTask.promise;
+            const pages = [];
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+                const page = await pdf.getPage(pageNum);
+                const content = await page.getTextContent();
+                const text = content.items.map(item => item.str).join(' ');
+                pages.push(text.trim());
+            }
+
+            return pages.filter(Boolean).join('\n\n');
+        }
+
+        function extractRtfText(text) {
+            if (!text) return '';
+            let cleaned = text
+                .replace(/\\par[d]?/g, '\n')
+                .replace(/\\'[0-9a-fA-F]{2}/g, ' ')
+                .replace(/\\u-?\d+\??/g, ' ')
+                .replace(/\\[a-zA-Z]+-?\d* ?/g, '')
+                .replace(/[{}]/g, '');
+            cleaned = cleaned.replace(/\n\s+\n/g, '\n\n').trim();
+            return cleaned;
+        }
+
+        async function extractOdtText(buffer) {
+            if (!buffer || !window.zip) {
+                throw new Error('ODT import requires zip.js (not available).');
+            }
+
+            const reader = new window.zip.ZipReader(new window.zip.Uint8ArrayReader(new Uint8Array(buffer)));
+            const entries = await reader.getEntries();
+            const contentEntry = entries.find(entry => entry.filename === 'content.xml');
+            if (!contentEntry) {
+                await reader.close();
+                throw new Error('ODT import failed: content.xml not found.');
+            }
+
+            const xmlText = await contentEntry.getData(new window.zip.TextWriter());
+            await reader.close();
+
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            const nodes = Array.from(xmlDoc.querySelectorAll('text\\:p, text\\:h'));
+            const lines = nodes.map(node => node.textContent.trim()).filter(Boolean);
+            return lines.join('\n\n');
+        }
+
+        function csvToMarkdown(text) {
+            const rows = parseCsv(text || '');
+            if (!rows.length) return '';
+            const header = rows[0];
+            const body = rows.slice(1);
+            const headerLine = `| ${header.map(cell => String(cell || '').trim()).join(' | ')} |`;
+            const separatorLine = `| ${header.map(() => '---').join(' | ')} |`;
+            const bodyLines = body.map(row => `| ${row.map(cell => String(cell || '').trim()).join(' | ')} |`);
+            return [headerLine, separatorLine, ...bodyLines].join('\n');
+        }
+
+        function parseCsv(text) {
+            const rows = [];
+            let current = [];
+            let cell = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i += 1) {
+                const char = text[i];
+                const next = text[i + 1];
+
+                if (char === '"') {
+                    if (inQuotes && next === '"') {
+                        cell += '"';
+                        i += 1;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                    continue;
+                }
+
+                if (char === ',' && !inQuotes) {
+                    current.push(cell);
+                    cell = '';
+                    continue;
+                }
+
+                if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (char === '\r' && next === '\n') {
+                        i += 1;
+                    }
+                    current.push(cell);
+                    if (current.length > 1 || current[0] !== '') {
+                        rows.push(current);
+                    }
+                    current = [];
+                    cell = '';
+                    continue;
+                }
+
+                cell += char;
+            }
+
+            if (cell.length || current.length) {
+                current.push(cell);
+                rows.push(current);
+            }
+
+            return rows;
+        }
+
         function mapImportedDataToSchema(imported) {
             const source = imported && typeof imported === 'object' ? imported : {};
             const lowerMap = {};
             Object.entries(source).forEach(([key, value]) => {
                 lowerMap[key.toLowerCase()] = value;
             });
+
+            if (source.__importedText) {
+                const primaryKey = PRIMARY_FIELD_KEY || 'content';
+                if (!source[primaryKey]) {
+                    source[primaryKey] = source.__importedText;
+                }
+            }
 
             const aliases = {
                 title: ['title', 'name', 'headline'],
@@ -4286,6 +6535,96 @@ PREREQUISITES:
 
                 fileInput.click();
             });
+        }
+
+        async function uploadImageBlob(blob, fileName = 'pasted-image.png') {
+            if (!blob) return null;
+            if (blob.size > 10 * 1024 * 1024) {
+                showStatus('editor-status', 'Image too large. Maximum 10MB.', 'error');
+                return null;
+            }
+
+            showStatus('editor-status', `Uploading ${fileName}...`, 'info');
+
+            try {
+                const formData = new FormData();
+                const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+                formData.append('file', file);
+
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SESSION.token}`
+                    },
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (res.status === 401) {
+                    throw new Error(data.error || 'Session expired');
+                }
+                if (!res.ok) {
+                    throw new Error(data.error || 'Upload failed');
+                }
+
+                return {
+                    id: data.id,
+                    url: data.url,
+                    fileName: fileName
+                };
+            } catch (e) {
+                if (!handleSessionError(e)) {
+                    showStatus('editor-status', `Upload failed: ${e.message}`, 'error');
+                }
+                return null;
+            }
+        }
+
+        async function handleImagePaste(event, targetInput) {
+            const items = event?.clipboardData?.items;
+            if (!items || !items.length) return;
+
+            const imageItem = Array.from(items).find(item => item.type && item.type.startsWith('image/'));
+            if (!imageItem) return;
+
+            event.preventDefault();
+            const blob = imageItem.getAsFile();
+            if (!blob) return;
+
+            const upload = await uploadImageBlob(blob, `pasted-${Date.now()}.png`);
+            if (!upload) return;
+
+            const alt = 'Image';
+            const token = `![${alt}](${upload.url})`;
+            insertSnippetAtCursor(targetInput, token);
+            showStatus('editor-status', 'Pasted image uploaded and inserted.', 'success');
+        }
+
+        function handleImageDragOver(event) {
+            if (!event) return;
+            event.preventDefault();
+            if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'copy';
+            }
+        }
+
+        async function handleImageDrop(event, targetInput) {
+            if (!event) return;
+            const files = event.dataTransfer?.files;
+            if (!files || !files.length) return;
+
+            const imageFile = Array.from(files).find(file => file.type && file.type.startsWith('image/'));
+            if (!imageFile) return;
+
+            event.preventDefault();
+            const upload = await uploadImageBlob(imageFile, imageFile.name || `dropped-${Date.now()}.png`);
+            if (!upload) return;
+
+            const alt = imageFile.name ? imageFile.name.replace(/\.[^.]+$/, '') : 'Image';
+            const token = `![${alt}](${upload.url})`;
+            insertSnippetAtCursor(targetInput, token);
+            showStatus('editor-status', 'Dropped image uploaded and inserted.', 'success');
         }
 
         async function uploadImageForField(fieldId) {
@@ -4503,12 +6842,13 @@ PREREQUISITES:
         }
 
         async function loadAuditLog() {
-            const list = document.getElementById('audit-list');
             const loading = document.getElementById('audit-loading');
+            const tbody = document.getElementById('audit-table')?.querySelector('tbody');
             const limit = document.getElementById('audit-limit').value || 100;
             
+            if (!tbody) return;
             loading.classList.remove('hidden');
-            list.innerHTML = '';
+            tbody.innerHTML = '';
             
             try {
                 const res = await fetch(`/api/audit?limit=${limit}`, {
@@ -4521,66 +6861,378 @@ PREREQUISITES:
                     throw new Error(data.error || 'Failed to load audit log');
                 }
                 
-                if (data.logs.length === 0) {
-                    list.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--muted-color);">No audit records</td></tr>';
-                    loading.classList.add('hidden');
-                    return;
+                AUDIT_LOG_DATA = data.logs || [];
+                renderAuditLog(AUDIT_LOG_DATA);
+                
+                const status = document.getElementById('audit-filter-status');
+                if (status) {
+                    status.textContent = `Loaded ${AUDIT_LOG_DATA.length} record(s). ${AUDIT_LOG_DATA.length > 0 ? 'Use filters to narrow results.' : ''}`;
                 }
                 
-                list.innerHTML = data.logs.map(log => `
-                    <tr>
-                        <td><small>${new Date(log.timestamp).toLocaleString()}</small></td>
-                        <td><strong>${escapeHtml(log.username)}</strong></td>
-                        <td><code style="font-size: 0.8rem;">${escapeHtml(log.action)}</code></td>
-                        <td><small>${escapeHtml(JSON.stringify(log.details || {}))}</small></td>
-                    </tr>
-                `).join('');
-                
-                showStatus('audit-status', `${data.logs.length} records`, 'info');
-                
             } catch (e) {
-                list.innerHTML = `<tr><td colspan="4" style="color: var(--error);">Error: ${escapeHtml(e.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="color: var(--error);">Error: ${escapeHtml(e.message)}</td></tr>`;
             } finally {
                 loading.classList.add('hidden');
             }
         }
+
+        /**
+         * Render audit log with optional data override
+         */
+        function renderAuditLog(logs) {
+            const tbody = document.getElementById('audit-table')?.querySelector('tbody');
+            if (!tbody) return;
+            
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--muted-color);">No audit records</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = logs.map(log => `
+                <tr>
+                    <td><small>${new Date(log.timestamp).toLocaleString()}</small></td>
+                    <td><strong>${escapeHtml(log.username)}</strong></td>
+                    <td><code style="font-size: 0.8rem;">${escapeHtml(log.action)}</code></td>
+                    <td><small>${escapeHtml(JSON.stringify(log.details || {}))}</small></td>
+                </tr>
+            `).join('');
+        }
+
+        /**
+         * Apply filters to audit logs
+         */
+        function applyAuditFilters() {
+            if (AUDIT_LOG_DATA.length === 0) {
+                const status = document.getElementById('audit-filter-status');
+                if (status) status.textContent = 'No logs loaded. Click "Load Logs" first.';
+                return;
+            }
+
+            const userFilter = (document.getElementById('audit-filter-user')?.value || '').toLowerCase().trim();
+            const actionFilter = document.getElementById('audit-filter-action')?.value || '';
+            const dateFromStr = document.getElementById('audit-filter-date-from')?.value;
+            const dateToStr = document.getElementById('audit-filter-date-to')?.value;
+
+            const dateFrom = dateFromStr ? new Date(dateFromStr).getTime() : 0;
+            const dateTo = dateToStr ? new Date(dateToStr).getTime() + 86400000 : Infinity;
+
+            const filtered = AUDIT_LOG_DATA.filter(log => {
+                // Username filter
+                if (userFilter && !log.username.toLowerCase().includes(userFilter)) {
+                    return false;
+                }
+                // Action filter
+                if (actionFilter && log.action !== actionFilter) {
+                    return false;
+                }
+                // Date range filter
+                const logTime = new Date(log.timestamp).getTime();
+                if (logTime < dateFrom || logTime > dateTo) {
+                    return false;
+                }
+                return true;
+            });
+
+            renderAuditLog(filtered);
+            
+            const status = document.getElementById('audit-filter-status');
+            if (status) {
+                const appliedFilters = [];
+                if (userFilter) appliedFilters.push(`user: "${userFilter}"`);
+                if (actionFilter) appliedFilters.push(`action: "${actionFilter}"`);
+                if (dateFromStr) appliedFilters.push(`from: ${dateFromStr}`);
+                if (dateToStr) appliedFilters.push(`to: ${dateToStr}`);
+                
+                const filterText = appliedFilters.length > 0 ? ` (${appliedFilters.join(', ')})` : '';
+                status.textContent = `Showing ${filtered.length} of ${AUDIT_LOG_DATA.length} record(s)${filterText}`;
+            }
+        }
         
         async function downloadAuditLog() {
-            const limit = document.getElementById('audit-limit').value || 1000;
+            let logsToExport = AUDIT_LOG_DATA;
             
+            // If no logs loaded, fetch them first
+            if (logsToExport.length === 0) {
+                const limit = document.getElementById('audit-limit').value || 1000;
+                try {
+                    const res = await fetch(`/api/audit?limit=${limit}`, {
+                        headers: { 'Authorization': `Bearer ${SESSION.token}` }
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to download');
+                    logsToExport = data.logs || [];
+                } catch (e) {
+                    const status = document.getElementById('audit-filter-status');
+                    if (status) status.textContent = 'Error downloading: ' + e.message;
+                    return;
+                }
+            }
+
+            // Apply current filters to export
+            const userFilter = (document.getElementById('audit-filter-user')?.value || '').toLowerCase().trim();
+            const actionFilter = document.getElementById('audit-filter-action')?.value || '';
+            const dateFromStr = document.getElementById('audit-filter-date-from')?.value;
+            const dateToStr = document.getElementById('audit-filter-date-to')?.value;
+
+            let logsToDownload = logsToExport;
+            if (userFilter || actionFilter || dateFromStr || dateToStr) {
+                const dateFrom = dateFromStr ? new Date(dateFromStr).getTime() : 0;
+                const dateTo = dateToStr ? new Date(dateToStr).getTime() + 86400000 : Infinity;
+
+                logsToDownload = logsToExport.filter(log => {
+                    if (userFilter && !log.username.toLowerCase().includes(userFilter)) return false;
+                    if (actionFilter && log.action !== actionFilter) return false;
+                    const logTime = new Date(log.timestamp).getTime();
+                    if (logTime < dateFrom || logTime > dateTo) return false;
+                    return true;
+                });
+            }
+
+            // Convert to CSV with headers
+            const csv = [
+                ['Timestamp', 'User', 'Action', 'Details'],
+                ...logsToDownload.map(log => [
+                    new Date(log.timestamp).toISOString(),
+                    log.username,
+                    log.action,
+                    JSON.stringify(log.details || {})
+                ])
+            ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+            
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `audit-log-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            const status = document.getElementById('audit-filter-status');
+            if (status) status.textContent = `Downloaded ${logsToDownload.length} record(s) as CSV`;
+        }
+
+        // =================================================================
+        // CONTENT HEALTH DASHBOARD
+        // =================================================================
+        async function scanContentHealth() {
+            const loading = document.getElementById('health-loading');
+            const summary = document.getElementById('health-summary');
+            const issues = document.getElementById('health-issues');
+            const noIssues = document.getElementById('health-no-issues');
+            const statusEl = document.getElementById('health-scan-status');
+
+            loading.classList.remove('hidden');
+            summary.style.display = 'none';
+            issues.style.display = 'none';
+            noIssues.style.display = 'none';
+            statusEl.textContent = 'Scanning...';
+
             try {
-                const res = await fetch(`/api/audit?limit=${limit}`, {
+                // Get all pages
+                const res = await fetch('/api/pages?minimal=true', {
                     headers: { 'Authorization': `Bearer ${SESSION.token}` }
                 });
+                const pagesData = await res.json();
+                if (!res.ok) {
+                    throw new Error(pagesData.error || 'Failed to load pages');
+                }
+                const allPages = (pagesData.pages || []).map(page => page.pageId || page);
+
+                const issues_found = [];
+                let criticalCount = 0;
+                let warningCount = 0;
+
+                // Scan each page
+                for (const page of allPages) {
+                    try {
+                        // Load page content
+                        const schemaRes = await fetch(`/data/${page}/schema.json`);
+                        const schema = await schemaRes.json();
+
+                        const contentRes = await fetch(`/data/${page}/content.json`);
+                        const content = await contentRes.json();
+                        const meta = content._meta || {};
+
+                        // Check draft age
+                        if (meta.status === 'draft') {
+                            const created = new Date(meta.created).getTime();
+                            const now = Date.now();
+                            const daysOld = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+                            if (daysOld > 60) {
+                                criticalCount++;
+                                issues_found.push({
+                                    page,
+                                    severity: 'critical',
+                                    type: 'old_draft',
+                                    message: `Draft page older than 60 days (${daysOld} days old)`,
+                                    meta
+                                });
+                            } else if (daysOld > 30) {
+                                warningCount++;
+                                issues_found.push({
+                                    page,
+                                    severity: 'warning',
+                                    type: 'old_draft',
+                                    message: `Draft page older than 30 days (${daysOld} days old)`,
+                                    meta
+                                });
+                            }
+                        }
+
+                        // Check required fields
+                        if (schema.fields && Array.isArray(schema.fields)) {
+                            const requiredFields = schema.fields
+                                .filter(field => field.required)
+                                .map(field => field.key);
+
+                            for (const field of requiredFields) {
+                                if (!content[field] || content[field] === '') {
+                                    criticalCount++;
+                                    issues_found.push({
+                                        page,
+                                        severity: 'critical',
+                                        type: 'missing_required_field',
+                                        message: `Missing required field: "${field}"`,
+                                        field
+                                    });
+                                }
+                            }
+                        }
+
+                        // Check for broken images
+                        const contentStr = JSON.stringify(content);
+                        const imageMatches = contentStr.match(/https?:\/\/[^\s"']+\.(jpg|jpeg|png|gif|webp|svg)/gi) || [];
+                        const brokenImages = [];
+
+                        for (const url of imageMatches) {
+                            // Basic validation: check if URL looks malformed
+                            try {
+                                new URL(url);
+                            } catch (e) {
+                                brokenImages.push(url);
+                            }
+                        }
+
+                        if (brokenImages.length > 0) {
+                            warningCount++;
+                            issues_found.push({
+                                page,
+                                severity: 'warning',
+                                type: 'image_issues',
+                                message: `${brokenImages.length} image URL(s) may be broken`,
+                                images: brokenImages
+                            });
+                        }
+
+                    } catch (e) {
+                        // Silently skip pages with errors
+                        console.error(`Error scanning page ${page}:`, e);
+                    }
+                }
+
+                // Display results
+                const healthScore = Math.max(0, Math.round(100 - (issues_found.length / allPages.length) * 100));
                 
-                const data = await res.json();
-                
-                if (!res.ok) throw new Error(data.error || 'Failed to download');
-                
-                // Convert to CSV
-                const csv = [
-                    ['Timestamp', 'User', 'Action', 'Details'],
-                    ...data.logs.map(log => [
-                        new Date(log.timestamp).toISOString(),
-                        log.username,
-                        log.action,
-                        JSON.stringify(log.details || {})
-                    ])
-                ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-                
-                // Download
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `audit-log-${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
+                document.getElementById('health-total').textContent = allPages.length;
+                document.getElementById('health-critical').textContent = criticalCount;
+                document.getElementById('health-warnings').textContent = warningCount;
+                document.getElementById('health-score').textContent = healthScore + '%';
+
+                loading.classList.add('hidden');
+                summary.style.display = 'grid';
+
+                if (issues_found.length === 0) {
+                    noIssues.style.display = 'block';
+                    statusEl.textContent = 'No issues found';
+                } else {
+                    issues.style.display = 'block';
+                    renderHealthIssues(issues_found);
+                    statusEl.textContent = `Found ${issues_found.length} issue(s)`;
+                }
+
             } catch (e) {
-                showStatus('audit-status', e.message, 'error');
+                loading.classList.add('hidden');
+                statusEl.textContent = 'Error: ' + e.message;
+                console.error('Health scan error:', e);
+            }
+        }
+
+        function renderHealthIssues(issues) {
+            const list = document.getElementById('health-issues-list');
+            list.innerHTML = '';
+
+            // Group by severity
+            const critical = issues.filter(i => i.severity === 'critical');
+            const warnings = issues.filter(i => i.severity === 'warning');
+
+            // Render critical issues
+            if (critical.length > 0) {
+                const criticalSection = document.createElement('div');
+                criticalSection.innerHTML = '<h5 style="color: #d32f2f; margin-bottom: 0.75rem;">Critical Issues</h5>';
+                
+                for (const issue of critical) {
+                    const issueEl = document.createElement('div');
+                    issueEl.style.cssText = 'padding: 0.75rem; background: #ffebee; border-left: 4px solid #d32f2f; border-radius: 4px;';
+                    
+                    let content = `<strong>${escapeHtml(issue.page)}</strong> - ${escapeHtml(issue.message)}`;
+                    
+                    if (issue.type === 'old_draft' && issue.meta.status === 'draft') {
+                        content += `<br/><button onclick="publishPageById('${escapeHtml(issue.page)}')" class="secondary" style="margin-top: 0.5rem; font-size: 0.85rem;">Publish</button>`;
+                    }
+                    
+                    issueEl.innerHTML = content;
+                    criticalSection.appendChild(issueEl);
+                }
+                
+                list.appendChild(criticalSection);
+            }
+
+            // Render warnings
+            if (warnings.length > 0) {
+                const warningSection = document.createElement('div');
+                warningSection.innerHTML = '<h5 style="color: #f57c00; margin-bottom: 0.75rem; margin-top: 1rem;">Warnings</h5>';
+                
+                for (const issue of warnings) {
+                    const issueEl = document.createElement('div');
+                    issueEl.style.cssText = 'padding: 0.75rem; background: #fff3e0; border-left: 4px solid #f57c00; border-radius: 4px;';
+                    
+                    let content = `<strong>${escapeHtml(issue.page)}</strong> - ${escapeHtml(issue.message)}`;
+                    
+                    if (issue.images && issue.images.length > 0) {
+                        content += '<details style="margin-top: 0.5rem;"><summary style="cursor: pointer;">View URLs</summary><div style="margin-top: 0.5rem; font-size: 0.85rem; font-family: monospace;">' +
+                            issue.images.map(img => `<div>${escapeHtml(img)}</div>`).join('') +
+                            '</div></details>';
+                    }
+                    
+                    issueEl.innerHTML = content;
+                    warningSection.appendChild(issueEl);
+                }
+                
+                list.appendChild(warningSection);
+            }
+        }
+
+        async function publishPageById(pageId) {
+            try {
+                const res = await fetch('/api/publish', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SESSION.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pageId, action: 'publish' })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to publish');
+
+                // Re-scan to update health
+                setTimeout(() => scanContentHealth(), 1000);
+            } catch (e) {
+                alert('Error publishing: ' + e.message);
             }
         }
 

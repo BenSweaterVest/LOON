@@ -65,6 +65,7 @@
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 /**
  * CORS options for this endpoint.
@@ -267,7 +268,7 @@ function canUserEdit(session, existingContent) {
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     // Check bindings
     if (!db) {

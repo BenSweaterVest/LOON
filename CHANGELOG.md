@@ -8,30 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- WebAuthn/FIDO2 passkey authentication (passwordless login)
-- Multi-passkey support per user with device management
-- Recovery codes for account recovery (12 codes, one-time use)
-- Draft/publish workflow for staged content
-- Image uploads via Cloudflare Images
-- In-app page creation with template selection
-- Audit logging for all administrative actions
-- JSON Schema conversion and validation utilities
+- Public feedback API documentation in `docs/API.md` (`POST /api/feedback`).
+- Automated test coverage for feedback endpoint behavior in `tests/feedback.test.js`.
 
 ### Changed
-- Consolidated documentation for clarity and maintainability
-- Enhanced inline code documentation throughout codebase
-- Professional presentation of all public-facing materials
-- Refined error messages and user guidance
+- Hardened `functions/api/feedback.js` input validation:
+  - Enforces sanitized `pageId` format.
+  - Rejects empty/whitespace-only feedback messages.
+  - Normalizes invalid timestamps to server time.
+  - Adds per-IP rate limiting (10 submissions per minute when KV is configured).
+- Updated package metadata links in `package.json` to the canonical `BenSweaterVest/LOON` repository.
 
-### Fixed
-- Comprehensive code review and quality improvements
-- Corrected configuration references
-- Updated all internal documentation links
-
-### Removed
-- Obsolete version-specific documentation files
-- Internal development artifacts
-- Deprecated Phase 1/Phase 2 terminology
-- Non-essential metadata files
-
+### TODO
+- Consolidate duplicate page ID sanitization/validation logic across API endpoints into one shared helper.
+- Standardize endpoint-level JSDoc style and trim overlong in-file commentary where it does not add operational value.
 

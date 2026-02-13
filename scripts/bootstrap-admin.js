@@ -14,7 +14,7 @@
  *
  * Or use this helper:
  *   node scripts/bootstrap-admin.js --username admin --password mypassword \
- *     --namespace-id abc123 --account-id def456
+ *     --namespace-id abc123
  *
  * This script:
  *   1. Creates an initial admin user in KV (bootstrap mode)
@@ -23,10 +23,6 @@
  *   4. Outputs next steps for production deployment
  */
 
-import crypto from 'crypto';
-import { promisify } from 'util';
-
-const pbkdf2 = promisify(crypto.pbkdf2);
 
 /**
  * Create admin user entry for KV storage
@@ -52,23 +48,6 @@ async function createAdminUser(username, password) {
 }
 
 /**
- * Generate wrangler KV command for creating user
- *
- * @param {string} username - Username
- * @param {Object} userObj - User object
- * @param {string} namespaceId - KV namespace ID
- * @returns {string} - Shell command to run
- */
-function generateCommand(username, userObj, namespaceId) {
-    const key = `user:${username}`;
-    const value = JSON.stringify(userObj);
-    
-    // Note: Command-line escaping varies by shell
-    // Users should review and copy-paste carefully
-    return `wrangler kv:key put --namespace-id ${namespaceId} '${key}' '${JSON.stringify(userObj, null, 2)}'`;
-}
-
-/**
  * Main bootstrap function
  */
 async function bootstrap() {
@@ -78,9 +57,7 @@ async function bootstrap() {
     const options = {
         username: 'admin',
         password: null,
-        namespaceId: null,
-        accountId: null,
-        interactive: true
+        namespaceId: null
     };
     
     for (let i = 0; i < args.length; i++) {
@@ -90,13 +67,9 @@ async function bootstrap() {
                 break;
             case '--password':
                 options.password = args[++i];
-                options.interactive = false;
                 break;
             case '--namespace-id':
                 options.namespaceId = args[++i];
-                break;
-            case '--account-id':
-                options.accountId = args[++i];
                 break;
         }
     }

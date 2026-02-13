@@ -26,6 +26,7 @@
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError } from './_response.js';
+import { getKVBinding } from './_kv.js';
 import { decode } from 'cbor-x';
 import {
     arrayBufferToBase64Url,
@@ -154,11 +155,11 @@ function getRPConfig(env) {
  * Checks session token against KV store and returns user data if valid.
  * 
  * @param {Request} request - The incoming request
- * @param {Object} env - Environment with LOON_DB binding
+ * @param {Object} db - KV binding
  * @returns {Promise<Object|null>} User session data or null if invalid
  */
-async function validateSession(request, env) {
-    if (!env.LOON_DB) {
+async function validateSession(request, db) {
+    if (!db) {
         return null;
     }
     
@@ -168,7 +169,7 @@ async function validateSession(request, env) {
     }
     
     const token = auth.slice(7);
-    const sessionRaw = await env.LOON_DB.get(`session:${token}`);
+    const sessionRaw = await db.get(`session:${token}`);
     
     if (!sessionRaw) {
         return null;
@@ -191,13 +192,14 @@ async function validateSession(request, env) {
  * Generate registration challenge
  */
 async function handleRegistrationChallenge(request, env) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
-    const user = await validateSession(request, env);
+    const user = await validateSession(request, db);
     if (!user) {
         return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
@@ -226,7 +228,7 @@ async function handleRegistrationChallenge(request, env) {
         
         // Store challenge with TTL (10 minutes)
         const challengeKey = getRegistrationChallengeKey(tokenB64);
-        await env.LOON_DB.put(
+        await db.put(
             challengeKey,
             JSON.stringify({
                 challenge: challengeB64,
@@ -277,13 +279,14 @@ async function handleRegistrationChallenge(request, env) {
  * Verify registration attestation
  */
 async function handleRegistrationVerify(request, env) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
-    const user = await validateSession(request, env);
+    const user = await validateSession(request, db);
     if (!user) {
         return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
@@ -320,7 +323,7 @@ async function handleRegistrationVerify(request, env) {
         
         // Retrieve stored challenge from KV
         const challengeKey = getRegistrationChallengeKey(challengeToken);
-        const storedChallengeStr = await env.LOON_DB.get(challengeKey);
+        const storedChallengeStr = await db.get(challengeKey);
         
         if (!storedChallengeStr) {
             return new Response(
@@ -471,23 +474,23 @@ async function handleRegistrationVerify(request, env) {
         
         // Store credential
         const credentialKey = getPasskeyKey(user.username, attestationResponse.id);
-        await env.LOON_DB.put(credentialKey, JSON.stringify(credential));
+        await db.put(credentialKey, JSON.stringify(credential));
         
         // Add to user's passkey index
-        await addPasskeyToIndex(env.LOON_DB, user.username, attestationResponse.id, credential.name);
+        await addPasskeyToIndex(db, user.username, attestationResponse.id, credential.name);
         
         // Add to global credential ID reverse index (for usernamehint-free lookups if needed)
-        await addCredentialIdToIndex(env.LOON_DB, attestationResponse.id, user.username);
+        await addCredentialIdToIndex(db, attestationResponse.id, user.username);
         
         // Delete the used challenge token from KV
-        await env.LOON_DB.delete(challengeKey);
+        await db.delete(challengeKey);
         
         // Generate recovery codes
         const recoveryEntry = await createRecoveryCodesEntry();
         const recoveryKey = getRecoveryCodesKey(user.username);
         
         // Store recovery codes (without plain codes)
-        await env.LOON_DB.put(
+        await db.put(
             recoveryKey,
             JSON.stringify({
                 codes: recoveryEntry.codes,
@@ -499,7 +502,7 @@ async function handleRegistrationVerify(request, env) {
         
         // Log audit event
         await logAudit(
-            env.LOON_DB,
+            db,
             'passkey_registered',
             user.username,
             { deviceName: credential.name, credentialId: attestationResponse.id }
@@ -526,7 +529,8 @@ async function handleRegistrationVerify(request, env) {
  * Generate authentication challenge
  */
 async function handleAuthChallenge(request, env) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -557,7 +561,7 @@ async function handleAuthChallenge(request, env) {
         
         // Store challenge
         const challengeKey = getAuthChallengeKey(tokenB64);
-        await env.LOON_DB.put(
+        await db.put(
             challengeKey,
             JSON.stringify({
                 challenge: challengeB64,
@@ -570,7 +574,7 @@ async function handleAuthChallenge(request, env) {
         // Get allowed credentials (all passkeys for hint, or empty for all)
         let allowCredentials = [];
         if (usernameHint) {
-            const keys = await listUserPasskeys(env.LOON_DB, usernameHint);
+            const keys = await listUserPasskeys(db, usernameHint);
             allowCredentials = keys.map(k => ({
                 id: k.id,
                 type: 'public-key',
@@ -612,7 +616,8 @@ async function handleAuthChallenge(request, env) {
  * 6. Generate real session token
  */
 async function handleAuthVerify(request, env) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -653,7 +658,7 @@ async function handleAuthVerify(request, env) {
         
         // Step 1: Retrieve stored challenge
         const challengeKey = getAuthChallengeKey(challengeToken);
-        const storedChallenge = await env.LOON_DB.get(challengeKey, { type: 'json' });
+        const storedChallenge = await db.get(challengeKey, { type: 'json' });
         
         if (!storedChallenge) {
             return new Response(
@@ -738,7 +743,7 @@ async function handleAuthVerify(request, env) {
         if (!username) {
             // Optional: use reverse index to look up username from credential ID
             // Requires extra KV lookup but allows passkey auth without usernamehint
-            username = await getUsernameFromCredentialId(env.LOON_DB, assertionResponse.id);
+            username = await getUsernameFromCredentialId(db, assertionResponse.id);
             
             if (!username) {
                 return new Response(
@@ -749,7 +754,7 @@ async function handleAuthVerify(request, env) {
         }
         
         const credentialKey = getPasskeyKey(username, assertionResponse.id);
-        const storedCredentialStr = await env.LOON_DB.get(credentialKey);
+        const storedCredentialStr = await db.get(credentialKey);
         
         if (!storedCredentialStr) {
             return new Response(
@@ -762,8 +767,8 @@ async function handleAuthVerify(request, env) {
         
         // Verify counter (anti-cloning)
         if (signCount !== 0 && signCount <= storedCredential.counter) {
-            await logAudit(
-                env.LOON_DB,
+                await logAudit(
+                    db,
                 'passkey_counter_warning',
                 username,
                 { credentialId: assertionResponse.id, storedCounter: storedCredential.counter, receivedCounter: signCount }
@@ -805,7 +810,7 @@ async function handleAuthVerify(request, env) {
             
             if (!verified) {
                 await logAudit(
-                    env.LOON_DB,
+                    db,
                     'passkey_signature_invalid',
                     username,
                     { credentialId: assertionResponse.id, reason: 'Signature verification failed' }
@@ -828,7 +833,7 @@ async function handleAuthVerify(request, env) {
         const sessionToken = crypto.randomUUID();
         
         // Fetch user record for role
-        const userRecord = await env.LOON_DB.get(`user:${username}`, { type: 'json' });
+        const userRecord = await db.get(`user:${username}`, { type: 'json' });
         
         if (!userRecord) {
             return new Response(
@@ -847,21 +852,21 @@ async function handleAuthVerify(request, env) {
             method: 'passkey'
         };
         
-        await env.LOON_DB.put(sessionKey, JSON.stringify(sessionData), {
+        await db.put(sessionKey, JSON.stringify(sessionData), {
             expirationTtl: 86400 // 24 hours
         });
         
         // Update credential usage
         storedCredential.lastUsed = Date.now();
         storedCredential.counter = Math.max(storedCredential.counter, signCount);
-        await env.LOON_DB.put(credentialKey, JSON.stringify(storedCredential));
+        await db.put(credentialKey, JSON.stringify(storedCredential));
         
         // Delete challenge
-        await env.LOON_DB.delete(challengeKey);
+        await db.delete(challengeKey);
         
         // Log successful auth
         await logAudit(
-            env.LOON_DB,
+            db,
             'passkey_login',
             username,
             { credentialId: assertionResponse.id, userVerified }
@@ -890,13 +895,14 @@ async function handleAuthVerify(request, env) {
  * List user's passkeys
  */
 async function handleListPasskeys(request, env) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
-    const user = await validateSession(request, env);
+    const user = await validateSession(request, db);
     if (!user) {
         return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
@@ -905,12 +911,12 @@ async function handleListPasskeys(request, env) {
     }
 
     try {
-        const keys = await listUserPasskeys(env.LOON_DB, user.username);
+        const keys = await listUserPasskeys(db, user.username);
         const passkeys = [];
         
         for (const key of keys) {
             const credentialKey = getPasskeyKey(user.username, key.id);
-            const stored = await env.LOON_DB.get(credentialKey);
+            const stored = await db.get(credentialKey);
             
             if (stored) {
                 const credential = JSON.parse(stored);
@@ -941,13 +947,14 @@ async function handleListPasskeys(request, env) {
  * Update passkey name
  */
 async function handleUpdatePasskey(request, env, credentialId) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
-    const user = await validateSession(request, env);
+    const user = await validateSession(request, db);
     if (!user) {
         return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
@@ -967,7 +974,7 @@ async function handleUpdatePasskey(request, env, credentialId) {
         }
         
         const credentialKey = getPasskeyKey(user.username, credentialId);
-        const stored = await env.LOON_DB.get(credentialKey);
+        const stored = await db.get(credentialKey);
         
         if (!stored) {
             return new Response(
@@ -979,10 +986,10 @@ async function handleUpdatePasskey(request, env, credentialId) {
         const credential = JSON.parse(stored);
         credential.name = name.slice(0, 50);
         
-        await env.LOON_DB.put(credentialKey, JSON.stringify(credential));
+        await db.put(credentialKey, JSON.stringify(credential));
         
         await logAudit(
-            env.LOON_DB,
+            db,
             'passkey_renamed',
             user.username,
             { credentialId, newName: credential.name }
@@ -1005,13 +1012,14 @@ async function handleUpdatePasskey(request, env, credentialId) {
  * Delete passkey
  */
 async function handleDeletePasskey(request, env, credentialId) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
-    const user = await validateSession(request, env);
+    const user = await validateSession(request, db);
     if (!user) {
         return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
@@ -1021,7 +1029,7 @@ async function handleDeletePasskey(request, env, credentialId) {
 
     try {
         const credentialKey = getPasskeyKey(user.username, credentialId);
-        const stored = await env.LOON_DB.get(credentialKey);
+        const stored = await db.get(credentialKey);
         
         if (!stored) {
             return new Response(
@@ -1031,16 +1039,16 @@ async function handleDeletePasskey(request, env, credentialId) {
         }
         
         // Delete credential
-        await env.LOON_DB.delete(credentialKey);
+        await db.delete(credentialKey);
         
         // Remove from index
-        await removePasskeyFromIndex(env.LOON_DB, user.username, credentialId);
+        await removePasskeyFromIndex(db, user.username, credentialId);
         
         // Clean up reverse credential ID index
-        await deleteCredentialIdMapping(env.LOON_DB, credentialId);
+        await deleteCredentialIdMapping(db, credentialId);
         
         await logAudit(
-            env.LOON_DB,
+            db,
             'passkey_deleted',
             user.username,
             { credentialId }
@@ -1063,7 +1071,8 @@ async function handleDeletePasskey(request, env, credentialId) {
  * Verify recovery code
  */
 async function handleRecoveryVerify(request, env) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
@@ -1088,7 +1097,7 @@ async function handleRecoveryVerify(request, env) {
         }
         
         const recoveryKey = getRecoveryCodesKey(username);
-        const stored = await env.LOON_DB.get(recoveryKey);
+        const stored = await db.get(recoveryKey);
         
         if (!stored) {
             return new Response(
@@ -1109,7 +1118,7 @@ async function handleRecoveryVerify(request, env) {
                     if (matches) {
                         // Valid code found
                         // Mark as used
-                        await markRecoveryCodeUsed(env.LOON_DB, username, i);
+                        await markRecoveryCodeUsed(db, username, i);
                         
                         // Generate recovery token
                         const recoveryToken = crypto.getRandomValues(new Uint8Array(32));
@@ -1117,7 +1126,7 @@ async function handleRecoveryVerify(request, env) {
                         
                         // Store recovery token (15 minute TTL)
                         const recoveryAuthKey = getRecoveryAuthKey(tokenB64);
-                        await env.LOON_DB.put(
+                        await db.put(
                             recoveryAuthKey,
                             JSON.stringify({
                                 username: username,
@@ -1128,7 +1137,7 @@ async function handleRecoveryVerify(request, env) {
                         );
                         
                         await logAudit(
-                            env.LOON_DB,
+                            db,
                             'recovery_code_used',
                             username,
                             {}
@@ -1172,13 +1181,14 @@ async function handleRecoveryVerify(request, env) {
  * Disable all passkeys
  */
 async function handleRecoveryDisable(request, env) {
-    if (!env.LOON_DB) {
+    const db = getKVBinding(env);
+    if (!db) {
         return new Response(
             JSON.stringify({ error: 'KV binding missing (configure LOON_DB or KV)' }),
             { status: 500, headers: getCorsHeaders(env, request) }
         );
     }
-    const user = await validateSession(request, env);
+    const user = await validateSession(request, db);
     if (!user) {
         return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
@@ -1187,10 +1197,10 @@ async function handleRecoveryDisable(request, env) {
     }
 
     try {
-        await disableAllPasskeys(env.LOON_DB, user.username);
+        await disableAllPasskeys(db, user.username);
         
         await logAudit(
-            env.LOON_DB,
+            db,
             'passkeys_disabled',
             user.username,
             {}
@@ -1214,11 +1224,8 @@ async function handleRecoveryDisable(request, env) {
  */
 export default {
     async fetch(request, env) {
-        // Normalize KV binding so deployments using `KV` still work.
-        const normalizedEnv = env.LOON_DB ? env : { ...env, LOON_DB: env.KV };
-
         if (request.method === 'OPTIONS') {
-            return handleCorsOptions(normalizedEnv, request, CORS_OPTIONS);
+            return handleCorsOptions(env, request, CORS_OPTIONS);
         }
         
         const url = new URL(request.url);
@@ -1227,45 +1234,45 @@ export default {
         // Routes
         if (path === '/api/passkeys/register/challenge') {
             if (request.method === 'GET') {
-                return handleRegistrationChallenge(request, normalizedEnv);
+                return handleRegistrationChallenge(request, env);
             }
         } else if (path === '/api/passkeys/register/verify') {
             if (request.method === 'POST') {
-                return handleRegistrationVerify(request, normalizedEnv);
+                return handleRegistrationVerify(request, env);
             }
         } else if (path === '/api/passkeys/auth/challenge') {
             if (request.method === 'GET') {
-                return handleAuthChallenge(request, normalizedEnv);
+                return handleAuthChallenge(request, env);
             }
         } else if (path === '/api/passkeys/auth/verify') {
             if (request.method === 'POST') {
-                return handleAuthVerify(request, normalizedEnv);
+                return handleAuthVerify(request, env);
             }
         } else if (path === '/api/passkeys/recovery/verify') {
             if (request.method === 'POST') {
-                return handleRecoveryVerify(request, normalizedEnv);
+                return handleRecoveryVerify(request, env);
             }
         } else if (path === '/api/passkeys/recovery/disable') {
             if (request.method === 'POST') {
-                return handleRecoveryDisable(request, normalizedEnv);
+                return handleRecoveryDisable(request, env);
             }
         } else if (path === '/api/passkeys') {
             if (request.method === 'GET') {
-                return handleListPasskeys(request, normalizedEnv);
+                return handleListPasskeys(request, env);
             }
         } else if (path.match(/^\/api\/passkeys\/[^/]+$/)) {
             const credentialId = path.split('/').pop();
             
             if (request.method === 'PATCH') {
-                return handleUpdatePasskey(request, normalizedEnv, credentialId);
+                return handleUpdatePasskey(request, env, credentialId);
             } else if (request.method === 'DELETE') {
-                return handleDeletePasskey(request, normalizedEnv, credentialId);
+                return handleDeletePasskey(request, env, credentialId);
             }
         }
         
         return new Response(
             JSON.stringify({ error: 'Not found' }),
-            { status: 404, headers: getCorsHeaders(normalizedEnv, request) }
+            { status: 404, headers: getCorsHeaders(env, request) }
         );
     }
 };

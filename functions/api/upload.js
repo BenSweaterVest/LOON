@@ -46,6 +46,7 @@
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -111,7 +112,7 @@ async function validateSession(db, authHeader) {
 export async function onRequestPost(context) {
     const { request, env } = context;
 
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
     if (!db) {
         return jsonResponse({ error: 'Database not configured' }, 500, env, request);
     }

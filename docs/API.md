@@ -29,6 +29,7 @@ LOON exposes the following API endpoints via Cloudflare Functions:
 | `/api/scheduled-publish` | POST | Publish due scheduled drafts |
 | `/api/watch` | GET, POST, DELETE | Manage watchlist + watched activity |
 | `/api/blocks` | GET | List reusable content blocks |
+| `/api/feedback` | POST | Accept public page feedback (stored in KV when configured) |
 | `/api/upload` | POST | Upload images (Cloudflare Images) |
 | `/api/templates` | GET | List schema templates |
 | `/api/users` | GET, POST, PATCH, DELETE | User management (admin) |
@@ -931,6 +932,47 @@ Response includes `source`:
 
 ---
 
+### POST /api/feedback
+
+Submit feedback for a public page.
+
+**Auth required:** No (public endpoint)
+
+#### Request
+
+```http
+POST /api/feedback
+Content-Type: application/json
+```
+
+```json
+{
+  "pageId": "demo",
+  "email": "person@example.com",
+  "message": "This page is super helpful."
+}
+```
+
+#### Validation and Limits
+
+- `pageId`: required, lowercase letters/numbers/underscore/hyphen, max 100 chars
+- `message`: required, trimmed non-empty, stored up to 5000 chars
+- `email`: optional, must be valid format when provided
+- Rate limit: 10 submissions/minute per IP (when KV is configured)
+- Retention: stored in KV for 180 days
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "Feedback received",
+  "id": "feedback_b9f3f9eb-0b2f-4fd2-b63b-7e45f49c5a03"
+}
+```
+
+---
+
 ### POST /api/upload
 
 Upload an image to Cloudflare Images.
@@ -1294,6 +1336,7 @@ curl -s https://your-domain.com/api/health | jq .
     "github_repo": true,
     "github_token": true,
     "kv_database": true,
+    "images_configured": true,
     "passkeys_rp_id": true,
     "passkeys_rp_origin": true,
     "passkeys_ready": true
@@ -1316,6 +1359,7 @@ Passkey checks are advisory/optional and do not by themselves make status `degra
 | `github_repo` | `GITHUB_REPO` env var set | Missing or empty variable |
 | `github_token` | `GITHUB_TOKEN` env var set | Missing token or invalid format |
 | `kv_database` | KV namespace bound and accessible | KV binding misconfigured or no access |
+| `images_configured` | `CF_ACCOUNT_ID` and `CF_IMAGES_TOKEN` set | Image uploads are unavailable |
 | `passkeys_rp_id` | `RP_ID` env var set | Missing relying-party ID for passkeys |
 | `passkeys_rp_origin` | `RP_ORIGIN` env var set | Missing relying-party origin for passkeys |
 | `passkeys_ready` | Both `RP_ID` and `RP_ORIGIN` set | Passkeys may fail in production until both are set |

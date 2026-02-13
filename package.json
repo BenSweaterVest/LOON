@@ -15,6 +15,7 @@
     "setup:kv": "node scripts/setup-kv.mjs",
     "setup:admin": "node scripts/setup-admin.mjs",
     "setup:local": "npm run setup:kv && npm run check:env",
+    "local": "node scripts/local-server.mjs",
     "backup:kv": "node scripts/backup-kv.mjs",
     "restore:kv": "node scripts/restore-kv.mjs",
     "lint": "npm run lint:js && npm run lint:json",
@@ -39,7 +40,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_GITHUB_ORG/LOON.git"
+    "url": "git+https://github.com/BenSweaterVest/LOON.git"
   },
   "keywords": [
     "cms",
@@ -52,7 +53,7 @@
   "author": "Project LOON Contributors",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/YOUR_GITHUB_ORG/LOON/issues"
+    "url": "https://github.com/BenSweaterVest/LOON/issues"
   },
-  "homepage": "https://github.com/YOUR_GITHUB_ORG/LOON#readme"
+  "homepage": "https://github.com/BenSweaterVest/LOON#readme"
 }

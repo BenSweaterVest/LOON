@@ -12,6 +12,7 @@
 import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
@@ -76,7 +77,7 @@ async function writePageContent(env, page, content, actor) {
 
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) return jsonResponse({ error: 'GitHub not configured' }, 500, env, request);
 

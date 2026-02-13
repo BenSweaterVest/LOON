@@ -38,6 +38,7 @@
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { getAuditLogs } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 /**
  * CORS options for this endpoint.
@@ -49,7 +50,7 @@ const CORS_OPTIONS = { methods: 'GET, OPTIONS' };
  */
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     // Check KV binding
     if (!db) {

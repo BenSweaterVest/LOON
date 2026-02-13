@@ -34,6 +34,10 @@ build/
 .wrangler/
 wrangler.local.toml
 
+# Local mode state
+data/.local/
+
 # Backup files
 backups/
 *.results.csv
+

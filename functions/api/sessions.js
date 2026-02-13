@@ -31,6 +31,7 @@
 
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 /**
  * CORS options for this endpoint.
@@ -101,7 +102,7 @@ async function validateAdminSession(db, authHeader) {
  */
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);
@@ -172,7 +173,7 @@ export async function onRequestGet(context) {
  */
 export async function onRequestDelete(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse({ error: 'KV database not configured. Configure a KV binding named LOON_DB (preferred) or KV. See OPERATIONS.md for setup.' }, 500, env, request);

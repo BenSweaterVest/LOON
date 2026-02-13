@@ -19,7 +19,7 @@
   # - default-src 'self': Only load resources from same origin by default
   # - script-src 'self' 'unsafe-inline': Allow inline scripts (needed for admin UI)
   # - style-src 'self' 'unsafe-inline' cdn.jsdelivr.net: Allow Pico CSS from CDN
-  # - img-src 'self' data: https:: Allow images from self, data URIs, and HTTPS
+  # - img-src 'self' data: https: Allow images from self, data URIs, and HTTPS
   # - connect-src 'self' api.github.com: Allow API calls to self and GitHub
   # - font-src 'self': Only load fonts from same origin
   # - frame-ancestors 'none': Prevent embedding in iframes (same as X-Frame-Options)

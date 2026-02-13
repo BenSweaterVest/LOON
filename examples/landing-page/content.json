@@ -1,0 +1,10 @@
+{
+  "headline": "Welcome to Your New Landing Page",
+  "subheadline": "Use this page to introduce your mission, explain the value, and guide visitors to the next step.",
+  "primary_cta_label": "Get Started",
+  "primary_cta_url": "https://example.com/start",
+  "secondary_cta_label": "Learn More",
+  "secondary_cta_url": "https://example.com/learn",
+  "highlights": "Fast setup\nClear calls to action\nFriendly for mobile visitors",
+  "sections": "## Section One\nExplain the main benefit in plain language.\n\n## Section Two\nShare proof points, metrics, or testimonials.\n\n## Section Three\nInvite visitors to take the next step."
+}

@@ -1,0 +1,60 @@
+{
+  "title": "Landing Page",
+  "description": "Hero section plus key sections and calls to action.",
+  "fields": [
+    {
+      "key": "headline",
+      "label": "Headline",
+      "type": "text",
+      "placeholder": "Short, clear value statement",
+      "required": true
+    },
+    {
+      "key": "subheadline",
+      "label": "Subheadline",
+      "type": "textarea",
+      "placeholder": "Add a one to two sentence supporting line"
+    },
+    {
+      "key": "hero_image",
+      "label": "Hero Image",
+      "type": "image"
+    },
+    {
+      "key": "primary_cta_label",
+      "label": "Primary Call To Action Label",
+      "type": "text",
+      "placeholder": "Get Started"
+    },
+    {
+      "key": "primary_cta_url",
+      "label": "Primary Call To Action URL",
+      "type": "url",
+      "placeholder": "https://example.com/start"
+    },
+    {
+      "key": "secondary_cta_label",
+      "label": "Secondary Call To Action Label",
+      "type": "text",
+      "placeholder": "Learn More"
+    },
+    {
+      "key": "secondary_cta_url",
+      "label": "Secondary Call To Action URL",
+      "type": "url",
+      "placeholder": "https://example.com/learn"
+    },
+    {
+      "key": "highlights",
+      "label": "Key Highlights",
+      "type": "textarea",
+      "placeholder": "List 3-5 short bullets, one per line"
+    },
+    {
+      "key": "sections",
+      "label": "Main Sections",
+      "type": "textarea",
+      "placeholder": "Use headings and short paragraphs to describe each section"
+    }
+  ]
+}

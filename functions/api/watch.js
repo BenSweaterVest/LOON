@@ -14,6 +14,7 @@
 import { handleCorsOptions } from './_cors.js';
 import { getAuditLogs } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 const CORS_OPTIONS = { methods: 'GET, POST, DELETE, OPTIONS' };
 
@@ -59,7 +60,7 @@ async function watchedRecentChanges(db, watchedPages, limit = 30) {
 
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
 
     try {
@@ -76,7 +77,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     try {
         const session = await validateSession(db, request);
@@ -94,7 +95,7 @@ export async function onRequestPost(context) {
 
 export async function onRequestDelete(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
     if (!db) return jsonResponse({ error: 'KV not configured' }, 500, env, request);
     try {
         const session = await validateSession(db, request);

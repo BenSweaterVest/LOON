@@ -218,11 +218,234 @@ NOTE:
             color: rgba(255,255,255,0.9);
         }
         
+        .feedback-button {
+            background: var(--form-element-focus-border-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+        .feedback-button:hover {
+            opacity: 0.9;
+        }
+
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-backdrop.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .modal-content .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+        }
+
+        .modal-content .button-group {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .modal-content button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        .modal-content .submit-btn {
+            background: var(--form-element-focus-border-color);
+            color: white;
+        }
+        .modal-content .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .modal-content .cancel-btn {
+            background: #eee;
+            color: #333;
+        }
+        .modal-content .cancel-btn:hover {
+            background: #ddd;
+        }
+
+        .feedback-status {
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .feedback-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .feedback-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .table-of-contents {
+            background: #f5f5f5;
+            border-left: 4px solid var(--primary);
+            padding: 1.25rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .table-of-contents h4 {
+            margin: 0 0 0.75rem 0;
+            color: var(--primary);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table-of-contents ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .table-of-contents li {
+            margin: 0.35rem 0;
+        }
+
+        .table-of-contents a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: opacity 0.2s;
+        }
+
+        .table-of-contents a:hover {
+            text-decoration: underline;
+            opacity: 0.8;
+        }
+
+        .table-of-contents ul ul {
+            margin-left: 1.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .heading-anchor {
+            color: #ccc;
+            text-decoration: none;
+            margin-left: 0.5rem;
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        h2:hover .heading-anchor,
+        h3:hover .heading-anchor,
+        h4:hover .heading-anchor {
+            opacity: 1;
+        }
+
+        .internal-link {
+            color: var(--primary);
+            text-decoration: none;
+            padding: 0.1rem 0.3rem;
+            border-bottom: 1px dotted var(--primary);
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .internal-link:hover {
+            background-color: rgba(var(--primary-focus-x), var(--primary-focus-y), var(--primary-focus-z), 0.1);
+            border-bottom-style: solid;
+        }
+
+        /* Responsive lazy-loaded images */
+        .responsive-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1rem 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.3s ease;
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        .responsive-image:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Remove shimmer animation once image loads */
+        .responsive-image[loading="lazy"] {
+            animation: shimmer 1.5s infinite;
+        }
+        
         @media (max-width: 600px) {
             .container { padding: 1rem; }
             .card { padding: 1.5rem; }
             .page-header h1 { font-size: 1.75rem; }
             .meta { flex-direction: column; align-items: flex-start; }
+            .table-of-contents { padding: 1rem; }
         }
     </style>
 </head>
@@ -244,9 +467,35 @@ NOTE:
     
     <a href="/admin.html" class="admin-link" aria-label="Open admin panel">Admin</a>
 
+    <!-- Feedback Modal -->
+    <div class="modal-backdrop" id="feedback-modal">
+        <div class="modal-content">
+            <h3>Share Feedback</h3>
+            <div class="feedback-status" id="feedback-status"></div>
+            <form id="feedback-form" onsubmit="submitFeedback(event)">
+                <div class="form-group">
+                    <label for="feedback-email">Email (optional)</label>
+                    <input type="email" id="feedback-email" placeholder="your@email.com" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div class="form-group">
+                    <label for="feedback-message">Your feedback</label>
+                    <textarea id="feedback-message" placeholder="Tell us what you think..." required></textarea>
+                </div>
+                <div class="button-group">
+                    <button type="button" class="cancel-btn" onclick="closeFeedbackModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" id="feedback-submit-btn">Send Feedback</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        // Feedback modal functions
         // Configuration - change this to load different pages
-        const PAGE_ID = 'demo';
+        // Support URL parameter: /?page=pagename
+        const urlParams = new URLSearchParams(window.location.search);
+        const rawPageId = urlParams.get('page');
+        const PAGE_ID = sanitizePageId(rawPageId) || 'welcome';
         
         async function loadContent() {
             const card = document.getElementById('content-card');
@@ -261,9 +510,10 @@ NOTE:
                 // Filter for published content - only display published state
                 let content = fullData;
                 const hasWorkflow = fullData.published !== undefined || fullData.draft !== undefined;
+                const metaStatus = fullData._meta?.status || fullData._meta?.workflowStatus;
 
                 if (hasWorkflow) {
-                    if (fullData._meta?.status !== 'published') {
+                    if (metaStatus !== 'published' && !fullData.published) {
                         throw new Error('This page has not been published yet. Please ask an editor to publish it.');
                     }
                     content = fullData.published || fullData.draft || fullData;
@@ -293,6 +543,9 @@ NOTE:
                 
                 // Determine body content
                 const body = content.body || content.description || content.content || '';
+
+                // Reading time
+                const { readingTime } = getReadingStats(body);
                 
                 // Build additional fields display (excluding meta and common fields)
                 const excludeFields = ['headline', 'title', 'name', 'body', 'description', 'content', 'status', '_meta'];
@@ -306,17 +559,36 @@ NOTE:
                     .filter(Boolean)
                     .join('');
                 
+                // Extract headings and generate TOC if body contains markdown headings
+                let tocHtml = '';
+                let processedBody = escapeHtml(body);
+                
+                if (body) {
+                    const headings = extractHeadings(body);
+                    if (headings.length > 0) {
+                        tocHtml = generateTableOfContents(headings);
+                        processedBody = processBodyContent(body, headings);
+                    }
+                }
+                
                 // Render content
                 card.innerHTML = `
                     <header>
                         <span class="status-badge ${statusClass}">${escapeHtml(status)}</span>
                         <h2>${escapeHtml(headline)}</h2>
                     </header>
-                    ${body ? `<p class="body-text">${escapeHtml(body)}</p>` : ''}
+                    ${tocHtml}
+                    ${body ? `<div class="body-text">${processedBody}</div>` : ''}
                     ${additionalFields ? `<div class="additional-fields" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">${additionalFields}</div>` : ''}
                     <footer class="meta">
-                        ${lastMod ? `<span>Last updated: ${lastMod}</span>` : '<span></span>'}
-                        <span style="color: #aaa;">Page: ${PAGE_ID}</span>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            ${lastMod ? `<span>Last updated: ${lastMod}</span>` : ''}
+                            ${readingTime ? `<span>Reading time: ${readingTime} min</span>` : ''}
+                        </div>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <button type="button" class="feedback-button" onclick="openFeedbackModal()" title="Send feedback about this page">Feedback</button>
+                            <span style="color: #aaa;">Page: ${PAGE_ID}</span>
+                        </div>
                     </footer>
                 `;
                 
@@ -349,6 +621,195 @@ NOTE:
                 .replace(/^\w/, c => c.toUpperCase())
                 .trim();
         }
+
+        function getReadingStats(text) {
+            const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+            const readingTime = words ? Math.max(1, Math.ceil(words / 200)) : 0;
+            return { words, readingTime };
+        }
+        
+        // Feedback functions
+        function openFeedbackModal() {
+            document.getElementById('feedback-modal').classList.add('show');
+            document.getElementById('feedback-message').focus();
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedback-modal').classList.remove('show');
+            document.getElementById('feedback-form').reset();
+            document.getElementById('feedback-status').className = 'feedback-status';
+        }
+
+        /**
+         * Parse markdown-style headings from text
+         * Looks for lines starting with # or ## (one or two hash symbols)
+         * Returns array of { text, level, id }
+         */
+        function sanitizePageId(input) {
+            return String(input || '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        }
+
+        function slugifyHeading(text) {
+            return String(text || '')
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-');
+        }
+
+        function extractHeadings(text) {
+            const headings = [];
+            const slugCounts = new Map();
+            const lines = text.split('\n');
+            
+            lines.forEach((line, index) => {
+                const match = line.match(/^(#{1,3})\s+(.+)$/);
+                if (!match) return;
+
+                const level = match[1].length; // 1 = h1, 2 = h2, 3 = h3
+                const headingText = match[2].trim();
+                const baseSlug = slugifyHeading(headingText) || 'section';
+                const nextCount = (slugCounts.get(baseSlug) || 0) + 1;
+                slugCounts.set(baseSlug, nextCount);
+                const id = nextCount === 1 ? `heading-${baseSlug}` : `heading-${baseSlug}-${nextCount}`;
+                headings.push({ text: headingText, level, id, lineIndex: index });
+            });
+
+            return headings;
+        }
+
+        /**
+         * Generate table of contents HTML from headings
+         */
+        function generateTableOfContents(headings) {
+            if (headings.length === 0) return '';
+
+            let html = '<div class="table-of-contents"><h4>Table of Contents</h4><ul>';
+            let currentLevel = 0;
+
+            for (const heading of headings) {
+                // Adjust list nesting based on heading level
+                while (currentLevel < heading.level - 1) {
+                    html += '<ul>';
+                    currentLevel++;
+                }
+                while (currentLevel > heading.level - 1) {
+                    html += '</ul>';
+                    currentLevel--;
+                }
+
+                html += `<li><a href="#${heading.id}">${escapeHtml(heading.text)}</a></li>`;
+            }
+
+            // Close remaining open lists
+            while (currentLevel > 0) {
+                html += '</ul>';
+                currentLevel--;
+            }
+
+            html += '</ul></div>';
+            return html;
+        }
+
+        /**
+         * Process body text to add heading IDs and convert markdown headings to HTML
+         * Also converts internal links [[page-id]] to HTML anchors
+         */
+        function processBodyContent(body, headings) {
+            // Build a map of heading lines to IDs
+            const headingMap = new Map();
+            for (const heading of headings) {
+                headingMap.set(heading.lineIndex, heading);
+            }
+
+            const lines = body.split('\n');
+            const processed = lines.map((line, index) => {
+                const heading = headingMap.get(index);
+                if (heading) {
+                    const level = Math.min(heading.level + 1, 4); // Convert to h2, h3, h4
+                    return `<h${level} id="${heading.id}">${escapeHtml(heading.text)} <a href="#${heading.id}" class="heading-anchor">#</a></h${level}>`;
+                }
+                
+                // Convert internal links [[page-id]] to HTML anchors
+                let processedLine = escapeHtml(line);
+                processedLine = processedLine.replace(
+                    /\[\[([a-z0-9_-]+)\]\]/gi,
+                    (match, pageId) => {
+                        const cleanPageId = pageId.toLowerCase();
+                        return `<a href="/?page=${encodeURIComponent(cleanPageId)}" class="internal-link" title="Open ${cleanPageId}">${cleanPageId}</a>`;
+                    }
+                );
+                
+                // Convert image URLs to lazy-loaded responsive images
+                processedLine = processedLine.replace(
+                    /(https?:\/\/[^\s"'<>]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
+                    (match, url) => {
+                        const filename = url.split('/').pop() || 'image';
+                        return `<img src="${url}" alt="${filename}" loading="lazy" class="responsive-image" />`;
+                    }
+                );
+                
+                return processedLine;
+            }).join('<br>');
+
+            return processed;
+        }
+
+        async function submitFeedback(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('feedback-email').value.trim();
+            const message = document.getElementById('feedback-message').value.trim();
+            const statusEl = document.getElementById('feedback-status');
+            const submitBtn = document.getElementById('feedback-submit-btn');
+
+            if (!message) {
+                statusEl.className = 'feedback-status error';
+                statusEl.textContent = 'Please enter your feedback';
+                return;
+            }
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Sending...';
+
+                const res = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pageId: PAGE_ID,
+                        email: email || null,
+                        message,
+                        timestamp: new Date().toISOString(),
+                        userAgent: navigator.userAgent
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    statusEl.className = 'feedback-status success';
+                    statusEl.textContent = 'Thank you! Your feedback has been received.';
+                    document.getElementById('feedback-form').reset();
+                    setTimeout(() => closeFeedbackModal(), 2000);
+                } else {
+                    throw new Error(data.error || 'Failed to submit feedback');
+                }
+            } catch (err) {
+                statusEl.className = 'feedback-status error';
+                statusEl.textContent = 'Error: ' + err.message;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Feedback';
+            }
+        }
+
+        // Close modal when clicking backdrop
+        document.getElementById('feedback-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'feedback-modal') {
+                closeFeedbackModal();
+            }
+        });
         
         // Load on page ready
         loadContent();

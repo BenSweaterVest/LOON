@@ -1,0 +1,42 @@
+{
+  "title": "Documentation Page",
+  "description": "Structured notes with a summary and references.",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Doc Title",
+      "type": "text",
+      "placeholder": "System Overview"
+    },
+    {
+      "key": "summary",
+      "label": "Summary",
+      "type": "textarea",
+      "placeholder": "One to two sentence overview"
+    },
+    {
+      "key": "body",
+      "label": "Main Content",
+      "type": "textarea",
+      "placeholder": "Use headings and bullet lists"
+    },
+    {
+      "key": "references",
+      "label": "References",
+      "type": "textarea",
+      "placeholder": "Links, source docs, or related pages"
+    },
+    {
+      "key": "version",
+      "label": "Version",
+      "type": "text",
+      "placeholder": "v1.0"
+    },
+    {
+      "key": "status",
+      "label": "Doc Status",
+      "type": "select",
+      "options": ["Draft", "Published", "Archived"]
+    }
+  ]
+}

@@ -29,6 +29,7 @@
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 /**
  * CORS options for this endpoint.
@@ -107,7 +108,7 @@ async function deleteFromGitHub(env, path, message) {
  */
 export async function onRequestDelete(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     // Check bindings
     if (!db) {

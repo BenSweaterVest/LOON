@@ -26,6 +26,26 @@ A schema for creating blog posts or articles.
 
 ---
 
+### Landing Page (`landing-page/`)
+
+A schema for a homepage or campaign landing page.
+
+**Fields:** headline, subheadline, hero image, calls to action, highlights, sections
+
+**Use case:** Campaigns, program signups, organizational homepages
+
+---
+
+### Documentation Page (`documentation-page/`)
+
+A schema for structured documentation or notes.
+
+**Fields:** title, summary, body, references, version, status
+
+**Use case:** Internal docs, guides, reference pages
+
+---
+
 ### Event (`event/`)
 
 A schema for event organizers to manage event information.
@@ -86,6 +106,16 @@ A schema for displaying services, products, or menu items with prices.
 
 ---
 
+### Menu Page (`menu-page/`)
+
+A schema for a quick, sectioned menu.
+
+**Fields:** title, summary, hours, sections, notes
+
+**Use case:** Cafes, weekly menus, daily offerings
+
+---
+
 ### Announcement (`announcement/`)
 
 A schema for posting time-sensitive notices and alerts.
@@ -133,6 +163,16 @@ A schema for customer testimonials and reviews.
 **Fields:** quote, author name, title, company, photo, rating, product reviewed, date, source, featured/approved toggles
 
 **Use case:** Customer reviews, case study quotes, social proof sections
+
+---
+
+### Task List (`todo-page/`)
+
+A schema for tracking tasks and ownership.
+
+**Fields:** title, owner, due date, status, tasks, notes
+
+**Use case:** Project checklists, weekly priorities, operations tracking
 
 ---
 

@@ -52,6 +52,7 @@
 import { getCorsHeaders, handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
+import { getKVBinding } from './_kv.js';
 
 /**
  * CORS options for this endpoint.
@@ -171,7 +172,7 @@ function generateSessionToken() {
  */
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     // Check KV binding exists
     if (!db) {
@@ -208,6 +209,8 @@ export async function onRequestPost(context) {
 
         // Verify password
         let isValid = false;
+        let updatedUserRecord = null;
+        const nowIso = new Date().toISOString();
 
         if (userRecord.bootstrap) {
             // Bootstrap user: plain text comparison, then upgrade
@@ -222,20 +225,28 @@ export async function onRequestPost(context) {
                     ...userRecord,
                     hash: hash,
                     salt: salt,
-                    upgraded: new Date().toISOString()
+                    upgraded: nowIso
                 };
                 delete upgradedUser.password; // Remove plain password
                 delete upgradedUser.bootstrap; // Remove bootstrap flag
-
-                await db.put(`user:${sanitizedUsername}`, JSON.stringify(upgradedUser));
+                updatedUserRecord = upgradedUser;
             }
         } else {
             // Secure user: hash comparison
             isValid = await verifyPassword(password, userRecord.hash, userRecord.salt);
+            if (isValid) {
+                updatedUserRecord = { ...userRecord };
+            }
         }
 
         if (!isValid) {
             return jsonResponse({ error: 'Invalid credentials' }, 401, env, request);
+        }
+
+        if (updatedUserRecord) {
+            updatedUserRecord.lastLogin = nowIso;
+            updatedUserRecord.lastLoginIp = ip;
+            await db.put(`user:${sanitizedUsername}`, JSON.stringify(updatedUserRecord));
         }
 
         // Create session
@@ -285,7 +296,7 @@ export async function onRequestPost(context) {
  */
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
@@ -328,7 +339,7 @@ export async function onRequestGet(context) {
  */
 export async function onRequestDelete(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);
@@ -377,7 +388,7 @@ export async function onRequestDelete(context) {
  */
 export async function onRequestPatch(context) {
     const { request, env } = context;
-    const db = env.LOON_DB || env.KV;
+    const db = getKVBinding(env);
 
     if (!db) {
         return jsonResponse({ error: 'KV not configured. Configure a KV binding named LOON_DB (preferred) or KV' }, 500, env, request);

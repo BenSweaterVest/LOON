@@ -1,0 +1,36 @@
+{
+  "title": "Menu Page",
+  "description": "Menu sections and item listings for quick scanning.",
+  "fields": [
+    {
+      "key": "title",
+      "label": "Menu Title",
+      "type": "text",
+      "placeholder": "Seasonal Menu"
+    },
+    {
+      "key": "summary",
+      "label": "Short Summary",
+      "type": "textarea",
+      "placeholder": "Describe the menu focus and pricing style"
+    },
+    {
+      "key": "hours",
+      "label": "Service Hours",
+      "type": "text",
+      "placeholder": "Mon-Fri 11am-8pm"
+    },
+    {
+      "key": "sections",
+      "label": "Menu Sections",
+      "type": "textarea",
+      "placeholder": "Use headings and bullet lists for items"
+    },
+    {
+      "key": "notes",
+      "label": "Notes or Policies",
+      "type": "textarea",
+      "placeholder": "Allergy info, substitutions, or service notes"
+    }
+  ]
+}
