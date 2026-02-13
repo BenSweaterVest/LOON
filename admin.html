@@ -3094,10 +3094,6 @@ PREREQUISITES:
                 return;
             }
 
-            // Save last used page
-            localStorage.setItem(STORAGE_KEYS.LAST_PAGE, pageId);
-            CURRENT_PAGE_ID = pageId;
-
             showStatus('editor-status', 'Loading...', 'info');
             document.getElementById('editor-container').classList.add('hidden');
 
@@ -3105,9 +3101,14 @@ PREREQUISITES:
                 // Fetch schema
                 const schemaRes = await fetch(`/data/${pageId}/schema.json`);
                 if (!schemaRes.ok) {
-                    throw new Error(`Page "${pageId}" not found. Check the Page ID or create the schema.`);
+                    if (schemaRes.status === 404) {
+                        throw new Error(`Page "${pageId}" not found. Create it with + New Page or choose an existing page from Browse Pages.`);
+                    }
+                    throw new Error(`Failed to load page "${pageId}" (HTTP ${schemaRes.status}).`);
                 }
                 CURRENT_SCHEMA = await schemaRes.json();
+                CURRENT_PAGE_ID = pageId;
+                localStorage.setItem(STORAGE_KEYS.LAST_PAGE, pageId);
 
                 // Fetch content
                 const contentRes = await fetch(`/data/${pageId}/content.json`);

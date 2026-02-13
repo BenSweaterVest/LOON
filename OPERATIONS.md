@@ -1,7 +1,7 @@
 # LOON Operations Guide
 Audience: administrators operating an already-deployed LOON instance.
 
-Last updated: February 11, 2026
+Last updated: February 13, 2026
 
 ## Scope
 This is a production runbook only:
@@ -61,6 +61,7 @@ Browser-first option:
 - Review role assignments (admin/editor/contributor) for least privilege.
 - Rotate secrets/tokens based on your policy.
 - Validate passkey settings (`RP_ID`, `RP_ORIGIN`) if passkeys are enabled.
+- Check upstream LOON changes and plan manual instance sync if needed.
 
 ## GitHub Token Setup
 Operational guidance for rotation/replacement:
@@ -70,8 +71,67 @@ Operational guidance for rotation/replacement:
 4. Redeploy.
 5. Run Post-Change Verification.
 
+## Manual Upstream Sync (Template Repositories)
+Use this when your deployment repo was created from LOON template and you want to bring in upstream fixes/features.
+
+Example:
+- Upstream: `BenSweaterVest/LOON`
+- Instance repo: `BenSweaterVest/CapitolFoodTrucksLOON`
+
+Procedure:
+1. Create backup point:
+- Ensure latest content is committed in `data/`.
+- Optionally run the backup workflow (`.github/workflows/backup.yml`).
+
+2. Create update branch in instance repo:
+- `chore/sync-loon-YYYYMMDD`
+
+3. Pull upstream LOON changes:
+```bash
+git remote add upstream https://github.com/BenSweaterVest/LOON.git
+git fetch upstream
+git checkout chore/sync-loon-YYYYMMDD
+git merge upstream/main --allow-unrelated-histories
+```
+
+4. Resolve conflicts carefully:
+- Preserve instance-specific content/branding.
+- Keep environment/domain differences intact.
+- Keep `data/` unless intentionally replacing content.
+
+5. Validate before merge:
+- `npm run lint`
+- `npm test`
+
+6. Merge PR and redeploy.
+
+7. Run Post-Change Verification:
+- `/api/health`
+- admin login
+- one save operation
+- one publish or rollback operation
+
 ## Backup and Recovery
-Source of truth is Git history for `data/`.
+Source of truth:
+- Content: Git history for `data/`
+- Auth/session/passkey state: Cloudflare KV snapshots
+
+KV backup options:
+1. Scheduled GitHub Action: `.github/workflows/backup-kv.yml`
+2. Manual backup:
+```bash
+export CF_API_TOKEN=...
+export CF_ACCOUNT_ID=...
+export KV_NAMESPACE_ID=...
+npm run backup:kv
+```
+3. Manual restore:
+```bash
+export CF_API_TOKEN=...
+export CF_ACCOUNT_ID=...
+export KV_NAMESPACE_ID=...
+npm run restore:kv -- backups/<kv-backup-file>.json
+```
 
 Restore one page from prior history (GitHub web UI only):
 1. Open your repository on GitHub.

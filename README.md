@@ -157,11 +157,68 @@ npm run check:env
 # Do both in one command
 npm run setup:local
 ```
+
+### Manual Upstream Updates (Template-Based Repos)
+If your site repo was created from the LOON template (for example `BenSweaterVest/CapitolFoodTrucksLOON` from `BenSweaterVest/LOON`), there is no one-click "Sync fork" button. Template repos are independent repositories.
+
+Recommended manual update flow:
+1. In your site repo, create branch `chore/sync-loon-YYYYMMDD`.
+2. Add upstream remote and fetch latest LOON:
+
+```bash
+git remote add upstream https://github.com/BenSweaterVest/LOON.git
+git fetch upstream
+```
+
+3. Merge upstream into your branch:
+
+```bash
+git checkout chore/sync-loon-YYYYMMDD
+git merge upstream/main --allow-unrelated-histories
+```
+
+4. Resolve conflicts, keeping instance-specific values:
+- `data/*` content files
+- branding/custom text
+- Cloudflare project/domain/env differences
+
+5. Validate before merge:
+
+```bash
+npm ci
+npm run lint
+npm test
+```
+
+6. Open PR to your `main`, merge, redeploy, then run smoke checks:
+- `/api/health` returns `status: "ok"`
+- admin login works
+- save one test edit successfully
+- publish/rollback still work for a test page
+
+### Auth State Backup (KV)
+Content in `data/` is already Git-backed. Authentication/session/passkey state lives in Cloudflare KV and should be backed up separately.
+
+Included options:
+- Scheduled GitHub Action: `.github/workflows/backup-kv.yml`
+- Manual CLI backup: `npm run backup:kv`
+- Manual CLI restore: `npm run restore:kv -- backups/<file>.json`
+
+Required secrets/env for KV backup/restore:
+- `CF_API_TOKEN` (KV read/write permission)
+- `CF_ACCOUNT_ID`
+- `KV_NAMESPACE_ID`
+
+Recommended:
+1. Configure the 3 secrets in GitHub repo settings.
+2. Run backup workflow manually once (`Actions -> Backup KV State -> Run workflow`) to validate.
+3. Keep at least one recent KV backup before major updates.
 ---
 ## Production Checklist
 Before going live, confirm these are set and working:
 - KV binding: `LOON_DB` is configured (`KV` also works as compatibility fallback)
 - Environment: `GITHUB_REPO` and `GITHUB_TOKEN` configured (secret)
+- Recovery: KV backup workflow configured (or manual `npm run backup:kv` process documented)
 - CORS: `CORS_ORIGIN` set to your production domain (if restricting)
 - Passkeys: `RP_ID` and `RP_ORIGIN` set to your production domain
 - Health check: `/api/health` returns `kv_database: true` and, for passkeys, `passkeys_ready: true`
@@ -241,6 +298,8 @@ loon/
 +-- examples/               # 16 ready-to-use schemas
    +-- ...                 # (see examples/README.md)
 +-- scripts/
+   +-- backup-kv.mjs       # Cloudflare KV snapshot backup
+   +-- restore-kv.mjs      # Cloudflare KV restore from backup file
    +-- bootstrap-admin.js  # Legacy admin bootstrap helper
    +-- setup-kv.mjs        # Optional KV automation (Wrangler)
    +-- check-env.mjs       # Local environment/config validation

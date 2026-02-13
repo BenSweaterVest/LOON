@@ -15,6 +15,8 @@
     "setup:kv": "node scripts/setup-kv.mjs",
     "setup:admin": "node scripts/setup-admin.mjs",
     "setup:local": "npm run setup:kv && npm run check:env",
+    "backup:kv": "node scripts/backup-kv.mjs",
+    "restore:kv": "node scripts/restore-kv.mjs",
     "lint": "npm run lint:js && npm run lint:json",
     "lint:js": "node scripts/check-js-syntax.mjs",
     "lint:json": "node scripts/validate-json.mjs",
