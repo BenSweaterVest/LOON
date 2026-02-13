@@ -144,6 +144,9 @@ describe('Pages Endpoint', () => {
         expect(body.pageId).toBe('new-page');
         expect(body.schemaCommit).toBe('schema-sha');
         expect(body.contentCommit).toBe('content-sha');
+        expect(body.schema).toBeTruthy();
+        expect(body.schema.title).toBe('New Page');
+        expect(body.content?._meta?.createdBy).toBe('admin');
         expect(global.fetch).toHaveBeenCalledTimes(3);
     });
 

@@ -3119,86 +3119,89 @@ PREREQUISITES:
                 if (queued && queued.content) {
                     CURRENT_CONTENT = { ...queued.content };
                 }
-
-                // Build form
-                buildForm();
-                markEditorDirty(false);
-                maybeRestoreAutosave(pageId);
-                refreshLinkPageList();
-                loadRevisionHistory();
-                hydrateWorkflowPanelFromContent();
-                loadWatchActivity();
-                loadReusableBlocks();
-
-                // Show editor
-                document.getElementById('editor-container').classList.remove('hidden');
-                document.getElementById('editor-title').textContent = CURRENT_SCHEMA.title || `Editing: ${pageId}`;
-                
-                // Show metadata if exists
-                if (CURRENT_CONTENT._meta) {
-                    const meta = CURRENT_CONTENT._meta;
-                    let metaHtml = '';
-                    if (meta.createdBy) metaHtml += `Created by: ${escapeHtml(meta.createdBy)}`;
-                    if (meta.created) metaHtml += ` on ${new Date(meta.created).toLocaleDateString()}`;
-                    if (meta.modifiedBy) metaHtml += ` | Last modified by: ${escapeHtml(meta.modifiedBy)}`;
-                    if (meta.lastModified) metaHtml += ` on ${new Date(meta.lastModified).toLocaleString()}`;
-                    
-                    const metaEl = document.getElementById('content-meta');
-                    metaEl.innerHTML = metaHtml;
-                    metaEl.classList.remove('hidden');
-                }
-                
-                // Show delete button for admin/editor only
-                const deleteBtn = document.getElementById('delete-btn');
-                if (SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor')) {
-                    deleteBtn.style.display = 'inline-block';
-                } else {
-                    deleteBtn.style.display = 'none';
-                }
-
-                // Show draft/publish buttons based on role
-                const saveBtn = document.getElementById('save-btn');
-                const draftBtn = document.getElementById('draft-btn');
-                const publishBtn = document.getElementById('publish-btn');
-
-                if (SESSION && SESSION.role === 'contributor') {
-                    // Contributors can only save drafts
-                    saveBtn.style.display = 'none';
-                    draftBtn.style.display = 'inline-block';
-                } else {
-                    saveBtn.style.display = 'inline-block';
-                    draftBtn.style.display = 'inline-block';
-                }
-
-                if (SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor')) {
-                    // Only admins and editors can publish
-                    publishBtn.style.display = 'inline-block';
-                } else {
-                    publishBtn.style.display = 'none';
-                }
-
-                // Show content status if available
-                if (CURRENT_CONTENT._meta && CURRENT_CONTENT._meta.status) {
-                    updateContentStatus(CURRENT_CONTENT._meta.status, CURRENT_CONTENT._meta.modifiedBy);
-                } else {
-                    document.getElementById('content-status').style.display = 'none';
-                }
-
-                if (queued) {
-                    document.getElementById('last-saved').textContent = `Loaded staged ${getStagedLabel(queued.saveAs)} change from this browser session`;
-                    showStatus('editor-status', `Loaded staged change for "${pageId}". Push all changes when ready.`, 'info');
-                    markEditorDirty(false);
-                } else {
-                    document.getElementById('last-saved').textContent = '';
-                }
-                updateBatchUi();
-                if (!queued) hideStatus('editor-status');
-                updateAutosaveIndicator();
+                renderLoadedPage(pageId, queued);
 
             } catch (e) {
                 showStatus('editor-status', e.message, 'error');
                 document.getElementById('editor-container').classList.add('hidden');
             }
+        }
+
+        function renderLoadedPage(pageId, queued = null) {
+            // Build form
+            buildForm();
+            markEditorDirty(false);
+            maybeRestoreAutosave(pageId);
+            refreshLinkPageList();
+            loadRevisionHistory();
+            hydrateWorkflowPanelFromContent();
+            loadWatchActivity();
+            loadReusableBlocks();
+
+            // Show editor
+            document.getElementById('editor-container').classList.remove('hidden');
+            document.getElementById('editor-title').textContent = CURRENT_SCHEMA.title || `Editing: ${pageId}`;
+
+            // Show metadata if exists
+            if (CURRENT_CONTENT._meta) {
+                const meta = CURRENT_CONTENT._meta;
+                let metaHtml = '';
+                if (meta.createdBy) metaHtml += `Created by: ${escapeHtml(meta.createdBy)}`;
+                if (meta.created) metaHtml += ` on ${new Date(meta.created).toLocaleDateString()}`;
+                if (meta.modifiedBy) metaHtml += ` | Last modified by: ${escapeHtml(meta.modifiedBy)}`;
+                if (meta.lastModified) metaHtml += ` on ${new Date(meta.lastModified).toLocaleString()}`;
+
+                const metaEl = document.getElementById('content-meta');
+                metaEl.innerHTML = metaHtml;
+                metaEl.classList.remove('hidden');
+            }
+
+            // Show delete button for admin/editor only
+            const deleteBtn = document.getElementById('delete-btn');
+            if (SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor')) {
+                deleteBtn.style.display = 'inline-block';
+            } else {
+                deleteBtn.style.display = 'none';
+            }
+
+            // Show draft/publish buttons based on role
+            const saveBtn = document.getElementById('save-btn');
+            const draftBtn = document.getElementById('draft-btn');
+            const publishBtn = document.getElementById('publish-btn');
+
+            if (SESSION && SESSION.role === 'contributor') {
+                // Contributors can only save drafts
+                saveBtn.style.display = 'none';
+                draftBtn.style.display = 'inline-block';
+            } else {
+                saveBtn.style.display = 'inline-block';
+                draftBtn.style.display = 'inline-block';
+            }
+
+            if (SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor')) {
+                // Only admins and editors can publish
+                publishBtn.style.display = 'inline-block';
+            } else {
+                publishBtn.style.display = 'none';
+            }
+
+            // Show content status if available
+            if (CURRENT_CONTENT._meta && CURRENT_CONTENT._meta.status) {
+                updateContentStatus(CURRENT_CONTENT._meta.status, CURRENT_CONTENT._meta.modifiedBy);
+            } else {
+                document.getElementById('content-status').style.display = 'none';
+            }
+
+            if (queued) {
+                document.getElementById('last-saved').textContent = `Loaded staged ${getStagedLabel(queued.saveAs)} change from this browser session`;
+                showStatus('editor-status', `Loaded staged change for "${pageId}". Push all changes when ready.`, 'info');
+                markEditorDirty(false);
+            } else {
+                document.getElementById('last-saved').textContent = '';
+            }
+            updateBatchUi();
+            if (!queued) hideStatus('editor-status');
+            updateAutosaveIndicator();
         }
 
         /**
@@ -3356,9 +3359,25 @@ PREREQUISITES:
                 statusDiv.innerHTML = '<p style="color: var(--success);">Page created! Loading editor...</p>';
                 
                 setTimeout(() => {
-                    document.getElementById('pageId').value = pageId;
                     cancelNewPage();
-                    loadEditor();
+                    document.getElementById('pageId').value = pageId;
+
+                    // Use API response data immediately so new pages open without waiting
+                    // for static /data propagation on the next deployment.
+                    if (data.schema && typeof data.schema === 'object') {
+                        CURRENT_PAGE_ID = pageId;
+                        CURRENT_SCHEMA = data.schema;
+                        CURRENT_CONTENT = (data.content && typeof data.content === 'object') ? data.content : {};
+                        localStorage.setItem(STORAGE_KEYS.LAST_PAGE, pageId);
+                        const queued = getQueuedChangeForPage(pageId);
+                        if (queued && queued.content) {
+                            CURRENT_CONTENT = { ...queued.content };
+                        }
+                        renderLoadedPage(pageId, queued);
+                        showStatus('editor-status', `Page "${pageId}" created and loaded.`, 'success');
+                    } else {
+                        loadEditor();
+                    }
                 }, 1000);
                 
             } catch (e) {

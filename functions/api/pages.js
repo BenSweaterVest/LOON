@@ -47,7 +47,9 @@
  *     "pageId": "my-page",
  *     "schemaCommit": "abc123...",
  *     "contentCommit": "def456...",
- *     "createdBy": "admin"
+ *     "createdBy": "admin",
+ *     "schema": { ... },
+ *     "content": { ... }
  *   }
  *
  * AUTHENTICATION:
@@ -348,7 +350,9 @@ export async function onRequestPost(context) {
             pageId: sanitizedPageId,
             schemaCommit: schemaCommit,
             contentCommit: contentCommit,
-            createdBy: session.username
+            createdBy: session.username,
+            schema: schemaContent,
+            content: contentData
         }, 201, env, request);
 
     } catch (err) {
