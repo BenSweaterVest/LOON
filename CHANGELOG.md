@@ -60,4 +60,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - default unset mode produces no security event logs
 - Added helper coverage enforcement to CI validation via `package.json` `validate:ci` (`npm run check:helper-coverage`).
 - Expanded API rate-limit documentation in `docs/API.md` and added KV rate-limit key operations notes in `OPERATIONS.md`.
+- Reduced setup-status KV operation cost in `functions/api/setup.js`:
+  - Added `meta:setup_complete` marker and `meta:setup_status_cache` key.
+  - `GET /api/setup` now uses marker/cache fast paths (`KV.get`) and avoids repeated `KV.list` scans.
+  - `POST /api/setup` now persists marker/cache after first admin creation.
+- Reduced onboarding setup monitor polling in `admin.html` from every 30 seconds to every 5 minutes to lower baseline API/KV usage during idle admin sessions.
+- Added shared KV index utilities in `functions/lib/kv-index.js` and refactored admin/session/watch flows to reduce `KV.list` pressure:
+  - `meta:index:users` for `/api/users` listing
+  - `meta:index:sessions` and `meta:index:user_sessions:<username>` for `/api/sessions` and user session cleanup paths
+  - `meta:index:watch:<username>` for watched-page lookups
+  - session metadata shadow keys (`session_meta:<token>`) to avoid broad scans
+- Added page-scoped audit feed keys (`audit_feed:page:<pageId>`) in `functions/api/_audit.js` and updated `functions/api/watch.js` to read recent watched-page changes from feed keys before global-audit fallback.
+- Reduced GitHub API usage in listing/history paths:
+  - Admin page browser now requests `/api/pages?minimal=true&limit=200` to avoid full metadata fan-out.
+  - Added short-lived full pages metadata cache in `functions/api/pages.js` for repeated full-mode calls.
+  - `functions/api/history.js` now performs owner checks only for contributors, skipping one GitHub read for admin/editor history requests.
+- Added scheduled publish index management to reduce GitHub directory scans:
+  - New KV key: `meta:index:scheduled_pages`
+  - `functions/api/workflow.js` updates the index when status changes to/from `scheduled`
+  - `functions/api/publish.js` and `functions/api/rollback.js` prune/update scheduled index state after content status transitions
+  - `functions/api/scheduled-publish.js` now prefers index-driven candidate pages and only uses GitHub directory scan as a backfill path
+- Added opportunistic stale session index cleanup in `functions/lib/kv-index.js` (`cleanupStaleSessionIndex`) and invoked it from `functions/api/sessions.js`.
 

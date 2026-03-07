@@ -83,6 +83,22 @@ Operational notes:
 - A persistent spike in 429s for one scope usually means automated traffic or a stuck client loop from a single IP.
 - Check `/api/audit` and deployment logs together when triaging repeated rate-limit blocks.
 
+## Index Keys (KV)
+To reduce expensive `KV.list` usage, LOON maintains lightweight index keys:
+
+- `meta:index:users`
+- `meta:index:sessions`
+- `meta:index:scheduled_pages`
+- `meta:index:user_sessions:<username>`
+- `meta:index:watch:<username>`
+- `session_meta:<token>`
+- `audit_feed:page:<pageId>`
+
+Operational notes:
+- These indexes are self-healing with endpoint-level fallback backfills.
+- Session indexes can contain stale tokens after TTL expiry; stale entries are cleaned opportunistically during session reads/revokes.
+- Scheduled publish candidates are index-driven; if the scheduled index is missing, the runner performs a one-time backfill scan and then persists the index.
+
 ## GitHub Token Setup
 Operational guidance for rotation/replacement:
 1. Create a fine-grained PAT scoped to this repo only.

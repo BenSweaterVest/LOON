@@ -18,6 +18,7 @@ import { getKVBinding } from './_kv.js';
 import { getStrictPageId } from '../lib/page-id.js';
 import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 import { getRepoFileJson, putRepoFileJson } from '../lib/github.js';
+import { addScheduledPageToIndex, removeScheduledPageFromIndex } from '../lib/kv-index.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
@@ -116,6 +117,12 @@ export async function onRequestPost(context) {
 
         const currentFile = await fetchCurrentFile(env, filePath);
         const newSha = await commitRollback(env, filePath, restoredContent, currentFile.sha, session.username, commitSha);
+        const rollbackStatus = restoredContent?._meta?.workflowStatus || restoredContent?._meta?.status;
+        if (rollbackStatus === 'scheduled' && restoredContent?._meta?.scheduledFor) {
+            await addScheduledPageToIndex(db, pageId);
+        } else {
+            await removeScheduledPageFromIndex(db, pageId);
+        }
 
         await logAudit(db, 'content_rollback', session.username, {
             pageId,

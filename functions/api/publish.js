@@ -11,6 +11,7 @@ import { getUnchangedSanitizedPageId } from '../lib/page-id.js';
 import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
 import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 import { getRepoFileJson, putRepoFileJson } from '../lib/github.js';
+import { removeScheduledPageFromIndex } from '../lib/kv-index.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
@@ -150,6 +151,7 @@ export async function onRequestPost(context) {
             content._meta.publishedBy = session.username;
             
             const commitSha = await putRepoFileJson(env, `data/${sanitizedPageId}/content.json`, content, `Publish ${sanitizedPageId} by ${session.username}`, sha, { pretty: true });
+            await removeScheduledPageFromIndex(db, sanitizedPageId);
             
             // Log audit
             await logAudit(db, 'content_publish', session.username, {
@@ -180,6 +182,7 @@ export async function onRequestPost(context) {
             content._meta.unpublishedBy = session.username;
             
             const commitSha = await putRepoFileJson(env, `data/${sanitizedPageId}/content.json`, content, `Unpublish ${sanitizedPageId} by ${session.username}`, sha, { pretty: true });
+            await removeScheduledPageFromIndex(db, sanitizedPageId);
             
             // Log audit
             await logAudit(db, 'content_unpublish', session.username, {

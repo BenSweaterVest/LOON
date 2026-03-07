@@ -53,6 +53,7 @@ import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { deindexSession, indexSession } from '../lib/kv-index.js';
 import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
 import { getBearerToken } from '../lib/session.js';
 
@@ -254,6 +255,7 @@ export async function onRequestPost(context) {
         await db.put(`session:${token}`, JSON.stringify(sessionData), {
             expirationTtl: 86400 // 24 hours
         });
+        await indexSession(db, token, sessionData, 86400);
 
         // Audit log
         await logAudit(db, 'login', sanitizedUsername, { ip, role: userRecord.role });
@@ -358,6 +360,7 @@ export async function onRequestDelete(context) {
 
         // Delete session from KV
         await db.delete(`session:${token}`);
+        await deindexSession(db, token, username);
 
         // Audit log
         await logAudit(db, 'logout', username, {});

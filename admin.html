@@ -2889,7 +2889,7 @@ PREREQUISITES:
         function startOnboardingMonitor() {
             if (ONBOARDING_TIMER) clearInterval(ONBOARDING_TIMER);
             refreshOnboardingStatus();
-            ONBOARDING_TIMER = setInterval(refreshOnboardingStatus, 30000);
+            ONBOARDING_TIMER = setInterval(refreshOnboardingStatus, 300000);
         }
 
         function stopOnboardingMonitor() {
@@ -4795,7 +4795,7 @@ PREREQUISITES:
                     headers['Authorization'] = `Bearer ${SESSION.token}`;
                 }
                 
-                const res = await fetch('/api/pages', { headers });
+                const res = await fetch('/api/pages?minimal=true&limit=200', { headers });
                 const data = await res.json();
                 
                 if (!res.ok) {

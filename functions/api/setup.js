@@ -18,10 +18,16 @@ import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { jsonResponse, logError } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import { addUserToIndex, indexSession } from '../lib/kv-index.js';
 import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
 
 const CORS_OPTIONS = { methods: 'GET, POST, OPTIONS' };
 const RATE_LIMIT = { maxAttempts: 10, windowMs: 60000 };
+const SETUP_COMPLETE_KEY = 'meta:setup_complete';
+const SETUP_STATUS_CACHE_KEY = 'meta:setup_status_cache';
+const SETUP_STATUS_CACHE_TTL_SECONDS = 900; // 15 minutes
+const SETUP_STATUS_CACHE_TTL_MS = SETUP_STATUS_CACHE_TTL_SECONDS * 1000;
+const inMemorySetupStatusByDb = new WeakMap();
 
 function normalizeUsername(username) {
     if (!username || typeof username !== 'string') return null;
@@ -65,7 +71,39 @@ function timingSafeEqualString(a, b) {
     return result === 0;
 }
 
+function cacheSetupStatus(db, hasAdmin) {
+    inMemorySetupStatusByDb.set(db, {
+        hasAdmin: !!hasAdmin,
+        expiresAt: Date.now() + SETUP_STATUS_CACHE_TTL_MS
+    });
+}
+
 async function adminExists(db) {
+    // Fast path: in-memory cache for current isolate.
+    const inMemoryEntry = inMemorySetupStatusByDb.get(db);
+    if (inMemoryEntry && Date.now() < inMemoryEntry.expiresAt) {
+        return !!inMemoryEntry.hasAdmin;
+    }
+
+    // Primary source: explicit marker set when setup/admin creation completes.
+    const setupComplete = await db.get(SETUP_COMPLETE_KEY, { type: 'json' });
+    if (setupComplete?.hasAdmin === true) {
+        cacheSetupStatus(db, true);
+        return true;
+    }
+
+    // Secondary source: short-lived KV cache to avoid repeated scans.
+    const setupStatusCache = await db.get(SETUP_STATUS_CACHE_KEY, { type: 'json' });
+    if (setupStatusCache && typeof setupStatusCache.hasAdmin === 'boolean') {
+        const checkedAt = Number(setupStatusCache.checkedAt || 0);
+        if (checkedAt > 0 && (Date.now() - checkedAt) < SETUP_STATUS_CACHE_TTL_MS) {
+            cacheSetupStatus(db, setupStatusCache.hasAdmin);
+            return setupStatusCache.hasAdmin;
+        }
+    }
+
+    // Backfill path: scan users only when marker/cache is unavailable or stale.
+    let hasAdmin = false;
     let cursor = undefined;
 
     do {
@@ -78,14 +116,32 @@ async function adminExists(db) {
         for (const key of keys) {
             const record = await db.get(key.name, { type: 'json' });
             if (record && record.role === 'admin') {
-                return true;
+                hasAdmin = true;
+                break;
             }
         }
 
+        if (hasAdmin) break;
         cursor = page?.cursor;
     } while (cursor);
 
-    return false;
+    const now = Date.now();
+    await db.put(SETUP_STATUS_CACHE_KEY, JSON.stringify({
+        hasAdmin,
+        checkedAt: now
+    }), {
+        expirationTtl: SETUP_STATUS_CACHE_TTL_SECONDS
+    });
+    if (hasAdmin) {
+        await db.put(SETUP_COMPLETE_KEY, JSON.stringify({
+            hasAdmin: true,
+            detectedAt: new Date(now).toISOString(),
+            source: 'backfill_scan'
+        }));
+    }
+
+    cacheSetupStatus(db, hasAdmin);
+    return hasAdmin;
 }
 
 export async function onRequestGet(context) {
@@ -194,6 +250,19 @@ export async function onRequestPost(context) {
         };
 
         await db.put(`user:${sanitizedUsername}`, JSON.stringify(userRecord));
+        await addUserToIndex(db, sanitizedUsername);
+        await db.put(SETUP_COMPLETE_KEY, JSON.stringify({
+            hasAdmin: true,
+            username: sanitizedUsername,
+            completedAt: nowIso
+        }));
+        await db.put(SETUP_STATUS_CACHE_KEY, JSON.stringify({
+            hasAdmin: true,
+            checkedAt: Date.now()
+        }), {
+            expirationTtl: SETUP_STATUS_CACHE_TTL_SECONDS
+        });
+        cacheSetupStatus(db, true);
 
         // Create authenticated session so setup can transition directly into app usage.
         const sessionToken = crypto.randomUUID();
@@ -207,6 +276,7 @@ export async function onRequestPost(context) {
         await db.put(`session:${sessionToken}`, JSON.stringify(sessionData), {
             expirationTtl: 86400
         });
+        await indexSession(db, sessionToken, sessionData, 86400);
 
         await logAudit(db, 'setup_admin_created', sanitizedUsername, { ip });
 

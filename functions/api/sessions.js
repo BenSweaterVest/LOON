@@ -32,6 +32,14 @@
 import { handleCorsOptions } from './_cors.js';
 import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import {
+    cleanupStaleSessionIndex,
+    deindexSession,
+    getSessionMeta,
+    getSessionTokensFromIndex,
+    getUserSessionTokens,
+    indexSession
+} from '../lib/kv-index.js';
 import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
 import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 
@@ -109,32 +117,38 @@ export async function onRequestGet(context) {
     }
 
     try {
-        // List all sessions
-        const list = await db.list({ prefix: 'session:' });
-        
-        // Parallel fetch all sessions to avoid N+1 query problem
-        const sessionDataPromises = list.keys.map(key =>
-            db.get(key.name, { type: 'json' }).then(sessionRaw => ({
-                key: key.name,
-                data: sessionRaw
-            }))
-        );
-        
-        const sessionDataResults = await Promise.all(sessionDataPromises);
-        
+        await cleanupStaleSessionIndex(db, { maxChecks: 60 });
+        const tokens = await getSessionTokensFromIndex(db);
+        const sessionDataResults = await Promise.all(tokens.map(async (tokenId) => {
+            let data = await getSessionMeta(db, tokenId);
+            if (!data) {
+                const raw = await db.get(`session:${tokenId}`);
+                if (!raw) {
+                    await deindexSession(db, tokenId);
+                    return null;
+                }
+                try {
+                    data = JSON.parse(raw);
+                } catch {
+                    await deindexSession(db, tokenId);
+                    return null;
+                }
+                await indexSession(db, tokenId, data);
+            }
+
+            return { tokenId, data };
+        }));
+
         const sessions = sessionDataResults
-            .filter(result => result.data)
-            .map(result => {
-                const tokenId = result.key.replace('session:', '');
-                return {
-                    tokenPreview: tokenId.substring(0, 8) + '...',
-                    username: result.data.username,
-                    role: result.data.role,
-                    created: result.data.created ? new Date(result.data.created).toISOString() : null,
-                    ip: result.data.ip || 'unknown',
-                    isCurrent: tokenId === auth.token
-                };
-            });
+            .filter(result => result?.data)
+            .map(result => ({
+                tokenPreview: result.tokenId.substring(0, 8) + '...',
+                username: result.data.username,
+                role: result.data.role,
+                created: result.data.created ? new Date(result.data.created).toISOString() : null,
+                ip: result.data.ip || 'unknown',
+                isCurrent: result.tokenId === auth.token
+            }));
 
         // Sort by creation time (newest first)
         sessions.sort((a, b) => {
@@ -199,6 +213,7 @@ export async function onRequestDelete(context) {
     }
 
     try {
+        await cleanupStaleSessionIndex(db, { maxChecks: 60 });
         const body = await request.json();
         let revokedCount = 0;
 
@@ -211,25 +226,34 @@ export async function onRequestDelete(context) {
                 return jsonResponse({ error: 'Cannot revoke your own sessions' }, 400, env, request);
             }
 
-            const list = await db.list({ prefix: 'session:' });
+            let tokens = await getUserSessionTokens(db, targetUsername);
 
-            // Parallel fetch all sessions to avoid N+1 query problem
-            const sessionDataPromises = list.keys.map(key =>
-                db.get(key.name, { type: 'json' }).then(sessionRaw => ({
-                    key: key.name,
-                    data: sessionRaw
-                }))
-            );
-            
-            const sessionDataResults = await Promise.all(sessionDataPromises);
-            
-            // Parallel delete sessions belonging to target user
-            const deletePromises = sessionDataResults
-                .filter(result => result.data && result.data.username === targetUsername)
-                .map(result => db.delete(result.key));
-            
-            revokedCount = deletePromises.length;
-            await Promise.all(deletePromises);
+            if (!tokens.length) {
+                // Backward-compatible fallback for existing sessions without user-session index.
+                const allTokens = await getSessionTokensFromIndex(db);
+                const tokenChecks = await Promise.all(allTokens.map(async (tokenId) => {
+                    const meta = await getSessionMeta(db, tokenId);
+                    if (meta?.username) return { tokenId, username: meta.username };
+
+                    const raw = await db.get(`session:${tokenId}`);
+                    if (!raw) return null;
+                    try {
+                        const parsed = JSON.parse(raw);
+                        return { tokenId, username: parsed?.username || null };
+                    } catch {
+                        return null;
+                    }
+                }));
+                tokens = tokenChecks
+                    .filter(entry => entry && entry.username === targetUsername)
+                    .map(entry => entry.tokenId);
+            }
+
+            await Promise.all(tokens.map(async (tokenId) => {
+                await db.delete(`session:${tokenId}`);
+                await deindexSession(db, tokenId, targetUsername);
+            }));
+            revokedCount = tokens.length;
         } else {
             return jsonResponse({ error: 'username and all=true required' }, 400, env, request);
         }

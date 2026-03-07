@@ -71,4 +71,21 @@ describe('Workflow Endpoint', () => {
         expect(res.status).toBe(400);
         expect(body.error).toContain('scheduledFor');
     });
+
+    it('should add page to scheduled index when scheduled', async () => {
+        await db.put('session:test-token', JSON.stringify({ username: 'admin', role: 'admin' }));
+        const scheduledFor = new Date(Date.now() + 3600_000).toISOString();
+        global.fetch = vi.fn()
+            .mockResolvedValueOnce(githubContentResponse({ _meta: {} }, 'current-sha'))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ commit: { sha: 'commit123' } }), { status: 200 }));
+
+        const res = await onRequestPost({
+            request: createRequest({ pageId: 'demo', status: 'scheduled', scheduledFor }),
+            env
+        });
+        expect(res.status).toBe(200);
+
+        const scheduledIndex = await db.get('meta:index:scheduled_pages', { type: 'json' });
+        expect(scheduledIndex).toContain('demo');
+    });
 });

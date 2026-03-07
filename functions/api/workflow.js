@@ -18,6 +18,7 @@ import { getKVBinding } from './_kv.js';
 import { getStrictPageId } from '../lib/page-id.js';
 import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 import { getRepoFileJson, putRepoFileJson } from '../lib/github.js';
+import { addScheduledPageToIndex, removeScheduledPageFromIndex } from '../lib/kv-index.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 const ALLOWED = new Set(['draft', 'in_review', 'approved', 'scheduled', 'published']);
@@ -115,6 +116,12 @@ export async function onRequestPost(context) {
             file.sha,
             `Workflow: ${pageId} -> ${status} by ${session.username}`
         );
+
+        if (status === 'scheduled') {
+            await addScheduledPageToIndex(db, pageId);
+        } else {
+            await removeScheduledPageFromIndex(db, pageId);
+        }
 
         await logAudit(db, 'content_workflow_update', session.username, {
             pageId,

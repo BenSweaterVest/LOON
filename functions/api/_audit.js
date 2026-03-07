@@ -40,6 +40,13 @@
 
 import { logError } from './_response.js';
 
+const PAGE_AUDIT_FEED_PREFIX = 'audit_feed:page:';
+const PAGE_AUDIT_FEED_LIMIT = 25;
+
+function getPageAuditFeedKey(pageId) {
+    return `${PAGE_AUDIT_FEED_PREFIX}${pageId}`;
+}
+
 /**
  * Log an audit event to KV storage.
  *
@@ -70,6 +77,18 @@ export async function logAudit(db, action, username, details = {}, ttlDays = 30)
         await db.put(key, JSON.stringify(logEntry), {
             expirationTtl: 86400 * ttlDays // Convert days to seconds
         });
+
+        const pageId = typeof details?.pageId === 'string' ? details.pageId.trim() : '';
+        if (pageId) {
+            const feedKey = getPageAuditFeedKey(pageId);
+            const current = (await db.get(feedKey, { type: 'json' })) || [];
+            const next = [logEntry, ...current]
+                .filter(entry => entry && entry.timestamp && entry.action)
+                .slice(0, PAGE_AUDIT_FEED_LIMIT);
+            await db.put(feedKey, JSON.stringify(next), {
+                expirationTtl: 86400 * ttlDays
+            });
+        }
 
     } catch (err) {
         // Don't fail the main operation if audit logging fails
@@ -132,6 +151,20 @@ export async function getAuditLogs(db, options = {}) {
 
     } catch (err) {
         logError(err, 'Audit/Retrieve');
+        return [];
+    }
+}
+
+export async function getAuditLogsForPage(db, pageId, limit = 20) {
+    if (!db || !pageId) return [];
+
+    try {
+        const entries = (await db.get(getPageAuditFeedKey(pageId), { type: 'json' })) || [];
+        return entries
+            .filter(entry => entry && entry.timestamp && entry.action)
+            .slice(0, Math.max(1, Math.min(limit, PAGE_AUDIT_FEED_LIMIT)));
+    } catch (err) {
+        logError(err, 'Audit/PageFeed');
         return [];
     }
 }

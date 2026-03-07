@@ -45,7 +45,6 @@ describe('History Endpoint', () => {
         await db.put('session:test-token', JSON.stringify({ username: 'admin', role: 'admin' }));
 
         global.fetch = vi.fn()
-            .mockResolvedValueOnce(githubContentResponse({ _meta: { createdBy: 'alice' } }, 'sha-current'))
             .mockResolvedValueOnce(new Response(JSON.stringify([
                 {
                     sha: 'abcdef123456',

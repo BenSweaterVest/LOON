@@ -60,11 +60,12 @@ export async function onRequestGet(context) {
             return jsonResponse({ error: 'Valid pageId is required' }, 400, env, request);
         }
 
-        const currentContent = await getCurrentContent(env, pageId);
-        const createdBy = currentContent?._meta?.createdBy || null;
-
-        if (session.role === 'contributor' && createdBy && createdBy !== session.username) {
-            return jsonResponse({ error: 'Contributors can only view history for pages they created' }, 403, env, request);
+        if (session.role === 'contributor') {
+            const currentContent = await getCurrentContent(env, pageId);
+            const createdBy = currentContent?._meta?.createdBy || null;
+            if (createdBy && createdBy !== session.username) {
+                return jsonResponse({ error: 'Contributors can only view history for pages they created' }, 403, env, request);
+            }
         }
 
         const path = encodeURIComponent(`data/${pageId}/content.json`);

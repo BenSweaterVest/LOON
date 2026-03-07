@@ -27,6 +27,10 @@ const directoryCache = {
     data: null,
     timestamp: 0
 };
+const fullPagesCache = {
+    data: null,
+    timestamp: 0
+};
 
 /**
  * Check if cached directory data is still valid.
@@ -35,6 +39,11 @@ const directoryCache = {
 function isCacheValid() {
     return directoryCache.data !== null &&
            (Date.now() - directoryCache.timestamp) < CONFIG.CACHE_TTL_MS;
+}
+
+function isFullPagesCacheValid() {
+    return fullPagesCache.data !== null &&
+           (Date.now() - fullPagesCache.timestamp) < CONFIG.CACHE_TTL_MS;
 }
 
 /**
@@ -247,6 +256,8 @@ export async function onRequestPost(context) {
         // Invalidate cache
         directoryCache.data = null;
         directoryCache.timestamp = 0;
+        fullPagesCache.data = null;
+        fullPagesCache.timestamp = 0;
 
         // Audit log
         await logAudit(db, 'page_create', session.username, { pageId: sanitizedPageId, template: template || 'custom' });
@@ -336,6 +347,11 @@ async function fetchPagesFromGitHub(env, minimal = false) {
         return pages;
     }
 
+    // Full mode cache: avoids repeated 2*N GitHub reads during page browser refreshes.
+    if (isFullPagesCacheValid()) {
+        return fullPagesCache.data.map(page => ({ ...page }));
+    }
+
     // Full mode: fetch schema and content for each page
     // Use Promise.all for parallel requests to improve performance
     const pages = await Promise.all(directories.map(async (dir) => {
@@ -385,6 +401,9 @@ async function fetchPagesFromGitHub(env, minimal = false) {
 
     // Sort by title
     pages.sort((a, b) => a.title.localeCompare(b.title));
+
+    fullPagesCache.data = pages;
+    fullPagesCache.timestamp = Date.now();
 
     return pages;
 }

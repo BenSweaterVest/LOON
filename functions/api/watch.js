@@ -12,29 +12,48 @@
  */
 
 import { handleCorsOptions } from './_cors.js';
-import { getAuditLogs } from './_audit.js';
+import { getAuditLogs, getAuditLogsForPage } from './_audit.js';
 import { logError, jsonResponse } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import {
+    addWatchPageToIndex,
+    getWatchPagesFromIndex,
+    removeWatchPageFromIndex
+} from '../lib/kv-index.js';
 import { getStrictPageId } from '../lib/page-id.js';
 import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 
 const CORS_OPTIONS = { methods: 'GET, POST, DELETE, OPTIONS' };
 
 async function listWatchedPages(db, username) {
-    const prefix = `watch:${username}:`;
-    const result = await db.list({ prefix, limit: 500 });
-    return result.keys
-        .map(k => k.name.slice(prefix.length))
-        .filter(Boolean)
-        .sort();
+    return getWatchPagesFromIndex(db, username);
 }
 
 async function watchedRecentChanges(db, watchedPages, limit = 30) {
     if (!watchedPages.length) return [];
-    const logs = await getAuditLogs(db, { limit: 600 });
-    const set = new Set(watchedPages);
+    const pageLogSets = await Promise.all(
+        watchedPages.map(pageId => getAuditLogsForPage(db, pageId, 20))
+    );
+    const logs = pageLogSets.flat();
+
+    // Backward-compatible fallback if page feeds are not populated yet.
+    if (!logs.length) {
+        const allLogs = await getAuditLogs(db, { limit: 600 });
+        const set = new Set(watchedPages);
+        return allLogs
+            .filter(log => set.has(log?.details?.pageId))
+            .slice(0, limit)
+            .map(log => ({
+                action: log.action,
+                pageId: log.details?.pageId || null,
+                username: log.username,
+                timestamp: log.timestamp,
+                details: log.details || {}
+            }));
+    }
+
     return logs
-        .filter(log => set.has(log?.details?.pageId))
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
         .slice(0, limit)
         .map(log => ({
             action: log.action,
@@ -77,6 +96,7 @@ export async function onRequestPost(context) {
         const pageId = getStrictPageId(body.pageId, { min: 3, max: 50, trim: true });
         if (!pageId) return jsonResponse({ error: 'Valid pageId required' }, 400, env, request);
         await db.put(`watch:${session.username}:${pageId}`, JSON.stringify({ watchedAt: Date.now() }));
+        await addWatchPageToIndex(db, session.username, pageId);
         return jsonResponse({ success: true, pageId }, 200, env, request);
     } catch (err) {
         logError(err, 'Watch/Post', env);
@@ -97,6 +117,7 @@ export async function onRequestDelete(context) {
         const pageId = getStrictPageId(body.pageId, { min: 3, max: 50, trim: true });
         if (!pageId) return jsonResponse({ error: 'Valid pageId required' }, 400, env, request);
         await db.delete(`watch:${session.username}:${pageId}`);
+        await removeWatchPageFromIndex(db, session.username, pageId);
         return jsonResponse({ success: true, pageId }, 200, env, request);
     } catch (err) {
         logError(err, 'Watch/Delete', env);

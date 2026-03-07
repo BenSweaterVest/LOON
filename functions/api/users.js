@@ -63,6 +63,15 @@ import { handleCorsOptions } from './_cors.js';
 import { logAudit } from './_audit.js';
 import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from './_response.js';
 import { getKVBinding } from './_kv.js';
+import {
+    addUserToIndex,
+    deindexSession,
+    getSessionTokensFromIndex,
+    getSessionMeta,
+    getUserSessionTokens,
+    getUsersFromIndex,
+    removeUserFromIndex
+} from '../lib/kv-index.js';
 import { checkKvRateLimit, buildRateLimitKey } from '../lib/rate-limit.js';
 import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 
@@ -158,12 +167,10 @@ function normalizeUsername(username) {
  * GET: List all users
  */
 async function handleGet(db, session, env, request) {
-    const list = await db.list({ prefix: 'user:' });
-    
-    // Parallel fetch all users to avoid N+1 query problem
-    const userDataPromises = list.keys.map(key => 
-        db.get(key.name, { type: 'json' }).then(userRaw => ({
-            key: key.name,
+    const usernames = await getUsersFromIndex(db);
+    const userDataPromises = usernames.map(username =>
+        db.get(`user:${username}`, { type: 'json' }).then(userRaw => ({
+            username,
             data: userRaw
         }))
     );
@@ -173,7 +180,7 @@ async function handleGet(db, session, env, request) {
     const users = userDataResults
         .filter(result => result.data)
         .map(result => ({
-            username: result.key.replace('user:', ''),
+            username: result.username,
             role: result.data.role,
             created: result.data.created,
             createdBy: result.data.createdBy,
@@ -234,6 +241,7 @@ async function handlePost(db, session, body, env, request) {
     };
 
     await db.put(`user:${sanitizedUsername}`, JSON.stringify(userRecord));
+    await addUserToIndex(db, sanitizedUsername);
 
     // Audit log
     await logAudit(db, 'user_create', session.username, { newUser: sanitizedUsername, role: role });
@@ -282,25 +290,35 @@ async function handleDelete(db, session, body, env, request) {
 
     // Delete user
     await db.delete(`user:${sanitizedUsername}`);
+    await removeUserFromIndex(db, sanitizedUsername);
 
     // Also delete any active sessions for this user
-    // Parallel fetch all sessions to avoid N+1 query problem
-    const sessions = await db.list({ prefix: 'session:' });
-    const sessionDataPromises = sessions.keys.map(key =>
-        db.get(key.name, { type: 'json' }).then(sessionData => ({
-            key: key.name,
-            data: sessionData
-        }))
-    );
-    
-    const sessionDataResults = await Promise.all(sessionDataPromises);
-    
-    // Parallel delete sessions belonging to this user
-    const deletePromises = sessionDataResults
-        .filter(result => result.data && result.data.username === sanitizedUsername)
-        .map(result => db.delete(result.key));
-    
-    await Promise.all(deletePromises);
+    let tokens = await getUserSessionTokens(db, sanitizedUsername);
+    if (!tokens.length) {
+        // Backward-compatible fallback for older deployments without populated user-session index.
+        const allTokens = await getSessionTokensFromIndex(db);
+        const tokenChecks = await Promise.all(allTokens.map(async (token) => {
+            const meta = await getSessionMeta(db, token);
+            if (meta?.username) return { token, username: meta.username };
+
+            const sessionRaw = await db.get(`session:${token}`);
+            if (!sessionRaw) return null;
+            try {
+                const parsed = JSON.parse(sessionRaw);
+                return { token, username: parsed?.username || null };
+            } catch {
+                return null;
+            }
+        }));
+        tokens = tokenChecks
+            .filter(entry => entry && entry.username === sanitizedUsername)
+            .map(entry => entry.token);
+    }
+
+    await Promise.all(tokens.map(async (token) => {
+        await db.delete(`session:${token}`);
+        await deindexSession(db, token, sanitizedUsername);
+    }));
 
     // Audit log
     await logAudit(db, 'user_delete', session.username, { deletedUser: sanitizedUsername });

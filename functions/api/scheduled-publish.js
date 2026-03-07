@@ -15,6 +15,12 @@ import { buildSecurityContext, logError, jsonResponse, logSecurityEvent } from '
 import { getKVBinding } from './_kv.js';
 import { getBearerToken, getSessionFromRequest } from '../lib/session.js';
 import { getRepoFileJson, listRepoDirectory, putRepoFileJson } from '../lib/github.js';
+import {
+    getScheduledPageIds,
+    readScheduledPageIdsIndex,
+    removeScheduledPageFromIndex,
+    setScheduledPageIdsIndex
+} from '../lib/kv-index.js';
 
 const CORS_OPTIONS = { methods: 'POST, OPTIONS' };
 
@@ -25,6 +31,16 @@ async function listPageIds(env, limit = 150) {
         .filter(item => item.type === 'dir')
         .map(item => item.name)
         .slice(0, limit);
+}
+
+async function getCandidateScheduledPageIds(db, env) {
+    const indexed = await readScheduledPageIdsIndex(db);
+    if (indexed) {
+        return { pageIds: indexed, source: 'index' };
+    }
+    // Backward-compatible one-time backfill source.
+    const scanned = await listPageIds(env, 200);
+    return { pageIds: scanned, source: 'github_scan_backfill' };
 }
 
 async function readPageContent(env, pageId) {
@@ -76,16 +92,25 @@ export async function onRequestPost(context) {
         }
 
         const now = Date.now();
-        const pageIds = await listPageIds(env, 200);
+        const { pageIds, source } = await getCandidateScheduledPageIds(db, env);
+        const discoveredScheduled = [];
         const published = [];
         const skipped = [];
 
         for (const pageId of pageIds) {
             const page = await readPageContent(env, pageId);
-            if (!page || !page.content?._meta) continue;
+            if (!page || !page.content?._meta) {
+                await removeScheduledPageFromIndex(db, pageId);
+                continue;
+            }
             const meta = page.content._meta;
             const status = meta.workflowStatus || meta.status;
-            if (status !== 'scheduled' || !meta.scheduledFor) continue;
+            if (status !== 'scheduled' || !meta.scheduledFor) {
+                await removeScheduledPageFromIndex(db, pageId);
+                continue;
+            }
+
+            discoveredScheduled.push(pageId);
 
             const due = new Date(meta.scheduledFor).getTime();
             if (Number.isNaN(due) || due > now) {
@@ -106,6 +131,7 @@ export async function onRequestPost(context) {
             delete next._meta.scheduledFor;
 
             const commit = await writePageContent(env, page, next, session.username);
+            await removeScheduledPageFromIndex(db, pageId);
             published.push({ pageId, commit });
             await logAudit(db, 'content_scheduled_publish', session.username, { pageId, commit });
             logSecurityEvent({
@@ -116,7 +142,12 @@ export async function onRequestPost(context) {
             }, env);
         }
 
-        return jsonResponse({ success: true, checked: pageIds.length, published, skipped }, 200, env, request);
+        if (source === 'github_scan_backfill') {
+            await setScheduledPageIdsIndex(db, discoveredScheduled);
+        }
+
+        const indexedCount = (await getScheduledPageIds(db)).length;
+        return jsonResponse({ success: true, checked: pageIds.length, published, skipped, source, indexedCount }, 200, env, request);
     } catch (err) {
         logError(err, 'ScheduledPublish/Post', env);
         return jsonResponse({ error: 'Scheduled publish runner failed' }, 500, env, request);

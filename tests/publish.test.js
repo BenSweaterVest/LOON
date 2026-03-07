@@ -107,6 +107,7 @@ describe('Publish Endpoint', () => {
 
     it('should publish draft content successfully', async () => {
         await db.put('session:test-token', JSON.stringify({ username: 'admin', role: 'admin' }));
+        await db.put('meta:index:scheduled_pages', JSON.stringify(['demo']));
 
         const content = { draft: { title: 'Draft' }, _meta: { status: 'draft' } };
         const encoded = Buffer.from(JSON.stringify(content)).toString('base64');
@@ -127,6 +128,8 @@ describe('Publish Endpoint', () => {
         expect(data.success).toBe(true);
         expect(data.status).toBe('published');
         expect(data.commit).toBe('commit123');
+        const scheduledIndex = await db.get('meta:index:scheduled_pages', { type: 'json' });
+        expect(scheduledIndex).not.toContain('demo');
     });
 
     it('should unpublish content successfully', async () => {

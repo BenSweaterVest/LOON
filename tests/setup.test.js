@@ -60,6 +60,10 @@ describe('Initial Setup Endpoint', () => {
         const storedSession = await db.get(`session:${body.token}`, { type: 'json' });
         expect(storedSession.username).toBe('admin');
         expect(storedSession.role).toBe('admin');
+
+        const setupMarker = await db.get('meta:setup_complete', { type: 'json' });
+        expect(setupMarker?.hasAdmin).toBe(true);
+        expect(setupMarker?.username).toBe('admin');
     });
 
     it('POST should reject invalid setup token', async () => {
@@ -87,5 +91,22 @@ describe('Initial Setup Endpoint', () => {
 
         const response = await onRequestPost({ request, env });
         expect(response.status).toBe(409);
+    });
+
+    it('GET should use setup marker without listing users', async () => {
+        await db.put('meta:setup_complete', JSON.stringify({ hasAdmin: true, username: 'admin' }));
+        let listCalls = 0;
+        const originalList = db.list;
+        db.list = async (...args) => {
+            listCalls += 1;
+            return originalList(...args);
+        };
+
+        const response = await onRequestGet({ request: createMockRequest('GET'), env });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.setupRequired).toBe(false);
+        expect(listCalls).toBe(0);
     });
 });
