@@ -1,145 +1,105 @@
 /**
- * Test Helpers
- * Utilities for testing Cloudflare Workers functions
+ * Test harness: a real D1 (via Miniflare) and a cookie-aware client that
+ * drives the actual request pipeline in src/server/app.js.
  */
 
-/**
- * Create a mock Request object
- */
-export function createMockRequest(method, body = null, headers = {}) {
-    const requestHeaders = new Headers({
-        'Content-Type': 'application/json',
-        'CF-Connecting-IP': '127.0.0.1',
-        ...headers
+import { Miniflare } from 'miniflare';
+import { afterAll } from 'vitest';
+import { handle } from '../src/server/app.js';
+import { migrate } from '../src/server/db/index.js';
+import { hashPassword } from '../src/server/auth/password.js';
+
+export const ORIGIN = 'https://loon.test';
+export const TEST_ITERATIONS = 1000;
+
+const instances = [];
+afterAll(async () => {
+    await Promise.all(instances.map((mf) => mf.dispose()));
+});
+
+export async function createEnv(overrides = {}) {
+    const mf = new Miniflare({
+        modules: true,
+        script: 'export default { fetch() { return new Response(null); } }',
+        d1Databases: ['DB']
     });
-    
-    const init = {
-        method,
-        headers: requestHeaders
+    instances.push(mf);
+    const DB = await mf.getD1Database('DB');
+    await migrate(DB);
+    return {
+        DB,
+        PBKDF2_ITERATIONS: String(TEST_ITERATIONS),
+        SETUP_TOKEN: 'setup-token-for-tests',
+        ...overrides
     };
-    
-    if (body && method !== 'GET') {
-        init.body = JSON.stringify(body);
+}
+
+export async function seedUser(env, username, role = 'admin', password = 'correct horse battery', extra = {}) {
+    const now = Date.now();
+    await env.DB.prepare(
+        `INSERT INTO users (username, display_name, role, password_hash, created_at, updated_at, must_change_password, disabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+        username, extra.displayName || '', role,
+        await hashPassword(password, TEST_ITERATIONS), now, now,
+        extra.mustChangePassword ? 1 : 0, extra.disabled ? 1 : 0
+    ).run();
+    return { username, password };
+}
+
+export class Client {
+    constructor(env, { ip = '203.0.113.10' } = {}) {
+        this.env = env;
+        this.ip = ip;
+        this.cookies = new Map();
+        this.waits = [];
     }
-    
-    return new Request('http://localhost/api/test', init);
-}
 
-/**
- * Create a mock environment object
- */
-export function createMockEnv(overrides = {}) {
-    return {
-        GITHUB_REPO: 'test-user/test-repo',
-        GITHUB_TOKEN: 'test-token-12345',
-        USER_DEMO_PASSWORD: 'test-password',
-        USER_TEST_PASSWORD: 'another-password',
-        ...overrides
-    };
-}
-
-/**
- * Create a mock KV namespace
- */
-export function createMockKV() {
-    const store = new Map();
-    
-    return {
-        get: async (key, options) => {
-            const value = store.get(key);
-            if (!value) return null;
-            if (options?.type === 'json') {
-                return JSON.parse(value);
-            }
-            return value;
-        },
-        put: async (key, value, options) => {
-            store.set(key, typeof value === 'string' ? value : JSON.stringify(value));
-        },
-        delete: async (key) => {
-            store.delete(key);
-        },
-        list: async (options) => {
-            const prefix = options?.prefix || '';
-            const keys = [];
-            for (const key of store.keys()) {
-                if (key.startsWith(prefix)) {
-                    keys.push({ name: key });
-                }
-            }
-            return { keys };
-        },
-        // Internal helper for tests
-        _store: store,
-        _clear: () => store.clear()
-    };
-}
-
-/**
- * Create a mock context object
- */
-export function createMockContext(request, env, overrides = {}) {
-    return {
-        request,
-        env,
-        ...overrides
-    };
-}
-
-/**
- * Parse JSON response
- */
-export async function parseResponse(response) {
-    const text = await response.text();
-    try {
-        return JSON.parse(text);
-    } catch {
-        return text;
-    }
-}
-
-/**
- * Create a mock database (alias for createMockKV)
- */
-export function createMockDB(overrides = {}) {
-    const kv = createMockKV();
-    return {
-        ...kv,
-        put: async (key, value, options) => {
-            await kv.put(key, value, options);
-            return { success: true };
-        },
-        ...overrides
-    };
-}
-
-/**
- * Create a mock session object
- */
-export function createMockSession(username = 'testuser', role = 'contributor') {
-    return {
-        token: `token-${Date.now()}`,
-        username,
-        role,
-        created: Date.now(),
-        ip: '127.0.0.1',
-        expiresIn: 86400 // 24 hours in seconds
-    };
-}
-
-/**
- * Create a mock response object
- */
-export function createMockResponse(status = 200, data = {}, headers = {}) {
-    return new Response(
-        JSON.stringify(data),
-        {
-            status,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                ...headers
-            }
+    async request(method, path, { body, headers = {}, origin = ORIGIN, raw } = {}) {
+        const init = { method, headers: { 'CF-Connecting-IP': this.ip, ...headers } };
+        if (origin && method !== 'GET') init.headers.Origin = origin;
+        if (this.cookies.size) {
+            init.headers.Cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
         }
-    );
+        if (raw !== undefined) {
+            init.body = raw;
+        } else if (body !== undefined) {
+            init.headers['Content-Type'] = 'application/json';
+            init.body = JSON.stringify(body);
+        }
+        const res = await handle(new Request(`${ORIGIN}${path}`, init), this.env, {
+            waitUntil: (p) => this.waits.push(p)
+        });
+        await Promise.allSettled(this.waits.splice(0));
+        for (const cookie of res.headers.getSetCookie()) {
+            const [pair, ...attrs] = cookie.split(';');
+            const [name, value] = pair.split('=');
+            const maxAge = attrs.find((a) => a.trim().toLowerCase().startsWith('max-age='));
+            if (maxAge && maxAge.trim().slice(8) === '0') this.cookies.delete(name.trim());
+            else this.cookies.set(name.trim(), value.trim());
+        }
+        const text = await res.text();
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        return { status: res.status, data, headers: res.headers };
+    }
+
+    get(path, opts) { return this.request('GET', path, opts); }
+    post(path, body, opts) { return this.request('POST', path, { ...opts, body }); }
+    put(path, body, opts) { return this.request('PUT', path, { ...opts, body }); }
+    patch(path, body, opts) { return this.request('PATCH', path, { ...opts, body }); }
+    delete(path, body, opts) { return this.request('DELETE', path, { ...opts, body }); }
+
+    async login(username, password = 'correct horse battery') {
+        const res = await this.post('/api/auth/login', { username, password });
+        if (res.status !== 200) throw new Error(`login failed: ${res.status} ${JSON.stringify(res.data)}`);
+        return res;
+    }
+}
+
+export async function signedIn(env, username, role = 'admin', extra = {}) {
+    await seedUser(env, username, role, undefined, extra);
+    const client = new Client(env);
+    await client.login(username);
+    return client;
 }

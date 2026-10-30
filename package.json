@@ -1,60 +1,32 @@
 {
   "name": "loon",
-  "version": "1.0.0",
-  "description": "LOON - Lightweight Online Organizing Network: A serverless micro-CMS",
+  "version": "2.0.0-dev",
+  "description": "LOON: a free-tier, serverless micro-CMS on Cloudflare Pages, D1 and GitHub",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev . --config wrangler.dev.toml --port 8788",
-    "dev:kv": "wrangler pages dev . --config wrangler.dev.toml --port 8788 --kv LOON_DB",
-    "dev:kv:local": "wrangler pages dev . --config wrangler.local.toml --port 8788",
-    "test": "vitest run --reporter=verbose",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs",
+    "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui",
-    "setup:kv": "node scripts/setup-kv.mjs",
-    "setup:admin": "node scripts/setup-admin.mjs",
-    "setup:local": "npm run setup:kv && npm run check:env",
-    "local": "node scripts/local-server.mjs",
-    "backup:kv": "node scripts/backup-kv.mjs",
-    "restore:kv": "node scripts/restore-kv.mjs",
-    "lint": "npm run lint:js && npm run lint:json",
-    "lint:js": "node scripts/check-js-syntax.mjs",
-    "lint:json": "node scripts/validate-json.mjs",
-    "check:helper-coverage": "node scripts/check-helper-coverage.mjs",
-    "check:env": "node scripts/check-env.mjs",
-    "validate": "npm run lint && npm run test && npm run check:env",
-    "validate:ci": "npm run lint && npm run test:coverage && npm run check:helper-coverage && npm run check:env",
-    "release": "npm run validate && echo 'Ready for release'"
+    "check": "node scripts/check.mjs",
+    "validate": "npm run check && npm test && npm run build"
   },
   "dependencies": {
-    "cbor-x": "^1.5.5"
+    "@simplewebauthn/server": "13.3.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240117.0",
-    "@vitest/coverage-v8": "^1.6.1",
-    "miniflare": "^3.20240129.0",
-    "vitest": "^1.2.0"
+    "@simplewebauthn/browser": "13.3.0",
+    "miniflare": "4.20260730.0",
+    "vitest": "3.2.7",
+    "wrangler": "4.156.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/BenSweaterVest/LOON.git"
   },
-  "keywords": [
-    "cms",
-    "serverless",
-    "cloudflare",
-    "github",
-    "micro-cms",
-    "json"
-  ],
-  "author": "Project LOON Contributors",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/BenSweaterVest/LOON/issues"
-  },
-  "homepage": "https://github.com/BenSweaterVest/LOON#readme"
+  "license": "MIT"
 }
