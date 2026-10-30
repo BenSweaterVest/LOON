@@ -1,0 +1,56 @@
+{
+  "title": "Documentation Page",
+  "description": "Structured notes with a summary and references.",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Doc Title",
+        "type": "text",
+        "placeholder": "System Overview"
+      },
+      {
+        "key": "summary",
+        "label": "Summary",
+        "type": "textarea",
+        "placeholder": "One to two sentence overview"
+      },
+      {
+        "key": "body",
+        "label": "Main Content",
+        "type": "markdown",
+        "placeholder": "Use headings and bullet lists"
+      },
+      {
+        "key": "references",
+        "label": "References",
+        "type": "textarea",
+        "placeholder": "Links, source docs, or related pages"
+      },
+      {
+        "key": "version",
+        "label": "Version",
+        "type": "text",
+        "placeholder": "v1.0"
+      },
+      {
+        "key": "status",
+        "label": "Doc Status",
+        "type": "select",
+        "options": [
+          "Draft",
+          "Published",
+          "Archived"
+        ]
+      }
+    ]
+  },
+  "sample": {
+    "title": "Local Demo Overview",
+    "summary": "How to run LOON locally without cloud setup.",
+    "body": "## Purpose\nThis page explains the local demo flow.\n\n## Steps\n1. Start the demo server.\n2. Log in with demo credentials.\n3. Create and edit pages.\n\n## Notes\nChanges are stored locally in demo-data.",
+    "references": "docs/LOCAL_DEMO.md",
+    "version": "v1.0",
+    "status": "Draft"
+  }
+}

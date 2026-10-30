@@ -41,3 +41,6 @@ data/.local/
 backups/
 *.results.csv
 
+
+# Build output and local wrangler state
+.wrangler/

@@ -1,0 +1,81 @@
+{
+  "title": "Team",
+  "description": "Team or staff directory with photos and short bios.",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "summary",
+        "label": "Introduction",
+        "type": "textarea",
+        "rows": 2
+      },
+      {
+        "key": "members",
+        "label": "Team members",
+        "type": "repeater",
+        "itemLabel": "Member",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "role",
+            "label": "Role",
+            "type": "text"
+          },
+          {
+            "key": "photo",
+            "label": "Photo",
+            "type": "image"
+          },
+          {
+            "key": "bio",
+            "label": "Bio",
+            "type": "markdown",
+            "rows": 3
+          },
+          {
+            "key": "email",
+            "label": "Email",
+            "type": "email"
+          }
+        ]
+      }
+    ]
+  },
+  "sample": {
+    "title": "Our Team",
+    "summary": "The people behind the work.",
+    "members": [
+      {
+        "name": "Jane Smith",
+        "role": "Director",
+        "photo": {
+          "src": "",
+          "alt": ""
+        },
+        "bio": "Leads programs and partnerships.",
+        "email": "jane@example.com"
+      },
+      {
+        "name": "Sam Lee",
+        "role": "Coordinator",
+        "photo": {
+          "src": "",
+          "alt": ""
+        },
+        "bio": "Keeps everything running on time.",
+        "email": ""
+      }
+    ]
+  }
+}

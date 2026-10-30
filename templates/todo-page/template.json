@@ -1,0 +1,56 @@
+{
+  "title": "Task List",
+  "description": "Simple list of tasks, owners, and due dates.",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "List Title",
+        "type": "text",
+        "placeholder": "Weekly Priorities"
+      },
+      {
+        "key": "owner",
+        "label": "Primary Owner",
+        "type": "text",
+        "placeholder": "Team or person"
+      },
+      {
+        "key": "due_date",
+        "label": "Due Date",
+        "type": "date"
+      },
+      {
+        "key": "status",
+        "label": "Overall Status",
+        "type": "select",
+        "options": [
+          "Not Started",
+          "In Progress",
+          "Blocked",
+          "Done"
+        ]
+      },
+      {
+        "key": "tasks",
+        "label": "Task List",
+        "type": "markdown",
+        "placeholder": "Use checkboxes or bullet lists"
+      },
+      {
+        "key": "notes",
+        "label": "Notes",
+        "type": "markdown",
+        "placeholder": "Dependencies, risks, or updates"
+      }
+    ]
+  },
+  "sample": {
+    "title": "Weekly Priorities",
+    "owner": "Operations",
+    "due_date": "2026-02-20",
+    "status": "In Progress",
+    "tasks": "- [ ] Confirm meeting agenda\n- [ ] Draft weekly update\n- [ ] Review open requests",
+    "notes": "Share updates in the Friday recap."
+  }
+}

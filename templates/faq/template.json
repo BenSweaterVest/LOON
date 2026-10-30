@@ -1,0 +1,66 @@
+{
+  "title": "FAQ",
+  "description": "Frequently asked questions with expandable answers.",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "summary",
+        "label": "Introduction",
+        "type": "textarea",
+        "rows": 2
+      },
+      {
+        "key": "questions",
+        "label": "Questions",
+        "type": "repeater",
+        "itemLabel": "Question",
+        "fields": [
+          {
+            "key": "question",
+            "label": "Question",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "answer",
+            "label": "Answer",
+            "type": "markdown",
+            "rows": 4,
+            "required": true
+          }
+        ]
+      },
+      {
+        "key": "contact",
+        "label": "Still need help?",
+        "type": "markdown",
+        "rows": 2
+      }
+    ]
+  },
+  "sample": {
+    "title": "Frequently Asked Questions",
+    "summary": "Quick answers to the questions we hear most.",
+    "questions": [
+      {
+        "question": "How do I reset my password?",
+        "answer": "1. Go to the sign-in page\n2. Choose **Forgot password**\n3. Follow the link we email you"
+      },
+      {
+        "question": "What are your hours?",
+        "answer": "Monday to Friday, 9am to 5pm."
+      },
+      {
+        "question": "Do you offer refunds?",
+        "answer": "Yes, within 30 days of purchase."
+      }
+    ],
+    "contact": "Email [help@example.com](mailto:help@example.com) and we will get back to you within one business day."
+  }
+}

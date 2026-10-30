@@ -1,0 +1,105 @@
+{
+  "title": "Menu & Pricing",
+  "description": "Menu items or services with prices, grouped under one heading.",
+  "schema": {
+    "fields": [
+      {
+        "key": "business_name",
+        "label": "Business name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "summary",
+        "label": "Summary",
+        "type": "textarea",
+        "rows": 2,
+        "placeholder": "One line about this menu"
+      },
+      {
+        "key": "effective_date",
+        "label": "Prices effective",
+        "type": "date"
+      },
+      {
+        "key": "items",
+        "label": "Items",
+        "type": "repeater",
+        "itemLabel": "Item",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "type": "text",
+            "placeholder": "$12.99"
+          },
+          {
+            "key": "description",
+            "label": "Description",
+            "type": "textarea",
+            "rows": 2
+          },
+          {
+            "key": "photo",
+            "label": "Photo",
+            "type": "image"
+          }
+        ]
+      },
+      {
+        "key": "specials",
+        "label": "Specials",
+        "type": "markdown",
+        "rows": 4
+      },
+      {
+        "key": "notes",
+        "label": "Notes",
+        "type": "markdown",
+        "rows": 3
+      }
+    ]
+  },
+  "sample": {
+    "business_name": "Corner Cafe",
+    "summary": "Lunch served daily from 11am.",
+    "effective_date": "2026-01-15",
+    "items": [
+      {
+        "name": "Club Sandwich",
+        "price": "$12.99",
+        "description": "Turkey, bacon, lettuce and tomato on toasted sourdough",
+        "photo": {
+          "src": "",
+          "alt": ""
+        }
+      },
+      {
+        "name": "Caesar Salad",
+        "price": "$10.99",
+        "description": "Romaine, parmesan, croutons, house dressing",
+        "photo": {
+          "src": "",
+          "alt": ""
+        }
+      },
+      {
+        "name": "Soup of the Day",
+        "price": "$6.50",
+        "description": "Ask your server",
+        "photo": {
+          "src": "",
+          "alt": ""
+        }
+      }
+    ],
+    "specials": "**Soup & Sandwich Combo**: $13.99 (Mon-Fri 11am-2pm)",
+    "notes": "Gluten-free bread available (+$2). Please tell us about any allergies."
+  }
+}

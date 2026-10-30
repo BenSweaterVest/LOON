@@ -1,0 +1,132 @@
+{
+  "title": "Class or Workshop",
+  "description": "Educational offering, class, or workshop details",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Class Title",
+        "type": "text",
+        "required": true,
+        "placeholder": "Introduction to Yoga",
+        "maxLength": 100
+      },
+      {
+        "key": "instructor",
+        "label": "Instructor",
+        "type": "text",
+        "placeholder": "Jane Smith"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "type": "markdown",
+        "required": true,
+        "placeholder": "What will participants learn?",
+        "rows": 5
+      },
+      {
+        "key": "level",
+        "label": "Skill Level",
+        "type": "select",
+        "options": [
+          "All Levels",
+          "Beginner",
+          "Intermediate",
+          "Advanced"
+        ]
+      },
+      {
+        "key": "schedule",
+        "label": "Schedule",
+        "type": "text",
+        "placeholder": "Tuesdays and Thursdays, 6:00 PM"
+      },
+      {
+        "key": "start_date",
+        "label": "Start Date",
+        "type": "date"
+      },
+      {
+        "key": "end_date",
+        "label": "End Date",
+        "type": "date",
+        "description": "Leave empty for ongoing classes"
+      },
+      {
+        "key": "duration",
+        "label": "Duration",
+        "type": "text",
+        "placeholder": "60 minutes, 6 weeks, etc."
+      },
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "placeholder": "Studio A, Online, etc."
+      },
+      {
+        "key": "capacity",
+        "label": "Class Capacity",
+        "type": "number",
+        "placeholder": "Maximum participants",
+        "min": 1
+      },
+      {
+        "key": "spots_available",
+        "label": "Spots Available",
+        "type": "number",
+        "min": 0
+      },
+      {
+        "key": "price",
+        "label": "Price",
+        "type": "text",
+        "placeholder": "$99, $25/class, Free"
+      },
+      {
+        "key": "requirements",
+        "label": "Requirements",
+        "type": "markdown",
+        "placeholder": "What to bring, prerequisites, etc.",
+        "rows": 3
+      },
+      {
+        "key": "registration_url",
+        "label": "Registration Link",
+        "type": "url",
+        "placeholder": "https://..."
+      },
+      {
+        "key": "status",
+        "label": "Status",
+        "type": "select",
+        "required": true,
+        "options": [
+          "Open",
+          "Waitlist",
+          "Full",
+          "Cancelled",
+          "Completed"
+        ]
+      }
+    ]
+  },
+  "sample": {
+    "title": "Introduction to Yoga",
+    "instructor": "Maria Santos",
+    "description": "Perfect for beginners, this class introduces fundamental yoga poses, breathing techniques, and meditation basics. You'll build strength, flexibility, and mindfulness in a supportive environment.\n\nNo prior experience needed. All bodies welcome.",
+    "level": "Beginner",
+    "schedule": "Tuesdays and Thursdays, 6:00 PM - 7:00 PM",
+    "start_date": "2026-02-01",
+    "end_date": "2026-03-15",
+    "duration": "60 minutes per session, 6-week series",
+    "location": "Studio B, Downtown Wellness Center",
+    "capacity": 15,
+    "spots_available": 7,
+    "price": "$120 for full series, $25 drop-in",
+    "requirements": "- Comfortable clothing\n- Yoga mat (rentals available for $3)\n- Water bottle\n- Arrive 10 minutes early for first class",
+    "registration_url": "",
+    "status": "Open"
+  }
+}

@@ -1,220 +1,24 @@
-# Continuous Integration Workflow
-# Runs on all pull requests and pushes to main
-
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: false
+permissions:
+  contents: read
 
 jobs:
-  # Validate JSON files
-  validate-json:
-    name: Validate JSON
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Validate JSON files
-        run: |
-          echo "Validating JSON files..."
-          find . -name "*.json" -type f -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
-            echo "Checking $file"
-            python3 -m json.tool "$file" > /dev/null || exit 1
-          done
-          echo "All JSON files are valid"
-
-  # Validate JavaScript syntax
-  validate-js:
-    name: Validate JavaScript
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Check JavaScript syntax
-        run: |
-          echo "Checking JavaScript syntax..."
-          find functions -name "*.js" -type f | while read file; do
-            echo "Checking $file"
-            node --check "$file" || exit 1
-          done
-          echo "All JavaScript files have valid syntax"
-
-  # Validate HTML
-  validate-html:
-    name: Validate HTML
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: Install html-validate
-        run: npm install -g html-validate
-      
-      - name: Validate HTML files
-        run: |
-          echo "Validating HTML files..."
-          html-validate "*.html" --config '{"extends":["html-validate:recommended"],"rules":{"no-inline-style":"off","prefer-native-element":"off"}}' || true
-          echo "HTML validation complete"
-
-  # Check for security issues
-  security-check:
-    name: Security Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check for secrets in code
-        run: |
-          echo "Checking for potential secrets..."
-          # Check for common secret patterns (but not in example/template files)
-          if grep -r --include="*.js" --include="*.html" -E "(password|secret|token|key)\s*[:=]\s*['\"][^'\"]{20,}" . 2>/dev/null | grep -v "placeholder\|example\|YOUR_\|your-\|xxxxx" | grep -v ".env"; then
-            echo "WARNING: Potential hardcoded secrets found"
-            exit 1
-          fi
-          echo "No hardcoded secrets detected"
-
-  # Validate Cloudflare Functions structure
-  validate-functions:
-    name: Validate Functions
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check function exports
-        run: |
-          echo "Checking Cloudflare Functions structure..."
-          for file in functions/api/*.js; do
-            echo "Checking $file"
-            # Verify each function exports at least one handler
-            if ! grep -q "export async function onRequest" "$file"; then
-              echo "WARNING: $file may not export a valid handler"
-            fi
-          done
-          echo "Functions structure check complete"
-
-  # Validate environment variable configuration
-  validate-env:
-    name: Validate Environment Configuration
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check .env.example exists
-        run: |
-          if [ ! -f .env.example ]; then
-            echo "ERROR: .env.example not found"
-            exit 1
-          fi
-          echo "PASS: .env.example exists"
-      
-      - name: Check required environment variables in documentation
-        run: |
-          echo "Checking for required environment variables documentation..."
-          if grep -q "GITHUB_REPO" CONTRIBUTING.md OPERATIONS.md; then
-            echo "PASS: GITHUB_REPO documented"
-          else
-            echo "WARNING: GITHUB_REPO not documented in CONTRIBUTING.md or OPERATIONS.md"
-          fi
-          
-          if grep -q "GITHUB_TOKEN" CONTRIBUTING.md OPERATIONS.md; then
-            echo "PASS: GITHUB_TOKEN documented"
-          else
-            echo "WARNING: GITHUB_TOKEN not documented"
-          fi
-      
-      - name: Validate Wrangler local configuration
-        run: |
-          CONFIG_FILE=""
-          if [ -f wrangler.dev.toml ]; then
-            CONFIG_FILE="wrangler.dev.toml"
-          elif [ -f wrangler.toml ]; then
-            CONFIG_FILE="wrangler.toml"
-          else
-            echo "ERROR: no Wrangler config found (expected wrangler.dev.toml or wrangler.toml)"
-            exit 1
-          fi
-
-          echo "Using $CONFIG_FILE for validation"
-          if grep -q 'name = "loon"' "$CONFIG_FILE"; then
-            echo "PASS: $CONFIG_FILE project name correct"
-          else
-            echo "WARNING: $CONFIG_FILE project name may need verification"
-          fi
-      
-      - name: Check for hardcoded secrets
-        run: |
-          echo "Scanning for hardcoded secrets..."
-          if grep -r "github_pat_" . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null | grep -v ".env.example" | grep -v "^./tests/" | grep -v "github_pat_xxx"; then
-            echo "WARNING: Potential hardcoded GitHub token found"
-            exit 1
-          fi
-          
-          # Only flag Bearer values that look like real tokens (20+ safe chars),
-          # and skip tests/docs/template placeholders.
-          if grep -r -nE "Bearer[[:space:]]+[A-Za-z0-9._-]{20,}" . --include="*.js" --include="*.json" --include="*.md" 2>/dev/null \
-            | grep -vE "^(\./)?tests/|^(\./)?docs/|\.env\.example|placeholder|example|YOUR_|your-|mock|test-token|Bearer[[:space:]]+\*{3,}|Authorization:[[:space:]]*['\"]\*{3,}['\"]"; then
-            echo "WARNING: Potential hardcoded bearer token found"
-            exit 1
-          fi
-          
-          echo "PASS: No obvious hardcoded secrets detected"
-
-  # Run tests (when available)
   test:
-    name: Run Tests
     runs-on: ubuntu-latest
-    needs: [validate-json, validate-js, validate-html, security-check, validate-functions, validate-env]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: |
-          if [ -f package.json ]; then
-            npm ci
-          fi
-      
-      - name: Run validate suite
-        run: |
-          if [ -f package.json ] && grep -q '"test"' package.json; then
-            npm run validate:ci
-          else
-            echo "No test script found, skipping automated tests"
-            echo "See CONTRIBUTING.md for test expectations"
-          fi
-        env:
-          CI: 'true'
-          GITHUB_REPO: 'example-org/example-repo'
-          GITHUB_TOKEN: 'ci-placeholder-token'
-      
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: |
-            coverage/
-          retention-days: 30
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build

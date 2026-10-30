@@ -1,97 +1,44 @@
-# Contributing to LOON
-This file defines the contributor workflow for code, tests, and docs.
+# Contributing
 
-## Fast Start
-1. Fork and clone.
-2. Install dependencies:
+Thanks for helping. LOON aims to stay small, dependable and free to run.
+
+## Getting started
+
 ```bash
-npm ci
+npm install
 ```
-3. Run checks:
-```bash
-npm run validate
-```
-4. Make changes in a feature branch.
-5. Re-run `npm run validate`.
-6. Open a PR with a clear summary and test evidence.
 
-## Local Development
-Prerequisites:
-- Node.js 18+
-- Git
-- (Optional) Wrangler for local Pages simulation
-
-Run local Pages dev server:
 ```bash
 npm run dev
 ```
 
-KV-enabled local setup (optional):
-```bash
-npm run setup:local
-npm run dev:kv
-```
+The admin is at http://localhost:8788/admin/ (setup token `local-setup-token`). The dev server rebuilds when files in `public/`, `src/shared/`, `templates/` or `content/` change. Changes to `src/server/` are picked up by Wrangler automatically.
 
-## Testing Requirements
-Required before opening a PR:
-```bash
-npm run lint
-npm run validate:ci
-```
+## Before opening a pull request
 
-Useful extras:
 ```bash
-npm run test:watch
-npm run test:coverage
-npm run check:env
 npm run validate
 ```
 
-Testing expectations:
-- add or update tests for behavior changes
-- keep endpoint status/error behavior consistent with `docs/API.md`
-- avoid regressing auth, RBAC, and save/publish flows
+This runs `npm run check` (syntax, JSON, template validation and CSP rules), `npm test` (Vitest against a real local D1 through Miniflare) and `npm run build`.
 
-## Code Standards
-- Use modern ES module JavaScript.
-- Keep functions small and explicit.
-- Reuse shared helpers (`_response.js`, `_cors.js`, `_kv.js`) instead of duplicating logic.
-- Prefer clear names over comments; add short comments only when logic is non-obvious.
-- Preserve backward compatibility for runtime bindings (`LOON_DB` preferred, `KV` fallback).
+## Ground rules
 
-## Pull Request Checklist
-- [ ] Change is scoped and does not include unrelated refactors.
-- [ ] `npm run validate` passes locally.
-- [ ] Any new behavior is covered by tests.
-- [ ] README/OPERATIONS/API docs updated if behavior or setup changed.
-- [ ] Security-impacting changes reviewed (auth, session, passkeys, permissions).
+- **Free tier first.** No paid services. Keep per-request CPU low (the Workers Free plan allows about 10 ms): do heavy work in the browser or at build time. Keep D1 writes modest and never commit drafts to GitHub.
+- **No inline scripts or styles** in `public/`. The CSP forbids them and `npm run check` enforces it. Build admin UI with the `h()` helper in `public/admin/js/dom.js`, never `innerHTML`.
+- **Shared code stays portable.** `src/shared/` runs in Workers, Node and browsers: no Node APIs, no dependencies.
+- **Tests with behavior changes.** API tests use `tests/helpers.js` (real D1, cookie-aware client) and `tests/fake-github.js` for publishing.
+- **Schema changes are append-only.** Add a new migration to `src/server/db/schema.js`; never edit one that has shipped.
+- **Docs with setup changes.** Update README, OPERATIONS or docs/API.md in the same pull request.
 
-## Pre-Deployment Checklist
-- [ ] KV binding configured (`LOON_DB` preferred, `KV` fallback supported).
-- [ ] `GITHUB_REPO` set explicitly to `owner/repo`.
-- [ ] `GITHUB_TOKEN` set as Secret with Contents read/write.
-- [ ] `SETUP_TOKEN` set for initial admin flow, then rotated/removed after setup.
-- [ ] `/api/health` returns all checks as `true`.
-- [ ] Admin login works at `/admin.html`.
-- [ ] One save operation confirms GitHub write path.
+## Project layout
 
-## Documentation Consolidation Rules
-To avoid fragmented docs:
-- `README.md`: install path and first-run setup
-- `OPERATIONS.md`: production runbook and troubleshooting
-- `docs/API.md`: endpoint contracts
-- `SECURITY.md`: security policy and controls
-- `docs/README.md`: documentation index
+See [ARCHITECTURE.md](ARCHITECTURE.md#code-layout).
 
-If your change fits one of the files above, update that file instead of creating a one-off document.
+## Adding a template
 
-## Reporting Bugs and Features
-Open a GitHub issue with:
-- clear repro steps
-- expected vs actual behavior
-- environment details (local/Cloudflare, browser, commit SHA if known)
-
-Use the `enhancement` label for feature requests.
+Add `templates/<name>/template.json` and list it in `templates/index.js`. See [docs/TEMPLATES.md](docs/TEMPLATES.md).
 
 ## License
-By contributing, you agree your contributions are licensed under MIT.
+
+Contributions are licensed under MIT.

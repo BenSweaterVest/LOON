@@ -1,0 +1,15 @@
+# Optional overrides for `npm run dev`. Copy to .dev.vars (git-ignored).
+# Wrangler loads this file automatically. In production, set these in
+# Cloudflare Pages > Settings > Variables and Secrets instead.
+
+# Publish to a real GitHub repository while developing (otherwise publishing
+# only updates the local database):
+# GITHUB_REPO=your-name/your-site
+# GITHUB_TOKEN=github_pat_...
+# GITHUB_BRANCH=main
+
+# Test the cron endpoint locally:
+# CRON_SECRET=local-cron-secret
+
+# Faster sign-in while developing (production default is 100000):
+# PBKDF2_ITERATIONS=10000

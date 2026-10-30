@@ -1,84 +1,51 @@
 # Changelog
 
-All notable changes to Project LOON will be documented in this file.
+All notable changes to LOON are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [2.0.0] - Unreleased
 
-## [Unreleased]
+A ground-up rebuild. Version 2 is not compatible with 1.x installs: create a new D1 database and follow the README setup. Content from 1.x can be re-entered or copied into new pages.
+
+### Why
+
+- Drafts were publicly readable, because `content.json` (with the draft inside) was served as a static file.
+- Unpublishing did not hide pages.
+- Passkey endpoints did not route on Cloudflare Pages.
+- The CSP blocked the admin's CDN libraries, and inline scripts required `unsafe-inline`.
+- KV's free tier (1,000 writes a day) could be exhausted by a few active editors, and every draft save triggered a Pages build (500 a month).
 
 ### Added
-- Public feedback API documentation in `docs/API.md` (`POST /api/feedback`).
-- Automated test coverage for feedback endpoint behavior in `tests/feedback.test.js`.
-- Shared KV rate-limit utility in `functions/lib/rate-limit.js`.
-- Rate-limit helper tests in `tests/rate-limit.test.js`.
-- Project TODO tracker in `TODO.md` for remaining polish tasks.
-- Shared GitHub Contents API helper in `functions/lib/github.js`.
-- Shared GitHub helper test coverage in `tests/github-helper.test.js`.
-- Endpoint-level rate-limit tests for admin APIs:
-  - `tests/users-rate-limit.test.js`
-  - `tests/sessions-rate-limit.test.js`
-- Helper coverage CI gate script in `scripts/check-helper-coverage.mjs`.
+
+- Cloudflare D1 for users, sessions, drafts, revision history, media, blocks, watches, feedback, settings, audit log and rate limits, with automatic migrations.
+- Static site build: published pages render to HTML at build time. Public traffic uses no Function requests. Sitemap, canonical links, Open Graph tags, 404 page, dark mode.
+- Schema-driven page renderer shared by the build and the admin's live preview.
+- Field types: Markdown, repeating groups, lists, images, dates and times, choices and more (15 total), with validation on save and required-field checks on publish.
+- Single-commit publishing through the Git Data API, including bulk publish.
+- Optimistic version checks on save and publish, with a conflict dialog; local draft backups in the browser.
+- Revision history with field-level comparison, restore to draft, and rollback of the live page.
+- Review workflow (submit, withdraw, send back with a note) and scheduled publishing (cron endpoint, GitHub Action, and opportunistic runs).
+- Media library: images resized and compressed in the browser, committed alongside the pages that use them.
+- Document import into Markdown fields from Word, OpenDocument, HTML, Markdown and text files.
+- Passkeys rebuilt on SimpleWebAuthn, with recovery codes that force a password change.
+- Reusable blocks, watch list with an activity feed, reader feedback inbox, audit log viewer.
+- Site settings: name, tagline, home page, navigation, footer, accent color, language.
+- System page: configuration checks, GitHub write-access test, chunked backup download, restore during setup, republish everything from the database.
+- `npm run dev` runs the real Functions with a local D1 through Wrangler.
+- Tests run against a real D1 (Miniflare), a fake GitHub API and a software WebAuthn authenticator.
 
 ### Changed
-- Hardened `functions/api/feedback.js` input validation:
-  - Enforces sanitized `pageId` format.
-  - Rejects empty/whitespace-only feedback messages.
-  - Normalizes invalid timestamps to server time.
-  - Adds per-IP rate limiting (10 submissions per minute when KV is configured).
-- Updated package metadata links in `package.json` to the canonical `BenSweaterVest/LOON` repository.
-- Consolidated pageId parsing/sanitization logic into shared helper `functions/lib/page-id.js` and refactored API endpoints to use it.
-- Added dedicated pageId utility tests in `tests/page-id.test.js`.
-- Removed unused `getCorsHeaders` imports across API handlers to reduce endpoint boilerplate.
-- Standardized JSDoc style in key API modules and trimmed overlong header commentary (`pages`, `health`, `save`, `publish`, `_response`).
-- Added shared bearer/session utilities in `functions/lib/session.js` and refactored endpoint session parsing to reduce duplication.
-- Added session utility tests in `tests/session.test.js`.
-- Normalized GitHub API auth header usage in `functions/api/publish.js` to `Bearer`.
-- Refactored duplicate KV rate-limit logic to the shared helper across `auth`, `save`, `publish`, `feedback`, `setup`, `sessions`, `upload`, and `users` endpoints.
-- Further consolidated session validation/parsing in `content`, `upload`, `sessions`, and `users` handlers via shared session utilities.
-- Refactored `save`, `publish`, and `content` endpoints to use shared GitHub helper methods for read/write/delete content operations.
-- Refactored `pages` and `templates` endpoints to use shared GitHub helper methods for directory listing, existence checks, file reads, and content writes.
-- Extended shared GitHub helper adoption to:
-  - `functions/api/history.js`
-  - `functions/api/workflow.js`
-  - `functions/api/rollback.js`
-  - `functions/api/revision-diff.js`
-  - `functions/api/blocks.js`
-  - `functions/api/scheduled-publish.js`
-- Standardized protected-endpoint auth responses to:
-  - `No authorization token` (missing/invalid auth header)
-  - `Invalid or expired session` (missing/expired session token)
-- Added optional structured security event logging (`SECURITY_LOG_MODE=structured`) in shared response utilities and wired events for auth/users/sessions flows.
-- Extended structured security event logging coverage to workflow endpoints:
-  - `functions/api/publish.js`
-  - `functions/api/rollback.js`
-  - `functions/api/workflow.js`
-  - `functions/api/scheduled-publish.js`
-- Hardened security event logging to be opt-in only:
-  - `SECURITY_LOG_MODE=structured` for JSON output
-  - `SECURITY_LOG_MODE=plain` for text output
-  - default unset mode produces no security event logs
-- Added helper coverage enforcement to CI validation via `package.json` `validate:ci` (`npm run check:helper-coverage`).
-- Expanded API rate-limit documentation in `docs/API.md` and added KV rate-limit key operations notes in `OPERATIONS.md`.
-- Reduced setup-status KV operation cost in `functions/api/setup.js`:
-  - Added `meta:setup_complete` marker and `meta:setup_status_cache` key.
-  - `GET /api/setup` now uses marker/cache fast paths (`KV.get`) and avoids repeated `KV.list` scans.
-  - `POST /api/setup` now persists marker/cache after first admin creation.
-- Reduced onboarding setup monitor polling in `admin.html` from every 30 seconds to every 5 minutes to lower baseline API/KV usage during idle admin sessions.
-- Added shared KV index utilities in `functions/lib/kv-index.js` and refactored admin/session/watch flows to reduce `KV.list` pressure:
-  - `meta:index:users` for `/api/users` listing
-  - `meta:index:sessions` and `meta:index:user_sessions:<username>` for `/api/sessions` and user session cleanup paths
-  - `meta:index:watch:<username>` for watched-page lookups
-  - session metadata shadow keys (`session_meta:<token>`) to avoid broad scans
-- Added page-scoped audit feed keys (`audit_feed:page:<pageId>`) in `functions/api/_audit.js` and updated `functions/api/watch.js` to read recent watched-page changes from feed keys before global-audit fallback.
-- Reduced GitHub API usage in listing/history paths:
-  - Admin page browser now requests `/api/pages?minimal=true&limit=200` to avoid full metadata fan-out.
-  - Added short-lived full pages metadata cache in `functions/api/pages.js` for repeated full-mode calls.
-  - `functions/api/history.js` now performs owner checks only for contributors, skipping one GitHub read for admin/editor history requests.
-- Added scheduled publish index management to reduce GitHub directory scans:
-  - New KV key: `meta:index:scheduled_pages`
-  - `functions/api/workflow.js` updates the index when status changes to/from `scheduled`
-  - `functions/api/publish.js` and `functions/api/rollback.js` prune/update scheduled index state after content status transitions
-  - `functions/api/scheduled-publish.js` now prefers index-driven candidate pages and only uses GitHub directory scan as a backfill path
-- Added opportunistic stale session index cleanup in `functions/lib/kv-index.js` (`cleanupStaleSessionIndex`) and invoked it from `functions/api/sessions.js`.
 
+- One catch-all Function (`functions/api/[[route]].js`) with a small router replaces 25 separate endpoint files.
+- Sessions use `__Host-` HttpOnly, SameSite=Strict cookies; D1 stores only token hashes. Bearer tokens in localStorage are gone.
+- Admin rebuilt as vanilla ES modules under a strict CSP; served from `/admin/`.
+- Templates use one `template.json` each; menu, FAQ and team templates use repeating groups.
+- Markdown is rendered by a built-in safe renderer (no raw HTML).
+- Contributor isolation now also hides other people's pages from lists and history.
+
+### Removed
+
+- Cloudflare KV, the KV index and backup scripts, and the separate local-mode server.
+- Cloudflare Images uploads (storage is a paid product).
+- PDF import (heavy dependency, poor results); DOCX and ODT import remain.
+- Bootstrap plaintext passwords and environment-variable user setup.
+- CORS configuration (the API is same-origin only).

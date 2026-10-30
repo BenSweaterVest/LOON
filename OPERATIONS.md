@@ -1,257 +1,101 @@
-# LOON Operations Guide
-Audience: administrators operating an already-deployed LOON instance.
+# Operations
 
-Last updated: February 13, 2026
+Running a LOON site day to day. Setup is in the [README](README.md).
 
-## Scope
-This is a production runbook only:
-- runtime verification
-- routine checks
-- incident response
-- recovery procedures
+## Configuration reference
 
-Operational model:
-- All required actions in this runbook are browser-based (GitHub, Cloudflare, LOON admin UI).
+Set these in Cloudflare Pages > your project > Settings > Variables and Secrets. Redeploy after changes.
 
-Installation and first deploy are documented in `README.md`.
-API contracts are documented in `docs/API.md`.
+| Variable | Required | Purpose |
+|---|---|---|
+| `DB` (D1 binding) | Yes | The database. Settings > Bindings > D1 database, variable name `DB`. |
+| `GITHUB_REPO` | Yes | `owner/repo` that LOON publishes to. |
+| `GITHUB_TOKEN` | Yes (secret) | Fine-grained token with Contents: Read and write on that repository only. |
+| `SETUP_TOKEN` | For setup and restore (secret) | Gates creating the first admin and restoring a backup. Harmless to keep once set up, since both only work on an empty database. |
+| `GITHUB_BRANCH` | No | Branch to publish to. Default `main`. Must be your Pages production branch. |
+| `CRON_SECRET` | For scheduling (secret) | Authorizes `POST /api/cron`. |
+| `SITE_URL` | No | Public address, e.g. `https://example.org`. Enables the sitemap, canonical links and link-preview images. Needed at build time too, so set it for the build environment as well. |
+| `SESSION_TTL_HOURS` | No | Sign-in lifetime. Default 24, max 720. |
+| `PBKDF2_ITERATIONS` | No | Password hashing cost. Default 100000 (the Workers maximum). Lower it if sign-in fails with error 1102. |
+| `AUDIT_RETENTION_DAYS` | No | How long audit entries are kept. Default 90. |
+| `RP_ID`, `RP_ORIGIN`, `RP_NAME` | No | Passkey settings. Default to the address the admin is opened on, which is right for `*.pages.dev` and custom domains. Set them only if you serve the admin from several hostnames and want passkeys tied to one. |
+| `NODE_VERSION` | Build | `22` |
 
-## Operating Baseline
-Expected production state:
-- Cloudflare Pages deployment is healthy.
-- KV binding is present (`LOON_DB` preferred, `KV` fallback supported).
-- Required env vars are set: `GITHUB_REPO`, `GITHUB_TOKEN`, `SETUP_TOKEN`, `ENVIRONMENT=production`.
-- `/api/health` reports all required checks as `true`.
+The **System** page in the admin checks this configuration and can test GitHub write access.
 
-## Post-Change Verification
-Run this after any env/binding/token/deployment change.
+## Scheduled publishing
 
-Browser-first option:
-- Open `/admin.html` and use the built-in **Guided Setup Assistant** card to confirm readiness checks.
-- Optional diagnostics-only page: `/admin/setup-check`.
+Editors can schedule a page from the editor. Due pages are published:
 
-1. Health check (browser)
-- Open `https://YOUR_DOMAIN/api/health` in a browser.
-- Confirm HTTP 200 and:
-  - `checks.kv_database: true`
-  - `checks.github_repo: true`
-  - `checks.github_token: true`
+- whenever an editor or admin opens the page list, and
+- by the optional GitHub Action `.github/workflows/scheduled-publish.yml`, every 15 minutes.
 
-2. Admin auth check
-- Login at `/admin.html`.
-- Confirm session is valid and admin UI loads.
-- In the Guided Setup Assistant, run **Run Full Readiness Check**.
+To enable the Action:
 
-3. Save-path check
-- Edit and save one page.
-- Confirm a commit appears in the configured GitHub repo.
+1. Set `CRON_SECRET` in Cloudflare Pages and redeploy.
+2. In GitHub, repository Settings > Secrets and variables > Actions, add `LOON_URL` (your site address) and `LOON_CRON_SECRET` (the same value).
 
-## Routine Operations
-### Daily
-- Check `/api/health`.
-- Review recent auth failures and sensitive actions in `/api/audit`.
-- Confirm at least one successful save/publish event if editors were active.
+The Action also clears expired sessions. **Private repositories:** every run bills one minute, so every 15 minutes uses about 2,900 of your 2,000 free minutes. Edit the workflow's cron to `'7 * * * *'` (hourly) to stay free.
 
-### Weekly
-- Review active sessions and revoke unknown/stale sessions.
-- Validate token expiration dates.
-- Spot-check restore from Git history for one page.
+If a scheduled page fails validation (for example a required field is empty), the schedule is cleared and the failure appears in the audit log.
 
-### Monthly
-- Review role assignments (admin/editor/contributor) for least privilege.
-- Rotate secrets/tokens based on your policy.
-- Validate passkey settings (`RP_ID`, `RP_ORIGIN`) if passkeys are enabled.
-- Check upstream LOON changes and plan manual instance sync if needed.
+## Backups
 
-## Rate Limit Keys (KV)
-LOON stores rolling-window rate-limit counters in KV using:
+What lives where:
 
-- `ratelimit:<scope>:<ip>`
+- **GitHub** (`content/`): every published page, its images and the site settings, with full history.
+- **D1**: drafts, page history, users, passkeys, unpublished images, feedback, audit log.
 
-Current scopes:
-- `auth`
-- `setup`
-- `save`
-- `publish`
-- `feedback`
-- `upload`
-- `users`
-- `sessions`
+Download a full backup from **System > Download backup**. The file contains password hashes, so store it privately. D1 also keeps its own point-in-time history (Time Travel) for the last 7 days on the free plan, which you can restore from the Cloudflare dashboard or with Wrangler.
 
-Operational notes:
-- Keys auto-expire using TTL aligned to each endpoint window (currently 60 seconds).
-- A persistent spike in 429s for one scope usually means automated traffic or a stuck client loop from a single IP.
-- Check `/api/audit` and deployment logs together when triaging repeated rate-limit blocks.
+**Restoring into a new database** (for example after deleting the database, or moving accounts):
 
-## Index Keys (KV)
-To reduce expensive `KV.list` usage, LOON maintains lightweight index keys:
+1. Create a new D1 database and bind it as `DB` (see README step 5). Redeploy.
+2. Make sure `SETUP_TOKEN` is set.
+3. Open `/admin/`. On the setup screen, enter the setup token, open **Restore a backup instead**, and choose the backup file.
+4. Sign in with an account from the backup.
 
-- `meta:index:users`
-- `meta:index:sessions`
-- `meta:index:scheduled_pages`
-- `meta:index:user_sessions:<username>`
-- `meta:index:watch:<username>`
-- `session_meta:<token>`
-- `audit_feed:page:<pageId>`
+**Repository lost or replaced:** point `GITHUB_REPO` at the new repository, then use **System > Republish all content**. Every published page, image and the settings are written back in one commit.
 
-Operational notes:
-- These indexes are self-healing with endpoint-level fallback backfills.
-- Session indexes can contain stale tokens after TTL expiry; stale entries are cleaned opportunistically during session reads/revokes.
-- Scheduled publish candidates are index-driven; if the scheduled index is missing, the runner performs a one-time backfill scan and then persists the index.
+## Custom domain
 
-## GitHub Token Setup
-Operational guidance for rotation/replacement:
-1. Create a fine-grained PAT scoped to this repo only.
-2. Grant Contents read/write.
-3. Update `GITHUB_TOKEN` in Cloudflare Pages as Secret.
-4. Redeploy.
-5. Run Post-Change Verification.
+Cloudflare Pages > your project > Custom domains > Set up a domain. Then update `SITE_URL`. Existing passkeys are tied to the old hostname; users can add a new passkey from My account after signing in with their password.
 
-## Optional Security Event Logging
-Use this only when you need richer authentication/admin activity logs in deployment logs.
+## Updating LOON
 
-Environment variable:
-- `SECURITY_LOG_MODE=structured` for JSON events (recommended for log ingestion)
-- `SECURITY_LOG_MODE=plain` for compact text events
-- unset (default): security event logging is off
+Your site repository started as a copy of LOON. To bring in a newer version:
 
-Current instrumented endpoints:
-- `/api/auth`
-- `/api/users`
-- `/api/sessions`
-- `/api/publish`
-- `/api/rollback`
-- `/api/workflow`
-- `/api/scheduled-publish`
-
-## Manual Upstream Sync (Template Repositories)
-Use this when your deployment repo was created from LOON template and you want to bring in upstream fixes/features.
-
-Example:
-- Upstream: `BenSweaterVest/LOON`
-- Instance repo: `BenSweaterVest/CapitolFoodTrucksLOON`
-
-Procedure:
-1. Create backup point:
-- Ensure latest content is committed in `data/`.
-- Optionally run the backup workflow (`.github/workflows/backup.yml`).
-
-2. Create update branch in instance repo:
-- `chore/sync-loon-YYYYMMDD`
-
-3. Pull upstream LOON changes:
 ```bash
 git remote add upstream https://github.com/BenSweaterVest/LOON.git
+```
+
+```bash
 git fetch upstream
-git checkout chore/sync-loon-YYYYMMDD
-git merge upstream/main --allow-unrelated-histories
 ```
 
-4. Resolve conflicts carefully:
-- Preserve instance-specific content/branding.
-- Keep environment/domain differences intact.
-- Keep `data/` unless intentionally replacing content.
-
-5. Validate before merge:
-- `npm run lint`
-- `npm test`
-
-6. Merge PR and redeploy.
-
-7. Run Post-Change Verification:
-- `/api/health`
-- admin login
-- one save operation
-- one publish or rollback operation
-
-## Backup and Recovery
-Source of truth:
-- Content: Git history for `data/`
-- Auth/session/passkey state: Cloudflare KV snapshots
-
-KV backup options:
-1. Scheduled GitHub Action: `.github/workflows/backup-kv.yml`
-2. Manual backup:
 ```bash
-export CF_API_TOKEN=...
-export CF_ACCOUNT_ID=...
-export KV_NAMESPACE_ID=...
-npm run backup:kv
-```
-3. Manual restore:
-```bash
-export CF_API_TOKEN=...
-export CF_ACCOUNT_ID=...
-export KV_NAMESPACE_ID=...
-npm run restore:kv -- backups/<kv-backup-file>.json
+git merge upstream/main
 ```
 
-Restore one page from prior history (GitHub web UI only):
-1. Open your repository on GitHub.
-2. Navigate to `data/<page-id>/content.json`.
-3. Click **History** for that file.
-4. Open the commit/version you want to restore.
-5. Copy that version's contents.
-6. Return to the current file, click **Edit**, paste the restored contents, and commit from the web UI.
+Keep your `content/` folder when resolving conflicts; it belongs to your site. Run `npm run validate`, push, and Cloudflare deploys the update. Database changes are applied automatically on the first request.
 
-Restore an entire page directory (GitHub web UI):
-1. Open repository history and identify the last good commit for `data/<page-id>/`.
-2. For each file in that folder (`schema.json`, `content.json`, assets), open the historical version.
-3. Restore each file via web edit and commit.
-4. Confirm Cloudflare Pages redeploy completes successfully.
+## Routine checks
 
-## Incident Playbooks
-### `KV database not configured`
-Symptoms:
-- login/setup/session endpoints fail
-- health check reports `checks.kv_database: false`
-
-Actions:
-1. Confirm Pages KV binding exists in Production (`LOON_DB` or `KV`).
-2. Fix binding in Cloudflare Dashboard (`Settings -> Bindings -> KV namespace bindings`).
-3. If controls are grayed out with "managed through wrangler.toml", remove KV binding blocks from root `wrangler.toml` (or remove that file), commit, and redeploy.
-4. Add binding `LOON_DB` in dashboard.
-5. Redeploy.
-6. Recheck `/api/health`.
-7. Open `/admin/setup-check` and confirm the KV check reports `Ready`.
-
-### First login/setup fails
-Actions:
-1. Confirm `SETUP_TOKEN` exists as a Production Secret.
-2. Confirm whether an admin already exists.
-3. If no admin exists, retry Initial Setup at `/admin.html`.
-4. If admin exists, setup is intentionally disabled; use normal login/reset flow.
-
-### Saves fail
-Actions:
-1. Validate `GITHUB_REPO` format is `owner/repo`.
-2. Validate `GITHUB_TOKEN` scope and expiry.
-3. Check GitHub API status/rate limits.
-4. Redeploy after any env var update.
-5. Re-run Post-Change Verification.
-
-### Users cannot login
-Actions:
-1. Check login rate-limit conditions.
-2. Confirm account exists and role is valid.
-3. Reset password via admin UI.
-4. Clear browser storage and retry.
+- **Weekly:** look at Activity > Audit log for failed sign-ins (`auth.login_failed`) and unexpected changes. Clear the Feedback inbox.
+- **Monthly:** download a backup. Review users and remove anyone who no longer needs access.
+- **Before the token expires:** create a new GitHub token, update `GITHUB_TOKEN`, redeploy, and use System > Test GitHub access.
 
 ## Troubleshooting
-### Matrix
-| Symptom | Most likely cause | First fix |
+
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| `KV database not configured` | Missing/wrong KV binding | Bind `LOON_DB` (or `KV`) and redeploy |
-| Initial setup disabled | Admin already exists | Use normal login path |
-| Login invalid credentials | Wrong password or stale account state | Reset password |
-| Save GitHub error | Expired or under-scoped token | Replace `GITHUB_TOKEN` |
-| Health degraded | Failed env/binding check | Fix failing check and redeploy |
-
-## Documentation Ownership
-To keep docs consolidated:
-- `README.md`: install and initial onboarding
-- `OPERATIONS.md`: runbook, incidents, recovery
-- `docs/API.md`: endpoint behavior and response contracts
-- `SECURITY.md`: security policy and controls
-
-Avoid creating one-off operations docs when these can be updated directly.
+| Admin says "Database not configured" | D1 not bound, or bound after the last deploy | Bind `DB`, then retry the latest deployment |
+| Setup says SETUP_TOKEN is not configured | Secret missing or not deployed | Add it, redeploy, reload |
+| Publish says "Publishing is not configured" | `GITHUB_REPO` or `GITHUB_TOKEN` missing | Add both, redeploy |
+| Publish fails with a GitHub 401/403/404 | Token expired, wrong repository, or missing Contents write permission | System > Test GitHub access shows which; create a new token |
+| Published but the site did not change | Pages build failed or is queued | Cloudflare Pages > Deployments; check the build log. Builds are capped at 500 a month |
+| Sign-in fails with Cloudflare error 1102 | Password hashing exceeded the CPU limit | Set `PBKDF2_ITERATIONS=50000` and redeploy |
+| "Too many requests" | Rate limit (for example 5 sign-in attempts a minute) | Wait a minute |
+| Passkey sign-in fails after moving domains | Passkeys are bound to the hostname | Sign in with password, add a new passkey |
+| Pages show error 1027 | Daily free Function limit reached (100,000 API requests) | Resets at midnight UTC. Public pages are unaffected |
+| Locked out, no admin can sign in | Lost passwords and passkeys | Use a recovery code. As a last resort, run `DELETE FROM users` in the D1 console (Cloudflare dashboard > D1 > your database > Console), then open `/admin/` and run setup again with `SETUP_TOKEN`. Pages and history are kept; other accounts must be recreated |

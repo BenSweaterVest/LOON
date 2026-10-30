@@ -1,0 +1,73 @@
+{
+  "title": "Menu",
+  "description": "A sectioned menu: starters, mains, drinks and so on.",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "summary",
+        "label": "Summary",
+        "type": "textarea",
+        "rows": 2
+      },
+      {
+        "key": "hours",
+        "label": "Service hours",
+        "type": "text",
+        "placeholder": "Mon-Fri 11am-8pm"
+      },
+      {
+        "key": "sections",
+        "label": "Menu sections",
+        "type": "repeater",
+        "itemLabel": "Section",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Section name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "items",
+            "label": "Items",
+            "type": "markdown",
+            "rows": 5,
+            "placeholder": "- Garden salad: $7"
+          }
+        ]
+      },
+      {
+        "key": "notes",
+        "label": "Notes or policies",
+        "type": "markdown",
+        "rows": 3
+      }
+    ]
+  },
+  "sample": {
+    "title": "Neighborhood Menu",
+    "summary": "Fast favorites and seasonal specials.",
+    "hours": "Mon-Fri 11am-8pm",
+    "sections": [
+      {
+        "name": "Starters",
+        "items": "- Garden salad: $7\n- Garlic bread: $5"
+      },
+      {
+        "name": "Mains",
+        "items": "- House bowl: $12\n- Seasonal pasta: $14"
+      },
+      {
+        "name": "Drinks",
+        "items": "- Sparkling water: $3\n- Iced tea: $3"
+      }
+    ],
+    "notes": "Ask about gluten-free options."
+  }
+}
