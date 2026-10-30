@@ -50,8 +50,3 @@ export function needsRehash(stored, iterations) {
     const parsed = parse(stored);
     return !parsed || parsed.iterations !== iterations;
 }
-
-/**
- * A hash that never matches, used to keep login timing uniform for unknown users.
- */
-export const DUMMY_HASH = `${PREFIX}$1000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`;
