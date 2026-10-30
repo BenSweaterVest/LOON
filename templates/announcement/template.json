@@ -1,0 +1,95 @@
+{
+  "title": "Announcement",
+  "description": "Post an important notice or alert",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Announcement Title",
+        "type": "text",
+        "required": true,
+        "placeholder": "Office Closure Notice",
+        "maxLength": 100
+      },
+      {
+        "key": "urgency",
+        "label": "Urgency Level",
+        "type": "select",
+        "required": true,
+        "options": [
+          "Info",
+          "Notice",
+          "Important",
+          "Urgent",
+          "Emergency"
+        ]
+      },
+      {
+        "key": "effective_date",
+        "label": "Effective Date",
+        "type": "date",
+        "description": "When this announcement takes effect"
+      },
+      {
+        "key": "expiry_date",
+        "label": "Expiry Date",
+        "type": "date",
+        "description": "When to remove this announcement (optional)"
+      },
+      {
+        "key": "summary",
+        "label": "Summary",
+        "type": "text",
+        "placeholder": "Brief one-line summary",
+        "description": "Shown in previews and notifications",
+        "maxLength": 200
+      },
+      {
+        "key": "body",
+        "label": "Full Announcement",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "Complete details of the announcement...",
+        "rows": 8
+      },
+      {
+        "key": "action_url",
+        "label": "Action Link",
+        "type": "url",
+        "placeholder": "https://...",
+        "description": "Link for more info or to take action"
+      },
+      {
+        "key": "action_text",
+        "label": "Action Button Text",
+        "type": "text",
+        "placeholder": "Learn More",
+        "maxLength": 30
+      },
+      {
+        "key": "contact",
+        "label": "Contact for Questions",
+        "type": "text",
+        "placeholder": "Name, email, or phone"
+      },
+      {
+        "key": "pinned",
+        "label": "Pin to Top",
+        "type": "checkbox",
+        "description": "Keep this announcement at the top of the list"
+      }
+    ]
+  },
+  "sample": {
+    "title": "Holiday Office Hours",
+    "urgency": "Notice",
+    "effective_date": "2026-02-14",
+    "expiry_date": "2026-02-18",
+    "summary": "Modified hours for Presidents Day weekend",
+    "body": "Our office will have modified hours for the Presidents Day holiday:\n\nFriday, Feb 14: Normal hours (9am-5pm)\nSaturday, Feb 15: Closed\nSunday, Feb 16: Closed\nMonday, Feb 17 (Presidents Day): Closed\nTuesday, Feb 18: Normal hours resume\n\nFor urgent matters during the closure, please email emergency@example.com.",
+    "action_url": "",
+    "action_text": "",
+    "contact": "Front Desk: (555) 123-4567",
+    "pinned": true
+  }
+}

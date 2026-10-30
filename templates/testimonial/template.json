@@ -1,0 +1,104 @@
+{
+  "title": "Testimonial",
+  "description": "Customer testimonial or review",
+  "schema": {
+    "fields": [
+      {
+        "key": "quote",
+        "label": "Testimonial Quote",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "What the customer said about your product or service...",
+        "rows": 4
+      },
+      {
+        "key": "author_name",
+        "label": "Customer Name",
+        "type": "text",
+        "required": true,
+        "placeholder": "Jane Smith"
+      },
+      {
+        "key": "author_title",
+        "label": "Title/Role",
+        "type": "text",
+        "placeholder": "CEO, Acme Corp"
+      },
+      {
+        "key": "author_company",
+        "label": "Company",
+        "type": "text",
+        "placeholder": "Acme Corporation"
+      },
+      {
+        "key": "author_photo_url",
+        "label": "Photo URL",
+        "type": "url",
+        "placeholder": "https://..."
+      },
+      {
+        "key": "rating",
+        "label": "Rating",
+        "type": "select",
+        "options": [
+          "5 Stars",
+          "4 Stars",
+          "3 Stars",
+          "2 Stars",
+          "1 Star",
+          "No Rating"
+        ]
+      },
+      {
+        "key": "product_service",
+        "label": "Product/Service Reviewed",
+        "type": "text",
+        "placeholder": "What did they purchase or use?"
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date"
+      },
+      {
+        "key": "source",
+        "label": "Source",
+        "type": "select",
+        "options": [
+          "Direct",
+          "Google",
+          "Yelp",
+          "Facebook",
+          "LinkedIn",
+          "Email",
+          "Other"
+        ]
+      },
+      {
+        "key": "featured",
+        "label": "Featured Testimonial",
+        "type": "checkbox",
+        "description": "Display prominently on homepage"
+      },
+      {
+        "key": "approved",
+        "label": "Approved for Display",
+        "type": "checkbox",
+        "description": "Only approved testimonials are shown publicly"
+      }
+    ]
+  },
+  "sample": {
+    "quote": "Working with this team transformed our online presence. Within three months, our website traffic doubled and customer inquiries increased by 150%. The attention to detail and responsiveness exceeded our expectations.",
+    "author_name": "Sarah Johnson",
+    "author_title": "Marketing Director",
+    "author_company": "Northland Industries",
+    "author_photo_url": "",
+    "rating": "5 Stars",
+    "product_service": "Website Redesign Package",
+    "date": "2026-01-15",
+    "source": "Direct",
+    "featured": true,
+    "approved": true
+  }
+}

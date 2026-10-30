@@ -1,0 +1,165 @@
+{
+  "title": "Property Listing",
+  "description": "Real estate or rental property details",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Listing Title",
+        "type": "text",
+        "required": true,
+        "placeholder": "Charming 3BR Home in Riverside",
+        "maxLength": 100
+      },
+      {
+        "key": "property_type",
+        "label": "Property Type",
+        "type": "select",
+        "required": true,
+        "options": [
+          "House",
+          "Apartment",
+          "Condo",
+          "Townhouse",
+          "Duplex",
+          "Land",
+          "Commercial",
+          "Other"
+        ]
+      },
+      {
+        "key": "listing_type",
+        "label": "Listing Type",
+        "type": "select",
+        "required": true,
+        "options": [
+          "For Sale",
+          "For Rent",
+          "Lease",
+          "Sold",
+          "Rented",
+          "Off Market"
+        ]
+      },
+      {
+        "key": "price",
+        "label": "Price",
+        "type": "text",
+        "required": true,
+        "placeholder": "$350,000 or $1,800/month"
+      },
+      {
+        "key": "address",
+        "label": "Address",
+        "type": "text",
+        "placeholder": "123 Main Street"
+      },
+      {
+        "key": "city_state_zip",
+        "label": "City, State, ZIP",
+        "type": "text",
+        "placeholder": "Minneapolis, MN 55401"
+      },
+      {
+        "key": "bedrooms",
+        "label": "Bedrooms",
+        "type": "number",
+        "min": 0
+      },
+      {
+        "key": "bathrooms",
+        "label": "Bathrooms",
+        "type": "text",
+        "placeholder": "2, 1.5, etc."
+      },
+      {
+        "key": "sqft",
+        "label": "Square Feet",
+        "type": "number",
+        "min": 0
+      },
+      {
+        "key": "lot_size",
+        "label": "Lot Size",
+        "type": "text",
+        "placeholder": "0.25 acres, 5,000 sqft"
+      },
+      {
+        "key": "year_built",
+        "label": "Year Built",
+        "type": "number",
+        "min": 1800,
+        "max": 2030
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "Describe the property features, neighborhood, etc.",
+        "rows": 6
+      },
+      {
+        "key": "features",
+        "label": "Features & Amenities",
+        "type": "textarea",
+        "placeholder": "Central AC, hardwood floors, attached garage, etc.",
+        "rows": 4
+      },
+      {
+        "key": "image_url",
+        "label": "Main Photo URL",
+        "type": "url",
+        "placeholder": "https://..."
+      },
+      {
+        "key": "virtual_tour_url",
+        "label": "Virtual Tour Link",
+        "type": "url",
+        "placeholder": "https://..."
+      },
+      {
+        "key": "contact_name",
+        "label": "Contact Name",
+        "type": "text",
+        "placeholder": "Agent name"
+      },
+      {
+        "key": "contact_phone",
+        "label": "Contact Phone",
+        "type": "tel"
+      },
+      {
+        "key": "contact_email",
+        "label": "Contact Email",
+        "type": "email"
+      },
+      {
+        "key": "available_date",
+        "label": "Available Date",
+        "type": "date"
+      }
+    ]
+  },
+  "sample": {
+    "title": "Charming 3BR Home in Riverside",
+    "property_type": "House",
+    "listing_type": "For Sale",
+    "price": "$385,000",
+    "address": "456 Oak Avenue",
+    "city_state_zip": "Minneapolis, MN 55414",
+    "bedrooms": 3,
+    "bathrooms": "2",
+    "sqft": 1850,
+    "lot_size": "0.18 acres",
+    "year_built": 1952,
+    "description": "Beautifully updated home in the heart of Riverside neighborhood. Original hardwood floors throughout, modern kitchen with stainless appliances, and spacious backyard perfect for entertaining.\n\nWalk to restaurants, parks, and public transit. Quiet street with friendly neighbors.\n\nMove-in ready with new roof (2024) and updated electrical.",
+    "features": "- Hardwood floors throughout\n- Updated kitchen with granite counters\n- Central air conditioning\n- Attached 2-car garage\n- Finished basement\n- Fenced backyard\n- New roof (2024)\n- Walk to light rail",
+    "image_url": "",
+    "virtual_tour_url": "",
+    "contact_name": "Jennifer Adams",
+    "contact_phone": "(555) 234-5678",
+    "contact_email": "jadams@realty.example.com",
+    "available_date": "2026-03-01"
+  }
+}

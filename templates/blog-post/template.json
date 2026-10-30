@@ -1,0 +1,56 @@
+{
+  "title": "Blog Post Editor",
+  "description": "Create or edit a blog post",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Post Title",
+        "type": "text",
+        "placeholder": "Enter your post title"
+      },
+      {
+        "key": "author",
+        "label": "Author Name",
+        "type": "text",
+        "placeholder": "Your name"
+      },
+      {
+        "key": "excerpt",
+        "label": "Excerpt / Summary",
+        "type": "textarea",
+        "placeholder": "A brief summary for previews..."
+      },
+      {
+        "key": "body",
+        "label": "Post Content",
+        "type": "textarea",
+        "placeholder": "Write your post content here..."
+      },
+      {
+        "key": "tags",
+        "label": "Tags (comma-separated)",
+        "type": "text",
+        "placeholder": "news, update, announcement"
+      },
+      {
+        "key": "status",
+        "label": "Publication Status",
+        "type": "select",
+        "options": [
+          "Draft",
+          "Published",
+          "Archived"
+        ]
+      }
+    ]
+  },
+  "sample": {
+    "title": "Getting Started with LOON",
+    "author": "The LOON Team",
+    "excerpt": "Learn how to set up your own serverless micro-CMS with Project LOON - no database required, completely free to host.",
+    "body": "Welcome to Project LOON!\n\nLOON (Lightweight Online Organizing Network) is a serverless micro-CMS that runs entirely on Cloudflare Pages and GitHub.\n\nKey Benefits:\n• Zero hosting costs - runs on free tiers\n• No database to maintain\n• Full version control with Git\n• Edit from any device\n• Simple, clean interface\n\nTo get started, check out the documentation at the project repository.",
+    "tags": "tutorial, getting-started, documentation",
+    "status": "Published"
+  }
+}

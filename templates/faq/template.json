@@ -1,0 +1,75 @@
+{
+  "title": "FAQ Entry",
+  "description": "Create or update a frequently asked question",
+  "schema": {
+    "fields": [
+      {
+        "key": "question",
+        "label": "Question",
+        "type": "text",
+        "required": true,
+        "placeholder": "How do I reset my password?",
+        "maxLength": 200
+      },
+      {
+        "key": "answer",
+        "label": "Answer",
+        "type": "textarea",
+        "required": true,
+        "placeholder": "Provide a clear, helpful answer...",
+        "rows": 6
+      },
+      {
+        "key": "category",
+        "label": "Category",
+        "type": "select",
+        "options": [
+          "General",
+          "Account",
+          "Billing",
+          "Technical",
+          "Shipping",
+          "Returns",
+          "Other"
+        ]
+      },
+      {
+        "key": "related_url",
+        "label": "Related Link",
+        "type": "url",
+        "placeholder": "https://...",
+        "description": "Link to relevant documentation or page"
+      },
+      {
+        "key": "keywords",
+        "label": "Search Keywords",
+        "type": "text",
+        "placeholder": "password, reset, forgot, login",
+        "description": "Comma-separated terms to help users find this FAQ"
+      },
+      {
+        "key": "order",
+        "label": "Display Order",
+        "type": "number",
+        "description": "Lower numbers appear first",
+        "min": 1,
+        "max": 999
+      },
+      {
+        "key": "published",
+        "label": "Published",
+        "type": "checkbox",
+        "description": "Uncheck to hide this FAQ from the public"
+      }
+    ]
+  },
+  "sample": {
+    "question": "How do I reset my password?",
+    "answer": "To reset your password:\n\n1. Go to the login page\n2. Click \"Forgot Password\" below the sign-in button\n3. Enter your email address\n4. Check your inbox for a reset link (check spam if not found)\n5. Click the link and create a new password\n\nIf you don't receive the email within 10 minutes, contact support.",
+    "category": "Account",
+    "related_url": "",
+    "keywords": "password, reset, forgot, login, access, locked out",
+    "order": 1,
+    "published": true
+  }
+}

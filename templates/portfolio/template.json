@@ -1,0 +1,102 @@
+{
+  "title": "Portfolio Project",
+  "description": "Showcase a project or work sample",
+  "schema": {
+    "fields": [
+      {
+        "key": "title",
+        "label": "Project Title",
+        "type": "text",
+        "required": true,
+        "placeholder": "E-commerce Website Redesign",
+        "maxLength": 100
+      },
+      {
+        "key": "client",
+        "label": "Client",
+        "type": "text",
+        "placeholder": "Company name or 'Personal Project'"
+      },
+      {
+        "key": "date",
+        "label": "Completion Date",
+        "type": "date"
+      },
+      {
+        "key": "category",
+        "label": "Category",
+        "type": "select",
+        "options": [
+          "Web Design",
+          "Branding",
+          "Print",
+          "Photography",
+          "Video",
+          "Development",
+          "Consulting",
+          "Other"
+        ]
+      },
+      {
+        "key": "summary",
+        "label": "Brief Summary",
+        "type": "text",
+        "placeholder": "One-line description for thumbnails",
+        "maxLength": 200
+      },
+      {
+        "key": "description",
+        "label": "Full Description",
+        "type": "textarea",
+        "placeholder": "Describe the project, your role, challenges, and outcomes...",
+        "rows": 6
+      },
+      {
+        "key": "image_url",
+        "label": "Featured Image URL",
+        "type": "url",
+        "placeholder": "https://...",
+        "description": "Main image for the project (hosted externally)"
+      },
+      {
+        "key": "project_url",
+        "label": "Live Project URL",
+        "type": "url",
+        "placeholder": "https://..."
+      },
+      {
+        "key": "tags",
+        "label": "Tags/Technologies",
+        "type": "text",
+        "placeholder": "React, Node.js, PostgreSQL",
+        "description": "Comma-separated list of skills or technologies used"
+      },
+      {
+        "key": "featured",
+        "label": "Featured Project",
+        "type": "checkbox",
+        "description": "Highlight this project on your main portfolio page"
+      },
+      {
+        "key": "testimonial",
+        "label": "Client Testimonial",
+        "type": "textarea",
+        "placeholder": "Quote from the client about the project...",
+        "rows": 3
+      }
+    ]
+  },
+  "sample": {
+    "title": "E-commerce Website Redesign",
+    "client": "Mountain Gear Co.",
+    "date": "2026-01-15",
+    "category": "Web Design",
+    "summary": "Complete redesign of an outdoor equipment retailer's online store",
+    "description": "Led the complete redesign of Mountain Gear Co.'s e-commerce platform, focusing on mobile-first design and improved checkout flow.\n\nKey achievements:\n- 40% increase in mobile conversions\n- Reduced cart abandonment by 25%\n- Implemented new product filtering system\n- Integrated with existing inventory management\n\nWorked closely with the marketing team to ensure brand consistency across all touchpoints.",
+    "image_url": "",
+    "project_url": "",
+    "tags": "Shopify, Figma, JavaScript, A/B Testing",
+    "featured": true,
+    "testimonial": "The redesign exceeded our expectations. Sales are up significantly and customers love the new experience."
+  }
+}

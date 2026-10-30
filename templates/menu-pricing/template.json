@@ -1,0 +1,70 @@
+{
+  "title": "Menu & Pricing",
+  "description": "Update your services, products, or menu items with pricing",
+  "schema": {
+    "fields": [
+      {
+        "key": "business_name",
+        "label": "Business Name",
+        "type": "text",
+        "required": true,
+        "placeholder": "Corner Cafe"
+      },
+      {
+        "key": "category",
+        "label": "Menu Category",
+        "type": "text",
+        "placeholder": "Lunch Specials, Haircuts, Services, etc."
+      },
+      {
+        "key": "items",
+        "label": "Menu Items",
+        "type": "textarea",
+        "placeholder": "Item Name - $XX.XX - Description\nItem Name - $XX.XX - Description",
+        "description": "One item per line. Format: Name - Price - Description",
+        "rows": 10
+      },
+      {
+        "key": "specials",
+        "label": "Current Specials",
+        "type": "textarea",
+        "placeholder": "Any current deals or promotions",
+        "rows": 4
+      },
+      {
+        "key": "notes",
+        "label": "Additional Notes",
+        "type": "textarea",
+        "placeholder": "Dietary info, policies, etc.",
+        "rows": 3
+      },
+      {
+        "key": "effective_date",
+        "label": "Prices Effective As Of",
+        "type": "date"
+      },
+      {
+        "key": "currency",
+        "label": "Currency",
+        "type": "select",
+        "options": [
+          "USD",
+          "EUR",
+          "GBP",
+          "CAD",
+          "AUD",
+          "Other"
+        ]
+      }
+    ]
+  },
+  "sample": {
+    "business_name": "Corner Cafe",
+    "category": "Lunch Menu",
+    "items": "Club Sandwich - $12.99 - Turkey, bacon, lettuce, tomato on toasted sourdough\nCaesar Salad - $10.99 - Romaine, parmesan, croutons, house-made dressing\nSoup of the Day - $6.99 - Ask your server for today's selection\nCheeseburger - $14.99 - Half-pound beef patty with cheddar, served with fries\nVeggie Wrap - $11.99 - Grilled vegetables, hummus, mixed greens in a spinach tortilla",
+    "specials": "Soup & Sandwich Combo - $13.99 (Mon-Fri 11am-2pm)\nSenior Discount - 10% off on Tuesdays",
+    "notes": "Gluten-free bread available (+$2). Please inform your server of any allergies.",
+    "effective_date": "2026-01-15",
+    "currency": "USD"
+  }
+}
