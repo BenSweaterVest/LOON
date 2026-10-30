@@ -18,8 +18,7 @@
       {
         "key": "due_date",
         "label": "Due Date",
-        "type": "text",
-        "placeholder": "YYYY-MM-DD"
+        "type": "date"
       },
       {
         "key": "status",
@@ -35,13 +34,13 @@
       {
         "key": "tasks",
         "label": "Task List",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "Use checkboxes or bullet lists"
       },
       {
         "key": "notes",
         "label": "Notes",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "Dependencies, risks, or updates"
       }
     ]

@@ -39,7 +39,7 @@
       {
         "key": "incident_details",
         "label": "Incident Details",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "Timeline and details of the current incident",
         "rows": 5
       },

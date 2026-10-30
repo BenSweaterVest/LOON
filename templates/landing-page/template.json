@@ -48,13 +48,13 @@
       {
         "key": "highlights",
         "label": "Key Highlights",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "List 3-5 short bullets, one per line"
       },
       {
         "key": "sections",
         "label": "Main Sections",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "Use headings and short paragraphs to describe each section"
       }
     ]

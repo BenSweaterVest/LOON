@@ -1,84 +1,81 @@
 {
-  "title": "Team Member Profile",
-  "description": "Update your profile information",
+  "title": "Team",
+  "description": "Team or staff directory with photos and short bios.",
   "schema": {
     "fields": [
       {
-        "key": "name",
-        "label": "Full Name",
-        "type": "text",
-        "required": true,
-        "placeholder": "Jane Smith"
-      },
-      {
         "key": "title",
-        "label": "Job Title",
+        "label": "Title",
         "type": "text",
-        "required": true,
-        "placeholder": "Software Engineer"
+        "required": true
       },
       {
-        "key": "department",
-        "label": "Department",
-        "type": "select",
-        "options": [
-          "Engineering",
-          "Design",
-          "Marketing",
-          "Sales",
-          "Operations",
-          "Leadership"
-        ]
-      },
-      {
-        "key": "bio",
-        "label": "Bio",
+        "key": "summary",
+        "label": "Introduction",
         "type": "textarea",
-        "placeholder": "A brief description of your background and interests...",
-        "rows": 4
+        "rows": 2
       },
       {
-        "key": "email",
-        "label": "Work Email",
-        "type": "email",
-        "placeholder": "jane@company.com"
-      },
-      {
-        "key": "phone",
-        "label": "Work Phone",
-        "type": "tel",
-        "placeholder": "(555) 123-4567"
-      },
-      {
-        "key": "photo_url",
-        "label": "Photo URL",
-        "type": "url",
-        "placeholder": "https://...",
-        "description": "Link to your profile photo (hosted externally)"
-      },
-      {
-        "key": "linkedin",
-        "label": "LinkedIn Profile",
-        "type": "url",
-        "placeholder": "https://linkedin.com/in/..."
-      },
-      {
-        "key": "available",
-        "label": "Available for Contact",
-        "type": "checkbox",
-        "description": "Display contact information publicly"
+        "key": "members",
+        "label": "Team members",
+        "type": "repeater",
+        "itemLabel": "Member",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "role",
+            "label": "Role",
+            "type": "text"
+          },
+          {
+            "key": "photo",
+            "label": "Photo",
+            "type": "image"
+          },
+          {
+            "key": "bio",
+            "label": "Bio",
+            "type": "markdown",
+            "rows": 3
+          },
+          {
+            "key": "email",
+            "label": "Email",
+            "type": "email"
+          }
+        ]
       }
     ]
   },
   "sample": {
-    "name": "Jane Smith",
-    "title": "Software Engineer",
-    "department": "Engineering",
-    "bio": "Full-stack developer with 5 years of experience. Passionate about building tools that help people work more efficiently.\n\nSpecializes in JavaScript, Python, and cloud infrastructure.",
-    "email": "jane@company.com",
-    "phone": "",
-    "photo_url": "",
-    "linkedin": "",
-    "available": true
+    "title": "Our Team",
+    "summary": "The people behind the work.",
+    "members": [
+      {
+        "name": "Jane Smith",
+        "role": "Director",
+        "photo": {
+          "src": "",
+          "alt": ""
+        },
+        "bio": "Leads programs and partnerships.",
+        "email": "jane@example.com"
+      },
+      {
+        "name": "Sam Lee",
+        "role": "Coordinator",
+        "photo": {
+          "src": "",
+          "alt": ""
+        },
+        "bio": "Keeps everything running on time.",
+        "email": ""
+      }
+    ]
   }
 }

@@ -24,7 +24,7 @@
       {
         "key": "body",
         "label": "Post Content",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "Write your post content here..."
       },
       {

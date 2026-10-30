@@ -32,7 +32,7 @@
       {
         "key": "description",
         "label": "Event Description",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "What is this event about?"
       },
       {

@@ -18,7 +18,7 @@
       {
         "key": "body",
         "label": "Main Content",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "Use headings and bullet lists"
       },
       {

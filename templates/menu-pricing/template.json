@@ -1,70 +1,105 @@
 {
   "title": "Menu & Pricing",
-  "description": "Update your services, products, or menu items with pricing",
+  "description": "Menu items or services with prices, grouped under one heading.",
   "schema": {
     "fields": [
       {
         "key": "business_name",
-        "label": "Business Name",
+        "label": "Business name",
         "type": "text",
-        "required": true,
-        "placeholder": "Corner Cafe"
+        "required": true
       },
       {
-        "key": "category",
-        "label": "Menu Category",
-        "type": "text",
-        "placeholder": "Lunch Specials, Haircuts, Services, etc."
+        "key": "summary",
+        "label": "Summary",
+        "type": "textarea",
+        "rows": 2,
+        "placeholder": "One line about this menu"
+      },
+      {
+        "key": "effective_date",
+        "label": "Prices effective",
+        "type": "date"
       },
       {
         "key": "items",
-        "label": "Menu Items",
-        "type": "textarea",
-        "placeholder": "Item Name - $XX.XX - Description\nItem Name - $XX.XX - Description",
-        "description": "One item per line. Format: Name - Price - Description",
-        "rows": 10
+        "label": "Items",
+        "type": "repeater",
+        "itemLabel": "Item",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "type": "text",
+            "placeholder": "$12.99"
+          },
+          {
+            "key": "description",
+            "label": "Description",
+            "type": "textarea",
+            "rows": 2
+          },
+          {
+            "key": "photo",
+            "label": "Photo",
+            "type": "image"
+          }
+        ]
       },
       {
         "key": "specials",
-        "label": "Current Specials",
-        "type": "textarea",
-        "placeholder": "Any current deals or promotions",
+        "label": "Specials",
+        "type": "markdown",
         "rows": 4
       },
       {
         "key": "notes",
-        "label": "Additional Notes",
-        "type": "textarea",
-        "placeholder": "Dietary info, policies, etc.",
+        "label": "Notes",
+        "type": "markdown",
         "rows": 3
-      },
-      {
-        "key": "effective_date",
-        "label": "Prices Effective As Of",
-        "type": "date"
-      },
-      {
-        "key": "currency",
-        "label": "Currency",
-        "type": "select",
-        "options": [
-          "USD",
-          "EUR",
-          "GBP",
-          "CAD",
-          "AUD",
-          "Other"
-        ]
       }
     ]
   },
   "sample": {
     "business_name": "Corner Cafe",
-    "category": "Lunch Menu",
-    "items": "Club Sandwich - $12.99 - Turkey, bacon, lettuce, tomato on toasted sourdough\nCaesar Salad - $10.99 - Romaine, parmesan, croutons, house-made dressing\nSoup of the Day - $6.99 - Ask your server for today's selection\nCheeseburger - $14.99 - Half-pound beef patty with cheddar, served with fries\nVeggie Wrap - $11.99 - Grilled vegetables, hummus, mixed greens in a spinach tortilla",
-    "specials": "Soup & Sandwich Combo - $13.99 (Mon-Fri 11am-2pm)\nSenior Discount - 10% off on Tuesdays",
-    "notes": "Gluten-free bread available (+$2). Please inform your server of any allergies.",
+    "summary": "Lunch served daily from 11am.",
     "effective_date": "2026-01-15",
-    "currency": "USD"
+    "items": [
+      {
+        "name": "Club Sandwich",
+        "price": "$12.99",
+        "description": "Turkey, bacon, lettuce and tomato on toasted sourdough",
+        "photo": {
+          "src": "",
+          "alt": ""
+        }
+      },
+      {
+        "name": "Caesar Salad",
+        "price": "$10.99",
+        "description": "Romaine, parmesan, croutons, house dressing",
+        "photo": {
+          "src": "",
+          "alt": ""
+        }
+      },
+      {
+        "name": "Soup of the Day",
+        "price": "$6.50",
+        "description": "Ask your server",
+        "photo": {
+          "src": "",
+          "alt": ""
+        }
+      }
+    ],
+    "specials": "**Soup & Sandwich Combo**: $13.99 (Mon-Fri 11am-2pm)",
+    "notes": "Gluten-free bread available (+$2). Please tell us about any allergies."
   }
 }

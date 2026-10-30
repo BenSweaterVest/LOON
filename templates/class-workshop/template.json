@@ -20,7 +20,7 @@
       {
         "key": "description",
         "label": "Description",
-        "type": "textarea",
+        "type": "markdown",
         "required": true,
         "placeholder": "What will participants learn?",
         "rows": 5
@@ -87,7 +87,7 @@
       {
         "key": "requirements",
         "label": "Requirements",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "What to bring, prerequisites, etc.",
         "rows": 3
       },

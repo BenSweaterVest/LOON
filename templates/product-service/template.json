@@ -21,7 +21,7 @@
       {
         "key": "description",
         "label": "Description",
-        "type": "textarea",
+        "type": "markdown",
         "required": true,
         "placeholder": "Describe what this product or service offers...",
         "rows": 6
@@ -35,15 +35,14 @@
       {
         "key": "features",
         "label": "Key Features",
-        "type": "textarea",
+        "type": "markdown",
         "placeholder": "One feature per line:\n- Feature one\n- Feature two\n- Feature three",
         "rows": 5
       },
       {
-        "key": "image_url",
+        "key": "image",
         "label": "Product Image URL",
-        "type": "url",
-        "placeholder": "https://..."
+        "type": "image"
       },
       {
         "key": "cta_text",
@@ -90,11 +89,14 @@
     "description": "Our premium hosting package includes everything you need to run a professional website. With 99.9% uptime guarantee, automatic backups, and 24/7 support, you can focus on your business while we handle the technical details.\n\nPerfect for small businesses, portfolios, and e-commerce sites.",
     "price": "$29/month",
     "features": "- 50GB SSD Storage\n- Unlimited bandwidth\n- Free SSL certificate\n- Daily automatic backups\n- 24/7 email support\n- One-click WordPress install\n- 99.9% uptime guarantee",
-    "image_url": "",
     "cta_text": "Get Started",
     "cta_url": "",
     "availability": "Available",
     "category": "Web Services",
-    "featured": true
+    "featured": true,
+    "image": {
+      "src": "",
+      "alt": ""
+    }
   }
 }

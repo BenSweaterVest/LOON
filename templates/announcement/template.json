@@ -47,7 +47,7 @@
       {
         "key": "body",
         "label": "Full Announcement",
-        "type": "textarea",
+        "type": "markdown",
         "required": true,
         "placeholder": "Complete details of the announcement...",
         "rows": 8
