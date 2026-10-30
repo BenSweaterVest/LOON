@@ -1,50 +1,18 @@
-## Description
+## Summary
 
-Brief description of the changes in this PR.
-
-## Type of Change
-
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to change)
-- [ ] Documentation update
-- [ ] Code refactoring (no functional changes)
-
-## Related Issues
-
-Closes #(issue number)
-
-## Changes Made
-
-- Change 1
-- Change 2
-- Change 3
+What changed and why.
 
 ## Testing
 
-Describe how you tested these changes:
-
-- [ ] Tested locally with `wrangler pages dev .`
-- [ ] Tested authentication flow
-- [ ] Tested save functionality
-- [ ] Verified on mobile device
-- [ ] Checked dark mode
+- [ ] `npm run validate` passes (checks, tests, build)
+- [ ] Tried the change with `npm run dev` (for UI or API changes)
+- [ ] Checked on a phone-sized screen (for UI changes)
 
 ## Checklist
 
-- [ ] My code follows the project's style guidelines
-- [ ] I have commented my code where necessary
-- [ ] I have updated the documentation (if applicable)
-- [ ] I have added tests (if applicable)
-- [ ] My changes don't break existing functionality
-- [ ] I have updated CHANGELOG.md (for user-facing changes)
+- [ ] Stays within Cloudflare and GitHub free tiers (no new paid services, no heavy per-request CPU work)
+- [ ] Tests added or updated for behavior changes
+- [ ] Docs updated (README, OPERATIONS, docs/API.md) if setup or behavior changed
+- [ ] Security-sensitive changes (auth, sessions, permissions, publishing) called out below
 
-## Screenshots (if applicable)
-
-| Before | After |
-|--------|-------|
-| image  | image |
-
-## Additional Notes
-
-Any additional context or considerations for reviewers.
+## Notes for reviewers

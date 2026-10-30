@@ -179,7 +179,7 @@ ${urls.map((u) => `  <url><loc>${escapeHtml(u)}</loc>${lastmod.get(u) ? `<lastmo
     }
     write(path.join(outDir, 'robots.txt'), `User-agent: *\nDisallow: /admin/\nDisallow: /api/\n${siteUrl ? `Sitemap: ${siteUrl}/sitemap.xml\n` : ''}`);
     write(path.join(outDir, '_headers'), HEADERS);
-    write(path.join(outDir, '_redirects'), '/admin.html /admin/ 301\n/admin /admin/ 301\n');
+    write(path.join(outDir, '_redirects'), '/admin.html /admin/ 301\n');
     // Only /api/* runs a Function; every other request is a free static asset.
     write(path.join(outDir, '_routes.json'), `${JSON.stringify({ version: 1, include: ['/api/*'], exclude: [] }, null, 2)}\n`);
 

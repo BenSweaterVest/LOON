@@ -1,0 +1,40 @@
+# Publishes pages whose scheduled time has passed, and cleans up expired
+# sessions. Calls your site's /api/cron endpoint.
+#
+# Setup (repository Settings > Secrets and variables > Actions):
+#   LOON_URL          your site address, e.g. https://example.pages.dev
+#   LOON_CRON_SECRET  the same value as CRON_SECRET in Cloudflare Pages
+#
+# Without these secrets the job skips itself. Scheduled publishing also runs
+# whenever an editor opens the page list, so this workflow is optional.
+#
+# Cost: each run bills one minute. Every 15 minutes is about 2,900 minutes a
+# month: free for public repositories. For a private repository (2,000 free
+# minutes), change the schedule to '7 * * * *' (hourly, about 720 minutes).
+
+name: Scheduled publish
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call /api/cron
+        env:
+          LOON_URL: ${{ secrets.LOON_URL }}
+          LOON_CRON_SECRET: ${{ secrets.LOON_CRON_SECRET }}
+        run: |
+          if [ -z "$LOON_URL" ] || [ -z "$LOON_CRON_SECRET" ]; then
+            echo "LOON_URL or LOON_CRON_SECRET is not set; skipping."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -X POST "${LOON_URL%/}/api/cron" \
+            -H "Authorization: Bearer $LOON_CRON_SECRET"

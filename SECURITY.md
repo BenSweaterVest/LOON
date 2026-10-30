@@ -1,87 +1,58 @@
-# Security Policy
+# Security
 
-This document is intentionally concise and focused on policy + security design.
-Operational runbooks and deployment troubleshooting live in `OPERATIONS.md`.
-Endpoint-level behavior and request/response details live in `docs/API.md`.
+## Reporting a vulnerability
 
-## Supported Versions
-Current mainline versions are supported. Keep your deployment updated with the latest fixes.
+Please do not open a public issue. Use GitHub's private vulnerability reporting (Security tab > Report a vulnerability) on the LOON repository, or contact the maintainer directly. Include steps to reproduce and the impact you expect. You will get an acknowledgement within a week.
 
-## Reporting a Vulnerability
-1. Do not open a public issue for a suspected vulnerability.
-2. Contact the repository maintainer directly.
-3. Include:
-   - Description of the issue
-   - Steps to reproduce
-   - Impact assessment
-   - Suggested mitigation (optional)
+## Model
 
-## Security Model (At a Glance)
-LOON uses Cloudflare Pages + Cloudflare KV + GitHub API. Sensitive state is split:
+LOON separates what is public from what is private:
 
-- Authentication/session state in KV
-- Content state in Git (auditable history)
-- Runtime secrets in Cloudflare encrypted environment variables
+- **Public:** published pages, their images and site settings, stored in the site's GitHub repository and served as static files.
+- **Private:** drafts, history, users, credentials and the audit log, stored in Cloudflare D1 and reachable only through the authenticated API.
 
-## Implemented Controls
+Drafts are never written to GitHub, so they cannot leak through the static site or the repository.
 
-### Authentication and Session Security
-- Password hashing: PBKDF2-SHA256 (100,000 iterations + salt)
-- Timing-safe comparison for credential verification
-- Session tokens: cryptographically random UUIDs
-- Session TTL: 24 hours in KV
-- WebAuthn/passkeys supported (ES256 signatures verified)
-- Recovery codes: one-time use, PBKDF2-hashed
+## Controls
 
-### Authorization
-- Role-based access control:
-  - `admin`
-  - `editor`
-  - `contributor`
-- Contributor edit isolation (own content only)
-- Admin-only endpoints for user/session/audit operations
+**Authentication**
+- Passwords: PBKDF2-SHA256, random 16-byte salt, 100,000 iterations by default (the Workers maximum). Hashes record their parameters and are upgraded at sign-in.
+- Uniform responses and timing for unknown users, wrong passwords and disabled accounts.
+- Minimum password length 10. Temporary passwords (new users, resets) must be changed at first sign-in.
+- Passkeys (WebAuthn) via SimpleWebAuthn, with single-use, five-minute challenges bound to the site's origin. Recovery codes are random, hashed and single-use, and force a password change.
 
-### Input and Request Hardening
-- Page/user identifiers sanitized server-side
-- JSON payload validation and bounded content size
-- KV-backed rate limiting on selected sensitive/write-heavy endpoints
-- CORS control via `CORS_ORIGIN`
+**Sessions**
+- Random 256-bit tokens in `__Host-` prefixed cookies: `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`.
+- D1 stores only the SHA-256 of each token.
+- Changing a password ends other sessions; disabling a user or resetting their password ends all of theirs. Users and admins can revoke sessions.
 
-### Data and Transport
-- HTTPS enforced by Cloudflare
-- Git commit history provides a content audit trail
-- Security headers configured via `_headers`
+**Authorization**
+- Roles: contributor < editor < admin, checked centrally on every route.
+- Contributors see and edit only pages they created; other pages respond as not found.
+- Only editors publish; only admins manage users, settings and backups.
+- At least one active admin always remains.
 
-## Threat Coverage
-Addressed:
-- Brute-force login attempts (rate limiting)
-- Timing attacks on secret comparisons
-- Path traversal via identifier sanitization
-- Basic XSS risk reduction through safe rendering patterns
-- Passkey phishing resistance (origin-bound WebAuthn)
+**Request hardening**
+- State-changing requests must come from the site's own origin (Origin / Fetch Metadata check), on top of SameSite cookies.
+- Rate limits on sign-in (per IP and per account), setup, passkeys, writes, publishing, uploads and feedback.
+- Body size limits on every endpoint; strict validation of IDs, schemas and content.
+- Uploads must be JPEG, PNG, WebP, GIF or AVIF by file signature. SVG is refused.
 
-Out of scope / residual risk:
-- Compromise of Cloudflare or GitHub admin accounts
-- Social engineering and endpoint-user device compromise
-- Full WebAuthn attestation trust-chain validation
+**Output**
+- Markdown is rendered by a built-in renderer that escapes all HTML and allows only `http(s)`, `mailto:`, `tel:`, site-relative and `#` URLs.
+- The admin builds its interface with DOM APIs only (a check in CI rejects `innerHTML`).
+- Content Security Policy without `unsafe-inline` for the site and the admin, plus `X-Frame-Options: DENY`, `nosniff`, HSTS and a restrictive Permissions-Policy.
 
-## Required Production Security Configuration
-Set in Cloudflare Pages:
-- `GITHUB_REPO`
-- `GITHUB_TOKEN` (Secret)
-- `SETUP_TOKEN` (Secret, one-time setup gate; rotate/remove after first admin)
+**Accountability**
+- Audit log of sign-ins, failed sign-ins, user and session changes, page edits, publishing and settings, with IP addresses, kept 90 days by default.
+- Every publish is a Git commit naming the person who published.
 
-Configure KV binding:
-- `LOON_DB` preferred
-- `KV` compatibility fallback supported
+## Secrets
 
-Recommended:
-- Restrict `CORS_ORIGIN` to your production domain
-- Set `RP_ID` and `RP_ORIGIN` for passkeys in production
-- Review `/api/health` after each deploy
+`GITHUB_TOKEN` should be a fine-grained token limited to the one site repository with only Contents: Read and write. `SETUP_TOKEN` and `CRON_SECRET` should be long random values. Store all three as Secrets in Cloudflare Pages. Backup files contain password hashes and should be kept private.
 
-## Canonical References
-- Deployment and operations: `OPERATIONS.md`
-- Installation and first-run setup: `README.md`
-- API behavior and errors: `docs/API.md`
-- Architecture overview: `ARCHITECTURE.md`
+## Known limits
+
+- PBKDF2 is limited to 100,000 iterations on Workers, below current recommendations for offline cracking resistance. Rate limiting protects against online guessing; keep backups and the D1 database private.
+- Passkey attestation is not verified (attestation `none`), which is standard for consumer passkeys.
+- Anyone with write access to the GitHub repository or the Cloudflare account can change the site. Protect those accounts with two-factor authentication.

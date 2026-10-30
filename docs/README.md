@@ -1,24 +1,14 @@
-# LOON Documentation Index
+# Documentation
 
-Use this as the single entry point for project documentation.
+| Document | For |
+|---|---|
+| [README](../README.md) | What LOON is, setup, local development |
+| [OPERATIONS](../OPERATIONS.md) | Configuration, scheduling, backups, updates, troubleshooting |
+| [ARCHITECTURE](../ARCHITECTURE.md) | Design, free-tier budget, data model, publishing pipeline |
+| [SECURITY](../SECURITY.md) | Security controls and how to report a vulnerability |
+| [API](API.md) | HTTP API reference |
+| [TEMPLATES](TEMPLATES.md) | Field types and writing templates |
+| [CONTRIBUTING](../CONTRIBUTING.md) | Working on LOON itself |
+| [CHANGELOG](../CHANGELOG.md) | Release history |
 
-## Start Here
-- Installation and first-run setup: `README.md`
-- Day-to-day operations: `OPERATIONS.md`
-- Local mode usage: `docs/LOCAL_MODE.md`
-- Browser-only diagnostics screen: `/admin/setup-check`
-
-## Reference Docs
-- API reference: `docs/API.md`
-- Passkey user guide: `docs/PASSKEYS_GUIDE.md`
-- Security policy and controls: `SECURITY.md`
-- Architecture overview: `ARCHITECTURE.md`
-- Contributor workflow: `CONTRIBUTING.md`
-
-## Documentation Scope Rules
-- `README.md`: fastest successful install path and high-level usage
-- `OPERATIONS.md`: production admin runbook and troubleshooting
-- `docs/API.md`: endpoint contracts and status/error behavior
-- `SECURITY.md`: policy, controls, and threat model summary
-
-If content belongs to one of these scopes, update that canonical doc instead of creating a new one-off file.
+Keep each topic in one place: update the document above that owns it rather than adding new files.
